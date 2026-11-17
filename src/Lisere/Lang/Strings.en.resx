@@ -141,6 +141,12 @@
   <data name="colorNebulusNote" xml:space="preserve">
     <value>Color grade of the After Effects Nebulus_CC preset: multi-scale sharpening, a 10% unsharp mask and a strong glow. The recorded values are fixed: the sliders below do not apply.</value>
   </data>
+  <data name="colorSplendida" xml:space="preserve">
+    <value>Splendida CC</value>
+  </data>
+  <data name="colorSplendidaNote" xml:space="preserve">
+    <value>Color grade of the After Effects Splendida_CC preset: sharpening and an unsharp mask, a 25% vignette, +21 brightness, +10 contrast, then its master curve (128 → 118). Its hue/saturation is neutral in the file. The recorded values are fixed: the sliders below do not apply.</value>
+  </data>
   <data name="colorNoneNote" xml:space="preserve">
     <value>No grading: the image keeps the enhancement preset colors.</value>
   </data>

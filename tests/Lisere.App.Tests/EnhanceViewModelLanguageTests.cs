@@ -80,7 +80,7 @@ public class EnhanceViewModelLanguageTests
         var viewModel = CreateViewModel(localization);
 
         Assert.Equal(
-            new[] { "Aucune", "Ultron CC", "Matrix CC", "Infinity CC", "Nebulus CC" },
+            new[] { "Aucune", "Ultron CC", "Matrix CC", "Infinity CC", "Nebulus CC", "Splendida CC" },
             viewModel.ColorPresets.Select(option => option.Label));
         Assert.DoesNotContain(viewModel.Presets, option => option.Label == "Ultron CC");
         Assert.False(viewModel.IsColorGradingActive);
@@ -183,6 +183,7 @@ public class EnhanceViewModelLanguageTests
     [Theory]
     [InlineData(ColorPreset.Infinity, "Infinity CC")]
     [InlineData(ColorPreset.Nebulus, "Nebulus CC")]
+    [InlineData(ColorPreset.Splendida, "Splendida CC")]
     public async Task FixedPresetsSendTheirPresetWithoutUltronSettings(ColorPreset preset, string label)
     {
         var localization = new LocalizationService();

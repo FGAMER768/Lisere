@@ -141,6 +141,12 @@
   <data name="colorNebulusNote" xml:space="preserve">
     <value>Étalonnage du preset After Effects Nebulus_CC : accentuation multi-échelles, unsharp mask à 10 % et halo marqué. Valeurs fixes : les curseurs ci-dessous ne s'appliquent pas.</value>
   </data>
+  <data name="colorSplendida" xml:space="preserve">
+    <value>Splendida CC</value>
+  </data>
+  <data name="colorSplendidaNote" xml:space="preserve">
+    <value>Étalonnage du preset After Effects Splendida_CC : netteté et unsharp mask, vignettage à 25 %, luminosité +21, contraste +10, puis sa courbe maître (128 → 118). Sa teinte/saturation est neutre dans le fichier. Valeurs fixes : les curseurs ci-dessous ne s'appliquent pas.</value>
+  </data>
   <data name="colorNoneNote" xml:space="preserve">
     <value>Aucun étalonnage : l'image garde les couleurs du préréglage IA.</value>
   </data>

@@ -20,5 +20,8 @@ public enum ColorPreset
     Infinity,
 
     /// <summary>Reproduction du preset After Effects <c>Nebulus_CC.ffx</c>.</summary>
-    Nebulus
+    Nebulus,
+
+    /// <summary>Reproduction du preset After Effects <c>Splendida_CC.ffx</c>.</summary>
+    Splendida
 }

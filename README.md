@@ -16,7 +16,7 @@ L'interface propose deux espaces :
 - L'ouverture affiche l'original : l'amélioration n'est calculée qu'au clic sur **Améliorer l'image**.
 - Deux menus de paramètres, **Amélioration (IA)** et **Colorimétrie**, chacun avec son préréglage et ses curseurs.
 - Préréglages d'amélioration Chroma, Auto, Manuel et Auto + relatif moyen.
-- Préréglages de colorimétrie **Ultron CC**, **Matrix CC**, **Infinity CC** et **Nebulus CC**, reproductions de presets After Effects appliquées après l'amélioration (`docs/ULTRON-CC-ANALYSE.md` et `docs/PRESETS-ANALYSE.md`).
+- Préréglages de colorimétrie **Ultron CC**, **Matrix CC**, **Infinity CC**, **Nebulus CC** et **Splendida CC**, reproductions de presets After Effects appliquées après l'amélioration (`docs/ULTRON-CC-ANALYSE.md` et `docs/PRESETS-ANALYSE.md`).
 - Réglages de correction de compression, réduction du bruit, netteté, récupération des détails, réduction du halo et lissage des contours.
 - Réglages complémentaires pour les détails d'origine et l'ajout de bruit.
 - Estimation automatique des paramètres à partir du contenu de l'image.
@@ -123,6 +123,7 @@ Le menu **Colorimétrie** de la page Image est indépendant des préréglages d'
 | Matrix CC | Étalonnage du preset After Effects `Matrix_CC.ffx` : luminosité +30, contraste +20 et trois accentuations (30 % / 15 px, 10 %, 15 % / 30 px). Valeurs fixes, sans curseurs. |
 | Infinity CC | Étalonnage du preset After Effects `Infinity_CC.ffx` : accentuation multi-échelles, unsharp mask 16 % / rayon 9,8, halo doux, puis exposition −0,36. Valeurs fixes. |
 | Nebulus CC | Étalonnage du preset After Effects `Nebulus_CC.ffx` : accentuation multi-échelles, unsharp mask 10 % / rayon 20 et halo marqué. Valeurs fixes. |
+| Splendida CC | Étalonnage du preset After Effects `Splendida_CC.ffx` : netteté 50, unsharp mask 15 % / rayon 25, vignettage 25 % à 40°, luminosité +21 / contraste +10, puis sa courbe maître lue dans le fichier (128 → 118). Valeurs fixes. |
 
 Les paramètres principaux sont bornés de `0` à `100`, sauf le lissage des contours qui accepte une valeur négative pour anticiper un flou. La valeur `0` désactive l'effet correspondant en mode manuel. Le préréglage **Aucune amélioration** grise les curseurs : l'image traverse le pipeline sans correction, ce qui permet de n'appliquer que la colorimétrie.
 
@@ -217,13 +218,13 @@ dotnet test Lisere.slnx
 
 La solution contient quatre projets de tests xUnit : `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` et `Lisere.App.Tests`.
 
-État actuel : **229 tests** (77 Core, 13 Ai, 35 Video, 104 App), 0 avertissement de build. Deux tests vidéo dépendants du temps peuvent échouer lors d'une exécution parallèle de la solution et réussissent isolément. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model.
+État actuel : **241 tests** (87 Core, 13 Ai, 35 Video, 106 App), 0 avertissement de build. Deux tests vidéo dépendants du temps peuvent échouer lors d'une exécution parallèle de la solution et réussissent isolément. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model.
 
 Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le rendu, la conservation de l'audio, le désentrelacement, la taille exacte, l'annulation et l'extraction d'aperçu. Ils sont ignorés silencieusement si FFmpeg est introuvable, afin que le reste de la suite reste exécutable sur une machine sans outillage vidéo.
 
 Le corpus complet des presets After Effects (47 fichiers, dossier `Experimental` exclu) est inventorié dans `docs/PRESETS-ANALYSE.md`, avec les valeurs brutes dans `docs/presets/PRESETS-INVENTAIRE.md` et les JSON de `docs/presets/scan/`. Seuls les presets documentés y sont décrits ; aucun n'est encore implémenté hormis Ultron.
 
-Les préréglages de colorimétrie sont couverts par des tests d'étalonnage : pour Ultron, saturation pondérée luma, contraste légacy, vibrance, accentuations par bandes, enchaînement complet et réglages (`tests/Lisere.Core.Tests/UltronCcLookTests.cs`) ; pour Matrix, valeurs extraites, courbe tonal approchée, accentuations et ignorance des réglages Ultron (`MatrixLookTests.cs`) ; pour Infinity et Nebulus, valeurs extraites, exposition en lumière linéaire, halo qui épargne les aplats et déborde d'une zone claire (`InfinityLookTests.cs`, `NebulusLookTests.cs`). Un test de non-régression applique les quatre presets à une photo de test versionnée et compare l'empreinte SHA-256 des pixels (`ColorPresetRegressionTests.cs`). La séparation des deux menus est couverte dans `tests/Lisere.App.Tests/EnhanceViewModelLanguageTests.cs` : indépendance des préréglages, onglets exclusifs et statut mentionnant l'étalonnage.
+Les préréglages de colorimétrie sont couverts par des tests d'étalonnage : pour Ultron, saturation pondérée luma, contraste légacy, vibrance, accentuations par bandes, enchaînement complet et réglages (`tests/Lisere.Core.Tests/UltronCcLookTests.cs`) ; pour Matrix, valeurs extraites, courbe tonal approchée, accentuations et ignorance des réglages Ultron (`MatrixLookTests.cs`) ; pour Infinity et Nebulus, valeurs extraites, exposition en lumière linéaire, halo qui épargne les aplats et déborde d'une zone claire (`InfinityLookTests.cs`, `NebulusLookTests.cs`) ; pour Splendida, valeurs extraites, courbe maître décodée, vignettage cos⁴ qui épargne le centre et assombrit les angles, et table de courbe appliquée par canal (`SplendidaLookTests.cs`, `GradingFiltersTests.cs`). Un test de non-régression applique les cinq presets à une photo de test versionnée et compare l'empreinte SHA-256 des pixels (`ColorPresetRegressionTests.cs`). La séparation des deux menus est couverte dans `tests/Lisere.App.Tests/EnhanceViewModelLanguageTests.cs` : indépendance des préréglages, onglets exclusifs et statut mentionnant l'étalonnage.
 
 L'import de presets est testé sur des JSON synthétiques et, lorsque `LISERE_PRESET_SAMPLE_DIR` pointe vers un dossier de presets, sur un corpus local. La file d'attente est testée avec un renderer factice : ordre d'exécution, instantané des réglages, échec isolé, arrêt en cours et états finaux.
 

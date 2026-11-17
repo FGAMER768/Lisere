@@ -13,6 +13,7 @@ public class PresetLooksTests
     [InlineData(ColorPreset.Matrix)]
     [InlineData(ColorPreset.Infinity)]
     [InlineData(ColorPreset.Nebulus)]
+    [InlineData(ColorPreset.Splendida)]
     public void FixedPresetLooksKeepTheImageSize(ColorPreset preset)
     {
         var source = TestImages.CreatePattern(size: 32);
@@ -28,6 +29,7 @@ public class PresetLooksTests
     [InlineData(ColorPreset.Matrix)]
     [InlineData(ColorPreset.Infinity)]
     [InlineData(ColorPreset.Nebulus)]
+    [InlineData(ColorPreset.Splendida)]
     public void FixedPresetLooksIgnoreTheUltronSettings(ColorPreset preset)
     {
         var source = TestImages.CreatePattern(size: 12);

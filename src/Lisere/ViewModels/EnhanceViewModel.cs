@@ -153,7 +153,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             CreateColorPreset(ColorPreset.UltronCc),
             CreateColorPreset(ColorPreset.Matrix),
             CreateColorPreset(ColorPreset.Infinity),
-            CreateColorPreset(ColorPreset.Nebulus)
+            CreateColorPreset(ColorPreset.Nebulus),
+            CreateColorPreset(ColorPreset.Splendida)
         ];
 
         SelectedPreset = Presets[0];
@@ -873,6 +874,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         ColorPreset.Matrix => "colorMatrix",
         ColorPreset.Infinity => "colorInfinity",
         ColorPreset.Nebulus => "colorNebulus",
+        ColorPreset.Splendida => "colorSplendida",
         _ => "colorNone"
     };
 
@@ -882,6 +884,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         ColorPreset.Matrix => "colorMatrixNote",
         ColorPreset.Infinity => "colorInfinityNote",
         ColorPreset.Nebulus => "colorNebulusNote",
+        ColorPreset.Splendida => "colorSplendidaNote",
         _ => "colorNoneNote"
     };
 

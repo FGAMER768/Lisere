@@ -17,6 +17,7 @@ public static class ColorGrading
             ColorPreset.Matrix => MatrixLook.Apply(source),
             ColorPreset.Infinity => InfinityLook.Apply(source),
             ColorPreset.Nebulus => NebulusLook.Apply(source),
+            ColorPreset.Splendida => SplendidaLook.Apply(source),
             _ => source.Clone()
         };
     }

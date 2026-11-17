@@ -90,6 +90,45 @@ public class GradingFiltersTests
     }
 
     [Fact]
+    public void CurveTableAppliesTheLookupPerChannel()
+    {
+        var source = new RgbImage(2, 1, [0, 64, 128, 192, 255, 10]);
+        var invert = Enumerable.Range(0, 256).Select(value => (byte)(255 - value)).ToArray();
+
+        var result = GradingFilters.CurveTable(source, invert);
+
+        Assert.Equal([255, 191, 127, 63, 0, 245], result.Pixels);
+    }
+
+    [Fact]
+    public void CurveTableWithIdentityLeavesTheImageUntouched()
+    {
+        var source = TestImages.CreatePattern();
+        var identity = Enumerable.Range(0, 256).Select(value => (byte)value).ToArray();
+
+        Assert.Equal(source.Pixels, GradingFilters.CurveTable(source, identity).Pixels);
+    }
+
+    [Fact]
+    public void VignetteKeepsTheCentreAndDarkensTheCorners()
+    {
+        var source = Uniform(255, 255, 255, 32);
+
+        var result = GradingFilters.Vignette(source, 25.0, 40.0, 0.5, 0.5);
+
+        Assert.Equal(255, result[16, 16, 0]);
+        Assert.InRange(result[0, 0, 0], 240, 242);
+    }
+
+    [Fact]
+    public void VignetteIsIdentityWithoutAmount()
+    {
+        var source = TestImages.CreatePattern();
+
+        Assert.Equal(source.Pixels, GradingFilters.Vignette(source, 0.0, 40.0, 0.5, 0.5).Pixels);
+    }
+
+    [Fact]
     public void UnsharpMaskFromRadiusLeavesAFlatUntouched()
     {
         var source = Uniform(80, 80, 80);

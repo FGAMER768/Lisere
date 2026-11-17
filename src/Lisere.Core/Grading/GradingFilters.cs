@@ -157,6 +157,74 @@ internal static class GradingFilters
     }
 
     /// <summary>
+    /// Applique une table de 256 entrées à chaque canal, comme la courbe
+    /// maître d'After Effects. Les courbes du fichier sont stockées sous cette
+    /// forme : un octet de sortie par niveau d'entrée.
+    /// </summary>
+    public static RgbImage CurveTable(RgbImage source, IReadOnlyList<byte> lookup)
+    {
+        if (lookup.Count != 256)
+        {
+            throw new ArgumentException("A 256-entry lookup table is required.", nameof(lookup));
+        }
+
+        var pixels = new byte[source.Pixels.Length];
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            pixels[i] = lookup[source.Pixels[i]];
+        }
+
+        return new RgbImage(source.Width, source.Height, pixels);
+    }
+
+    /// <summary>
+    /// Vignettage radial fondé sur la loi physique cos⁴ : l'angle croît du
+    /// centre (0) au bord de l'image (angle de champ / 2), l'éclairement chute
+    /// de cos⁴θ, et le montant dose cette chute. Approximation de CC Vignette,
+    /// dont la formule n'est pas publiée ; « Pin Highlights », décoché dans le
+    /// preset, n'est pas reproduit.
+    /// </summary>
+    public static RgbImage Vignette(
+        RgbImage source,
+        double amountPercent,
+        double angleOfViewDegrees,
+        double centerX,
+        double centerY)
+    {
+        if (amountPercent == 0.0)
+        {
+            return source.Clone();
+        }
+
+        var strength = amountPercent / 100.0;
+        var halfAngle = angleOfViewDegrees * Math.PI / 360.0;
+        double centerPixelX = centerX * source.Width;
+        double centerPixelY = centerY * source.Height;
+        var halfDiagonal = Math.Sqrt((source.Width * source.Width) + (source.Height * source.Height)) / 2.0;
+        var pixels = new byte[source.Pixels.Length];
+
+        for (var y = 0; y < source.Height; y++)
+        {
+            for (var x = 0; x < source.Width; x++)
+            {
+                var dx = x + 0.5 - centerPixelX;
+                var dy = y + 0.5 - centerPixelY;
+                var radius = Math.Min(1.0, Math.Sqrt((dx * dx) + (dy * dy)) / halfDiagonal);
+                var theta = halfAngle * radius;
+                var falloff = Math.Pow(Math.Cos(theta), 4.0);
+                var factor = 1.0 - (strength * (1.0 - falloff));
+                var offset = ((y * source.Width) + x) * 3;
+
+                pixels[offset] = Clip(source.Pixels[offset] * factor);
+                pixels[offset + 1] = Clip(source.Pixels[offset + 1] * factor);
+                pixels[offset + 2] = Clip(source.Pixels[offset + 2] * factor);
+            }
+        }
+
+        return new RgbImage(source.Width, source.Height, pixels);
+    }
+
+    /// <summary>
     /// Halo additif : seuil progressif sur la luma, flou par canal avec les
     /// largeurs propres au rouge, au vert et au bleu, puis ajout pondéré par la
     /// luminosité du halo. Approximation de S_Glow : « Combine », « Opacity »

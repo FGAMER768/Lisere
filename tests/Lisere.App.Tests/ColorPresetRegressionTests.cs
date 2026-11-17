@@ -6,7 +6,7 @@ using Lisere.Services;
 namespace Lisere.App.Tests;
 
 /// <summary>
-/// Non-régression des quatre presets de colorimétrie sur une photo de test
+/// Non-régression des cinq presets de colorimétrie sur une photo de test
 /// versionnée (320 × 213, Lorem Picsum / licence Unsplash). Chaque empreinte
 /// couvre les pixels entiers : toute modification de formule, d'ordre d'effet
 /// ou de valeur du preset la fait changer.
@@ -18,6 +18,7 @@ public class ColorPresetRegressionTests
     [InlineData(ColorPreset.Matrix, "DDDF8BAA8F7EBEF4A2B98FC8649B79F9CE1B95BF241330158DD5083F8679CB98")]
     [InlineData(ColorPreset.Infinity, "757A0700A2FB00DFBA294CBE0FAA2964F13E633CD53967C9A627163DC775F9CB")]
     [InlineData(ColorPreset.Nebulus, "BB5F6ECEF9219AEDF49144EF1D2A191CE59C61FD879ABED736962CEAFDE87451")]
+    [InlineData(ColorPreset.Splendida, "47F0341ABE7AC33C1771ECF007E4D1884B9E9A63C304F5190CE91F756016F9FF")]
     public async Task PresetsKeepTheirRenderingOnTheTestPhoto(ColorPreset preset, string expectedHash)
     {
         var path = Path.Combine(AppContext.BaseDirectory, "TestData", "preset-photo.jpg");
