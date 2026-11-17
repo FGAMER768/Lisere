@@ -1,0 +1,82 @@
+# Dossier des modèles
+
+Ce dossier est le point d'entrée des moteurs neuronaux de Liseré. Il est
+découvert automatiquement (dossier de l'application, variable
+`LISERE_MODELS`, parents du dossier courant en développement, ou
+`%LOCALAPPDATA%\Lisere\models`).
+
+## Contenu
+
+| Fichier | Rôle |
+|---|---|
+| `catalog.json` | Déclaration des modèles : identifiant, fichier, échelle, noms d'entrée/sortie, taille de tuile, licence, source, empreinte SHA-256. |
+| `onnx/super-resolution-10.onnx` | SRCNN sous-pixel ×3 (Shi et al., 2016), ONNX Model Zoo. |
+| `onnx/LICENSE` | Apache License 2.0 du modèle SRCNN. |
+| `onnx/rife49.onnx` | RIFE 4.9 (Practical-RIFE), interpolation d'images, export ONNX communautaire. |
+| `rife/LICENSE` | Licence MIT de RIFE / Practical-RIFE. |
+
+## Modèle livré
+
+- **Source** : <https://github.com/onnx/models/tree/main/validated/vision/super_resolution/sub_pixel_cnn_2016>
+- **Licence** : Apache-2.0.
+- **Entrée** : `input`, tenseur `1×1×224×224` (luminance normalisée `[0,1]`).
+- **Sortie** : `output`, tenseur `1×1×672×672` (facteur ×3).
+- **SHA-256** : `85f36ff88cc504a24af5e0602148bc56a8aa09a58eca8c0da2756f3e8186035e`
+- **Taille** : 240 Ko environ.
+
+Liseré applique ce réseau sur le plan de luminance, tuile par tuile, avec un
+contexte de 8 pixels. La chroma est agrandie en bicubique, puis l'image est
+rééchantillonnée vers l'échelle de sortie demandée (1×, 2× ou 4×).
+
+## Modèle d'interpolation RIFE
+
+- **Source** : <https://huggingface.co/edgetools/rife> (`rife49.onnx`), export
+  de RIFE 4.9 / Practical-RIFE.
+- **Licence** : MIT (`rife/LICENSE`).
+- **Entrées** : `img0` et `img1`, tenseurs RGB planaires `1×3×H×W` dans `[0,1]` ;
+  `timestep`, tenseur `1` dans `[0,1]`.
+- **Sortie** : `output`, tenseur RGB planaire `1×3×H×W`.
+- **SHA-256** : `76e4cef9ab42fa7dd4e8f6e4aba47462051e3faa969e4bca6479784fbab0ac6f`
+- **Taille** : 20,5 Mo environ.
+
+RIFE exige des dimensions multiples de 32 : Liseré complète les bords, exécute
+l'inférence, puis recadre à la taille d'origine. Le moteur est volontairement
+limité au **×2** (une image intermédiaire à `timestep = 0.5` par paire).
+
+## DirectML et repli CPU
+
+Le paquet NuGet `Microsoft.ML.OnnxRuntime.DirectML` fournit à la fois l'API
+managée et le provider DirectML. Liseré tente DirectML (adaptateur 0, l'iGPU
+Intel sur cette machine) puis retombe sur le CPU si la session ne peut pas être
+créée. Le provider réellement utilisé est exposé par les moteurs ; aucune
+accélération n'est supposée.
+
+Mesure locale (Iris Xe, RIFE, après chauffe) : **37 ms** en 192×192,
+**833 ms** en 1080×1080. Le CPU seul est nettement plus lent.
+
+## Vérification
+
+L'empreinte est contrôlée au chargement du catalogue. Si le fichier est absent
+ou modifié, le moteur correspondant apparaît **indisponible** dans l'interface
+avec la raison exacte, et aucun rendu ne peut être lancé avec lui.
+
+Pour revérifier manuellement :
+
+```powershell
+Get-FileHash models\onnx\super-resolution-10.onnx -Algorithm SHA256
+Get-FileHash models\onnx\rife49.onnx -Algorithm SHA256
+```
+
+## Ajouter un modèle
+
+1. Déposer le fichier `.onnx` (ou le format pris en charge par un futur moteur)
+   sous `models/`.
+2. Calculer son empreinte SHA-256.
+3. Ajouter une entrée dans `catalog.json` avec `id`, `displayName`, `family`,
+   `file`, `sha256`, `scale`, `inputName`, `outputName`, `tileSize`, `plane`,
+   `license`, `source`, `description`.
+4. Si le contrat d'inférence diffère (entrée RGB, échelle dynamique, plusieurs
+   entrées), ajouter une implémentation de `IFrameEnhancer` dans `Lisere.Ai`.
+
+Aucun modèle propriétaire ou non redistribuable ne doit être ajouté ici : les
+poids au format `.tz` ne sont ni libres ni redistribuables.

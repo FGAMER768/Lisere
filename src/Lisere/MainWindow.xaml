@@ -1,0 +1,106 @@
+<ui:FluentWindow x:Class="Lisere.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:dialogs="clr-namespace:Lisere.Views.Dialogs"
+                 mc:Ignorable="d"
+                 Title="Liseré"
+                 Width="1200"
+                 Height="675"
+                 MinWidth="1024"
+                 MinHeight="576"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterScreen"
+                 Background="{ui:ThemeResource ApplicationBackgroundBrush}">
+    <ui:FluentWindow.InputBindings>
+        <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenCommand}" />
+        <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding EnhanceCommand}" />
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}" />
+    </ui:FluentWindow.InputBindings>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Liseré">
+            <ui:TitleBar.TrailingContent>
+                <StackPanel Margin="0,0,6,0"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <ui:Button MinWidth="36"
+                               MinHeight="26"
+                               Margin="0,0,4,0"
+                               Padding="6,1"
+                               AutomationProperties.HelpText="{Binding Strings[languageSwitchHelp]}"
+                               AutomationProperties.Name="Français"
+                               Command="{Binding SetLanguageCommand}"
+                               CommandParameter="fr"
+                               Content="FR"
+                               FontSize="12"
+                               ToolTip="{Binding Strings[languageSwitchHelp]}">
+                        <ui:Button.Style>
+                            <Style TargetType="{x:Type ui:Button}"
+                                   BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Appearance" Value="Transparent" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Strings.CurrentLanguage}" Value="French">
+                                        <Setter Property="Appearance" Value="Primary" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                    <ui:Button MinWidth="36"
+                               MinHeight="26"
+                               Padding="6,1"
+                               AutomationProperties.HelpText="{Binding Strings[languageSwitchHelp]}"
+                               AutomationProperties.Name="English"
+                               Command="{Binding SetLanguageCommand}"
+                               CommandParameter="en"
+                               Content="EN"
+                               FontSize="12"
+                               ToolTip="{Binding Strings[languageSwitchHelp]}">
+                        <ui:Button.Style>
+                            <Style TargetType="{x:Type ui:Button}"
+                                   BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Appearance" Value="Transparent" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Strings.CurrentLanguage}" Value="English">
+                                        <Setter Property="Appearance" Value="Primary" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                </StackPanel>
+            </ui:TitleBar.TrailingContent>
+        </ui:TitleBar>
+        <StackPanel Grid.Row="1"
+                    Margin="16,10,0,0"
+                    Orientation="Horizontal">
+            <ui:Button x:Name="ImageTabButton"
+                       Click="OnImageTabClick"
+                       Content="{Binding Strings[navImage]}"
+                       Icon="{ui:SymbolIcon Image24}" />
+            <ui:Button x:Name="VideoTabButton"
+                       Margin="8,0,0,0"
+                       Click="OnVideoTabClick"
+                       Content="{Binding Strings[navVideo]}"
+                       Icon="{ui:SymbolIcon Video24}" />
+        </StackPanel>
+        <ContentControl x:Name="PageHost" Grid.Row="2" />
+        <dialogs:WaitDialog x:Name="WaitDialog"
+                            Grid.RowSpan="3"
+                            Panel.ZIndex="99" />
+        <dialogs:MessageDialog x:Name="MessageDialog"
+                               Grid.RowSpan="3"
+                               Panel.ZIndex="100" />
+    </Grid>
+</ui:FluentWindow>

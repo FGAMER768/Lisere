@@ -1,0 +1,13 @@
+<Solution>
+  <Project Path="src/Lisere/Lisere.csproj" />
+  <Project Path="src/Lisere.Ai/Lisere.Ai.csproj" />
+  <Project Path="src/Lisere.Video/Lisere.Video.csproj" />
+  <Folder Name="/src/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/Lisere.App.Tests/Lisere.App.Tests.csproj" />
+    <Project Path="tests/Lisere.Ai.Tests/Lisere.Ai.Tests.csproj" />
+    <Project Path="tests/Lisere.Video.Tests/Lisere.Video.Tests.csproj" />
+  </Folder>
+  <Project Path="src/Lisere.Core/Lisere.Core.csproj" />
+  <Project Path="tests/Lisere.Core.Tests/Lisere.Core.Tests.csproj" />
+</Solution>

@@ -1,0 +1,111 @@
+<UserControl x:Class="Lisere.Views.BeforeAfterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             AutomationProperties.Name="Comparaison avant et après"
+             x:Name="Root">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="Stage"
+              Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+              ClipToBounds="True"
+              SizeChanged="OnStageSizeChanged">
+            <Grid x:Name="ImageLayer"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center">
+                <Image x:Name="AfterLayerImage"
+                       AutomationProperties.Name="Aperçu après"
+                   RenderOptions.BitmapScalingMode="HighQuality"
+                   Source="{Binding AfterImage, ElementName=Root}"
+                       Stretch="Fill" />
+
+            <Grid x:Name="BeforeLayer"
+                  HorizontalAlignment="Left"
+                  ClipToBounds="True">
+                    <Image x:Name="BeforeLayerImage"
+                           Width="{Binding ActualWidth, ElementName=ImageLayer}"
+                           Height="{Binding ActualHeight, ElementName=ImageLayer}"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Top"
+                       AutomationProperties.Name="Aperçu avant"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       Source="{Binding BeforeImage, ElementName=Root}"
+                           Stretch="Fill" />
+            </Grid>
+
+            <Border x:Name="Divider"
+                    Width="2"
+                    HorizontalAlignment="Left"
+                    Background="{ui:ThemeResource TextFillColorPrimaryBrush}" />
+
+            <Thumb x:Name="DividerThumb"
+                   Width="24"
+                   HorizontalAlignment="Left"
+                   AutomationProperties.HelpText="Utilisez les flèches gauche et droite."
+                   AutomationProperties.Name="Position de comparaison"
+                   Background="Transparent"
+                   Cursor="SizeWE"
+                   DragDelta="OnDividerDragDelta"
+                   Focusable="True"
+                   IsTabStop="True"
+                   KeyDown="OnDividerKeyDown">
+                <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Background="Transparent">
+                            <Border Width="18"
+                                    Height="34"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                    BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="17">
+                                <StackPanel HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Orientation="Horizontal">
+                                    <Border Width="2"
+                                            Height="12"
+                                            Margin="0,0,3,0"
+                                            Background="{ui:ThemeResource TextFillColorSecondaryBrush}" />
+                                    <Border Width="2"
+                                            Height="12"
+                                            Background="{ui:ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Thumb.Template>
+            </Thumb>
+        </Grid>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="10,8,10,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock VerticalAlignment="Center"
+                       FontSize="12"
+                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                       Text="Avant" />
+            <Slider Grid.Column="1"
+                    Margin="10,0"
+                    AutomationProperties.Name="Position de comparaison"
+                    IsSnapToTickEnabled="True"
+                    Maximum="100"
+                    Minimum="0"
+                    TickFrequency="1"
+                    Value="{Binding ComparisonPosition, ElementName=Root, Mode=TwoWay}" />
+            <TextBlock Grid.Column="2"
+                       VerticalAlignment="Center"
+                       FontSize="12"
+                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                       Text="Après" />
+        </Grid>
+    </Grid>
+</UserControl>

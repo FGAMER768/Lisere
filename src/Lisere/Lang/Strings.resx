@@ -1,0 +1,480 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="pagePreviewTitle" xml:space="preserve">
+    <value>Aperçu avant et après</value>
+  </data>
+  <data name="pageOpen" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
+  <data name="pageEmptyTitle" xml:space="preserve">
+    <value>Aucune image</value>
+  </data>
+  <data name="pageEmptyBody" xml:space="preserve">
+    <value>Ouvrez une image pour lancer l'amélioration.</value>
+  </data>
+  <data name="pageOpenAction" xml:space="preserve">
+    <value>Ouvrir une image</value>
+  </data>
+  <data name="sectionPreset" xml:space="preserve">
+    <value>Préréglage</value>
+  </data>
+  <data name="sectionSettings" xml:space="preserve">
+    <value>Réglages</value>
+  </data>
+  <data name="actionEnhance" xml:space="preserve">
+    <value>Améliorer l'image</value>
+  </data>
+  <data name="actionExport" xml:space="preserve">
+    <value>Exporter en JPEG</value>
+  </data>
+  <data name="imageNone" xml:space="preserve">
+    <value>Aucune image</value>
+  </data>
+  <data name="errorBarTitle" xml:space="preserve">
+    <value>Erreur</value>
+  </data>
+  <data name="languageLabel" xml:space="preserve">
+    <value>Langue</value>
+  </data>
+  <data name="languageSwitchHelp" xml:space="preserve">
+    <value>Changer la langue de l'interface</value>
+  </data>
+  <data name="paramFixCompression" xml:space="preserve">
+    <value>Correction de compression</value>
+  </data>
+  <data name="paramReduceNoise" xml:space="preserve">
+    <value>Réduction du bruit</value>
+  </data>
+  <data name="paramSharpen" xml:space="preserve">
+    <value>Netteté</value>
+  </data>
+  <data name="paramRecoverDetails" xml:space="preserve">
+    <value>Récupération des détails</value>
+  </data>
+  <data name="paramDehalo" xml:space="preserve">
+    <value>Réduction du halo</value>
+  </data>
+  <data name="paramAntialias" xml:space="preserve">
+    <value>Lissage des contours</value>
+  </data>
+  <data name="paramOriginalDetail" xml:space="preserve">
+    <value>Détails d'origine</value>
+  </data>
+  <data name="paramAddNoise" xml:space="preserve">
+    <value>Ajouter du bruit</value>
+  </data>
+  <data name="spinIncrease" xml:space="preserve">
+    <value>Augmenter</value>
+  </data>
+  <data name="spinDecrease" xml:space="preserve">
+    <value>Diminuer</value>
+  </data>
+  <data name="presetChroma" xml:space="preserve">
+    <value>Chroma</value>
+  </data>
+  <data name="presetAuto" xml:space="preserve">
+    <value>Auto (estimation locale)</value>
+  </data>
+  <data name="presetManual" xml:space="preserve">
+    <value>Manuel (curseurs)</value>
+  </data>
+  <data name="presetAutoRelative" xml:space="preserve">
+    <value>Auto + relatif moyen</value>
+  </data>
+  <data name="presetChromaNote" xml:space="preserve">
+    <value>Préréglage de référence, à ajuster selon l'image.</value>
+  </data>
+  <data name="presetAutoNote" xml:space="preserve">
+    <value>Les six paramètres sont estimés à partir de l'image chargée, puis appliqués.</value>
+  </data>
+  <data name="presetManualNote" xml:space="preserve">
+    <value>Chaque curseur est appliqué tel quel. Zéro désactive l'effet correspondant.</value>
+  </data>
+  <data name="presetAutoRelativeNote" xml:space="preserve">
+    <value>Estimation automatique de l'image, puis ajustements du préréglage relatif moyen.</value>
+  </data>
+  <data name="modeChroma" xml:space="preserve">
+    <value>Chroma</value>
+  </data>
+  <data name="modeAuto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="modeManual" xml:space="preserve">
+    <value>Manuel</value>
+  </data>
+  <data name="modeAutoRelative" xml:space="preserve">
+    <value>Auto + relatif moyen</value>
+  </data>
+  <data name="statusStart" xml:space="preserve">
+    <value>Ouvrez une image pour commencer.</value>
+  </data>
+  <data name="statusLoading" xml:space="preserve">
+    <value>Chargement de l'image...</value>
+  </data>
+  <data name="statusLoaded" xml:space="preserve">
+    <value>Image chargée.</value>
+  </data>
+  <data name="statusProcessing" xml:space="preserve">
+    <value>Traitement en cours...</value>
+  </data>
+  <data name="statusApplied" xml:space="preserve">
+    <value>{0} appliqué.</value>
+  </data>
+  <data name="statusDirty" xml:space="preserve">
+    <value>Paramètres modifiés. Lancez l'amélioration.</value>
+  </data>
+  <data name="statusExporting" xml:space="preserve">
+    <value>Export en cours...</value>
+  </data>
+  <data name="statusExported" xml:space="preserve">
+    <value>Image exportée : {0}.</value>
+  </data>
+  <data name="statusError" xml:space="preserve">
+    <value>Erreur.</value>
+  </data>
+  <data name="errorLoad" xml:space="preserve">
+    <value>Impossible de charger l'image.</value>
+  </data>
+  <data name="errorEnhance" xml:space="preserve">
+    <value>Le traitement a échoué.</value>
+  </data>
+  <data name="errorExport" xml:space="preserve">
+    <value>L'export a échoué.</value>
+  </data>
+  <data name="errorEstimate" xml:space="preserve">
+    <value>L'estimation automatique a échoué.</value>
+  </data>
+  <data name="warningRecoverDetails" xml:space="preserve">
+    <value>La récupération des détails {0:0.#} dépasse la valeur conseillée (≤ {1:0}) : le bruit ou la compression peuvent devenir une fausse texture.</value>
+  </data>
+  <data name="warningDehalo" xml:space="preserve">
+    <value>La réduction du halo {0:0.#} dépasse la zone idéale (~0 à {1:0}) : les contours peuvent devenir mous.</value>
+  </data>
+  <data name="warningHighSharpen" xml:space="preserve">
+    <value>La netteté et la récupération des détails élevées ensemble donnent souvent un rendu trop net ou plastique.</value>
+  </data>
+  <data name="warningHeavyCompression" xml:space="preserve">
+    <value>Une forte correction de compression avec beaucoup de détails peut lisser puis réinventer la texture.</value>
+  </data>
+  <data name="dialogWaitTitle" xml:space="preserve">
+    <value>Veuillez patienter</value>
+  </data>
+  <data name="dialogErrorTitle" xml:space="preserve">
+    <value>Erreur</value>
+  </data>
+  <data name="dialogWarningTitle" xml:space="preserve">
+    <value>Avertissement</value>
+  </data>
+  <data name="dialogInfoTitle" xml:space="preserve">
+    <value>Information</value>
+  </data>
+  <data name="fileOpenTitle" xml:space="preserve">
+    <value>Ouvrir une image</value>
+  </data>
+  <data name="fileSaveTitle" xml:space="preserve">
+    <value>Exporter l'image</value>
+  </data>
+  <data name="fileFilterImages" xml:space="preserve">
+    <value>Images</value>
+  </data>
+  <data name="fileFilterAll" xml:space="preserve">
+    <value>Tous les fichiers</value>
+  </data>
+  <data name="fileFilterJpeg" xml:space="preserve">
+    <value>Image JPEG</value>
+  </data>
+  <data name="navImage" xml:space="preserve">
+    <value>Image</value>
+  </data>
+  <data name="navVideo" xml:space="preserve">
+    <value>Vidéo</value>
+  </data>
+  <data name="videoPreviewTitle" xml:space="preserve">
+    <value>Aperçu vidéo avant et après</value>
+  </data>
+  <data name="videoEmptyTitle" xml:space="preserve">
+    <value>Aucune vidéo</value>
+  </data>
+  <data name="videoEmptyBody" xml:space="preserve">
+    <value>Ouvrez une vidéo pour l'analyser et lancer le rendu image par image.</value>
+  </data>
+  <data name="videoOpenAction" xml:space="preserve">
+    <value>Ouvrir une vidéo</value>
+  </data>
+  <data name="videoSectionModel" xml:space="preserve">
+    <value>Moteur et modèle</value>
+  </data>
+  <data name="videoLabelEngine" xml:space="preserve">
+    <value>Moteur</value>
+  </data>
+  <data name="videoLabelResolution" xml:space="preserve">
+    <value>Résolution de sortie</value>
+  </data>
+  <data name="videoOutputSource" xml:space="preserve">
+    <value>Source (échelle 1×)</value>
+  </data>
+  <data name="videoActionImportPreset" xml:space="preserve">
+    <value>Importer un preset...</value>
+  </data>
+  <data name="videoLabelPreviewPosition" xml:space="preserve">
+    <value>Position de l'aperçu</value>
+  </data>
+  <data name="videoActionPreview" xml:space="preserve">
+    <value>Rafraîchir l'aperçu</value>
+  </data>
+  <data name="videoActionRender" xml:space="preserve">
+    <value>Exporter la vidéo</value>
+  </data>
+  <data name="videoActionCancel" xml:space="preserve">
+    <value>Annuler le rendu</value>
+  </data>
+  <data name="videoSectionOutput" xml:space="preserve">
+    <value>Traitement et export</value>
+  </data>
+  <data name="videoSectionQueue" xml:space="preserve">
+    <value>File d'attente</value>
+  </data>
+  <data name="videoQueueEmpty" xml:space="preserve">
+    <value>Aucun clip en attente. Ajoutez la vidéo courante pour exporter plusieurs clips à la suite.</value>
+  </data>
+  <data name="videoActionAddQueue" xml:space="preserve">
+    <value>Ajouter à la file</value>
+  </data>
+  <data name="videoActionRunQueue" xml:space="preserve">
+    <value>Lancer la file</value>
+  </data>
+  <data name="videoActionStopQueue" xml:space="preserve">
+    <value>Arrêter</value>
+  </data>
+  <data name="videoActionClearQueue" xml:space="preserve">
+    <value>Vider la file</value>
+  </data>
+  <data name="videoStabilize" xml:space="preserve">
+    <value>Stabilisation</value>
+  </data>
+  <data name="videoStabilizeNote" xml:space="preserve">
+    <value>Analyse du mouvement en deux passes (vidstab). Allonge le rendu.</value>
+  </data>
+  <data name="videoDeinterlace" xml:space="preserve">
+    <value>Désentrelacement</value>
+  </data>
+  <data name="videoDeinterlaceNote" xml:space="preserve">
+    <value>Applique bwdif avant l'amélioration (vidéos entrelacées). Allonge le rendu.</value>
+  </data>
+  <data name="videoLabelFrameRate" xml:space="preserve">
+    <value>Cadence de sortie</value>
+  </data>
+  <data name="videoFrameRateNote" xml:space="preserve">
+    <value>Une cadence différente recrée des images par compensation de mouvement (minterpolate). Très coûteux sur CPU.</value>
+  </data>
+  <data name="videoFrameRateSource" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="videoRife" xml:space="preserve">
+    <value>Interpolation RIFE ×2</value>
+  </data>
+  <data name="videoRifeReady" xml:space="preserve">
+    <value>RIFE 4.9 (ONNX Runtime, DirectML sur iGPU Intel ou CPU en repli). Double la cadence, plus lent en HD.</value>
+  </data>
+  <data name="videoRifeMissing" xml:space="preserve">
+    <value>Modèle RIFE absent : l'interpolation neuronale est indisponible.</value>
+  </data>
+  <data name="videoCodec" xml:space="preserve">
+    <value>Codec</value>
+  </data>
+  <data name="videoCodecH264" xml:space="preserve">
+    <value>H.264</value>
+  </data>
+  <data name="videoCodecH265" xml:space="preserve">
+    <value>H.265 (HEVC)</value>
+  </data>
+  <data name="videoQuality" xml:space="preserve">
+    <value>Qualité (CRF)</value>
+  </data>
+  <data name="videoQualityNote" xml:space="preserve">
+    <value>Plus la valeur est basse, meilleure est la qualité et plus le fichier est volumineux.</value>
+  </data>
+  <data name="videoNone" xml:space="preserve">
+    <value>Aucune vidéo</value>
+  </data>
+  <data name="videoWithAudio" xml:space="preserve">
+    <value>avec audio</value>
+  </data>
+  <data name="videoWithoutAudio" xml:space="preserve">
+    <value>sans audio</value>
+  </data>
+  <data name="videoStatusStart" xml:space="preserve">
+    <value>Ouvrez une vidéo pour commencer.</value>
+  </data>
+  <data name="videoStatusProbing" xml:space="preserve">
+    <value>Analyse de la vidéo...</value>
+  </data>
+  <data name="videoStatusOpened" xml:space="preserve">
+    <value>Vidéo analysée et aperçu prêt.</value>
+  </data>
+  <data name="videoStatusPreviewing" xml:space="preserve">
+    <value>Calcul de l'aperçu...</value>
+  </data>
+  <data name="videoStatusPreviewReady" xml:space="preserve">
+    <value>Aperçu à jour.</value>
+  </data>
+  <data name="videoStatusRendering" xml:space="preserve">
+    <value>Rendu en cours...</value>
+  </data>
+  <data name="videoStatusRendered" xml:space="preserve">
+    <value>Vidéo exportée : {0}.</value>
+  </data>
+  <data name="videoStatusCanceled" xml:space="preserve">
+    <value>Rendu annulé.</value>
+  </data>
+  <data name="videoStatusCanceling" xml:space="preserve">
+    <value>Annulation du rendu...</value>
+  </data>
+  <data name="videoStatusEngineUnavailable" xml:space="preserve">
+    <value>Moteur indisponible : {0}. L'aperçu n'a pas été calculé.</value>
+  </data>
+  <data name="videoErrorEngine" xml:space="preserve">
+    <value>Le moteur sélectionné est indisponible :</value>
+  </data>
+  <data name="videoStatusDirty" xml:space="preserve">
+    <value>Réglages modifiés. Rafraîchissez l'aperçu ou exportez.</value>
+  </data>
+  <data name="videoStatusQueued" xml:space="preserve">
+    <value>Ajouté à la file : {0}.</value>
+  </data>
+  <data name="videoStatusQueueRunning" xml:space="preserve">
+    <value>File d'attente : {0} clip(s) à exporter...</value>
+  </data>
+  <data name="videoStatusQueueDone" xml:space="preserve">
+    <value>File d'attente terminée : {0} export(s) réussi(s).</value>
+  </data>
+  <data name="videoStatusQueueStopped" xml:space="preserve">
+    <value>File d'attente arrêtée.</value>
+  </data>
+  <data name="videoStatusQueueStopping" xml:space="preserve">
+    <value>Arrêt de la file après le clip en cours...</value>
+  </data>
+  <data name="videoStatusQueueCleared" xml:space="preserve">
+    <value>File d'attente vidée.</value>
+  </data>
+  <data name="videoQueueStatusPending" xml:space="preserve">
+    <value>En attente</value>
+  </data>
+  <data name="videoQueueStatusRunning" xml:space="preserve">
+    <value>Rendu...</value>
+  </data>
+  <data name="videoQueueStatusCompleted" xml:space="preserve">
+    <value>Terminé</value>
+  </data>
+  <data name="videoQueueStatusFailed" xml:space="preserve">
+    <value>Échec : {0}</value>
+  </data>
+  <data name="videoQueueStatusCancelled" xml:space="preserve">
+    <value>Annulé</value>
+  </data>
+  <data name="videoErrorQueueDuplicate" xml:space="preserve">
+    <value>Ce fichier de sortie est déjà dans la file :</value>
+  </data>
+  <data name="videoErrorToolchain" xml:space="preserve">
+    <value>Le moteur vidéo est indisponible.</value>
+  </data>
+  <data name="videoErrorProbe" xml:space="preserve">
+    <value>Impossible d'ouvrir la vidéo.</value>
+  </data>
+  <data name="videoErrorPreview" xml:space="preserve">
+    <value>Impossible de calculer l'aperçu.</value>
+  </data>
+  <data name="videoErrorRender" xml:space="preserve">
+    <value>Le rendu a échoué.</value>
+  </data>
+  <data name="videoErrorEstimate" xml:space="preserve">
+    <value>L'estimation automatique de la vidéo a échoué.</value>
+  </data>
+  <data name="videoErrorPreset" xml:space="preserve">
+    <value>Impossible d'importer le preset.</value>
+  </data>
+  <data name="videoStatusPresetImported" xml:space="preserve">
+    <value>Preset importé : {0}. Aucun poids propriétaire n'est utilisé : le moteur sélectionné traite les images.</value>
+  </data>
+  <data name="videoPresetUnknownModel" xml:space="preserve">
+    <value>modèle non précisé</value>
+  </data>
+  <data name="videoProgressPreparing" xml:space="preserve">
+    <value>Préparation du rendu...</value>
+  </data>
+  <data name="videoProgressCanceled" xml:space="preserve">
+    <value>Rendu annulé.</value>
+  </data>
+  <data name="videoProgressDone" xml:space="preserve">
+    <value>{0} images rendues en {1:0.0} s.</value>
+  </data>
+  <data name="videoProgressFrames" xml:space="preserve">
+    <value>{0} · {1} images · {2:0.0} %</value>
+  </data>
+  <data name="videoProgressStage" xml:space="preserve">
+    <value>{0} · {1:0.0} %</value>
+  </data>
+  <data name="videoStagePreparing" xml:space="preserve">
+    <value>Préparation</value>
+  </data>
+  <data name="videoStageDeinterlacing" xml:space="preserve">
+    <value>Désentrelacement</value>
+  </data>
+  <data name="videoStageStabilizing" xml:space="preserve">
+    <value>Stabilisation</value>
+  </data>
+  <data name="videoStageRendering" xml:space="preserve">
+    <value>Rendu</value>
+  </data>
+  <data name="videoStageInterpolating" xml:space="preserve">
+    <value>Interpolation</value>
+  </data>
+  <data name="videoStageFinalizing" xml:space="preserve">
+    <value>Finalisation</value>
+  </data>
+  <data name="engineAvailable" xml:space="preserve">
+    <value>Disponible</value>
+  </data>
+  <data name="engineUnavailable" xml:space="preserve">
+    <value>Indisponible : {0}</value>
+  </data>
+  <data name="engineMissing" xml:space="preserve">
+    <value>modèle non installé</value>
+  </data>
+  <data name="engineClassicReady" xml:space="preserve">
+    <value>Pipeline local déterministe, sans modèle externe.</value>
+  </data>
+  <data name="engineNeuralReady" xml:space="preserve">
+    <value>Modèle ONNX local vérifié par empreinte SHA-256, inférence DirectML sur iGPU ou CPU en repli.</value>
+  </data>
+  <data name="fileOpenVideoTitle" xml:space="preserve">
+    <value>Ouvrir une vidéo</value>
+  </data>
+  <data name="fileSaveVideoTitle" xml:space="preserve">
+    <value>Exporter la vidéo</value>
+  </data>
+  <data name="fileFilterVideos" xml:space="preserve">
+    <value>Vidéos</value>
+  </data>
+  <data name="fileFilterPresets" xml:space="preserve">
+    <value>Presets vidéo (*.json)</value>
+  </data>
+  <data name="fileOpenPresetTitle" xml:space="preserve">
+    <value>Importer un preset vidéo</value>
+  </data>
+  <data name="fileFilterMp4" xml:space="preserve">
+    <value>Vidéo MP4</value>
+  </data>
+</root>

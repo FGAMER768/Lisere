@@ -1,0 +1,217 @@
+# Liseré
+
+Liseré est une application de bureau Windows pour améliorer **une image ou une vidéo**, comparer le résultat à l'original et exporter la version retouchée. Les traitements sont effectués localement : aucun service externe, aucun compte.
+
+L'interface propose deux espaces :
+
+- **Image** : pipeline déterministe six paramètres, préréglages, estimation automatique, export JPEG.
+- **Vidéo** : analyse FFmpeg, aperçu avant/après, rendu image par image, moteurs interchangeables (pipeline local ou modèles ONNX), résolutions FHD/4K, cadence 30/60/120 i/s, interpolation neuronale RIFE ×2, désentrelacement, stabilisation, file d'attente et export MP4 avec audio.
+
+## Fonctionnalités
+
+### Image
+
+- Ouverture des images prises en charge par Windows Imaging Component, avec normalisation des cas irréguliers.
+- Comparaison avant/après avec séparateur déplaçable et curseur de position.
+- Préréglages Chroma, Auto, Manuel et Auto + relatif moyen.
+- Réglages de correction de compression, réduction du bruit, netteté, récupération des détails, réduction du halo et lissage des contours.
+- Réglages complémentaires pour les détails d'origine et l'ajout de bruit.
+- Estimation automatique des paramètres à partir du contenu de l'image.
+- Avertissements lorsque les réglages sortent des plages conseillées.
+- Export JPEG avec une qualité de 92.
+
+### Vidéo
+
+- Analyse du fichier avec `ffprobe` : résolution, cadence, durée, codec, présence et codec audio.
+- Aperçu avant/après sur une image extraite à la position choisie.
+- Application des six mêmes paramètres à chaque image, avec estimation Auto échantillonnée sur le clip.
+- Moteurs interchangeables :
+  - **Lisere Classic** : pipeline local déterministe, toujours disponible ;
+  - **Super-Resolution CNN ×3** : modèle ONNX local, vérifié par SHA-256, inférence DirectML sur iGPU avec repli CPU.
+- Résolution de sortie : source, 2×, 4×, 1080p ou 2160p ; la largeur FHD/4K est calculée selon le ratio source et arrondie à une valeur paire.
+- Cadence de sortie : source, 30, 60 ou 120 i/s (`minterpolate`, uniquement si la cadence diffère).
+- **Interpolation neuronale RIFE ×2** : modèle ONNX RIFE 4.9 (MIT), deux images et un timestep, exécuté sur DirectML (iGPU Intel) avec repli CPU. La cadence est doublée ; c'est volontairement limité au ×2.
+- Désentrelacement (`bwdif`) avant l'amélioration, pour les sources entrelacées.
+- Stabilisation en deux passes (`vidstab`).
+- **Import de presets vidéo (JSON)** : lit le JSON d'un preset (six paramètres, récupération des détails, bruit, taille FHD/4K, cadence, stabilisation, désentrelacement) et l'applique à Liseré. Aucun poids propriétaire n'est lu ni utilisé.
+- **File d'attente multi-clips** : chaque job fige la source et les réglages, les exports s'exécutent séquentiellement, un échec n'interrompt pas les suivants, l'arrêt annule le job en cours.
+- Export MP4 H.264 ou H.265, qualité CRF réglable, piste audio d'origine conservée (AAC 192 kbit/s).
+- Progression par étape et annulation réelle des processus FFmpeg.
+
+### Commun
+
+- Interface française et anglaise, bascule immédiate depuis la barre de titre et mémorisation du choix.
+- Traitement asynchrone, dialogues d'attente et messages d'erreur explicites.
+- Raccourcis clavier : `Ctrl+O` ouvrir, `Ctrl+Entrée` lancer l'aperçu ou l'amélioration, `Ctrl+S` exporter.
+
+## Prérequis
+
+- Windows 10 ou Windows 11.
+- [.NET SDK 10.0](https://dotnet.microsoft.com/download) ou version ultérieure compatible avec `net10.0-windows`.
+- **FFmpeg** avec `ffmpeg.exe` et `ffprobe.exe` pour les fonctions vidéo. Liseré ne le redistribue pas. Il le cherche dans cet ordre : variable `LISERE_FFMPEG`, dossier de l'application, `C:\ffmpeg\bin`, `C:\ffmpeg`, `C:\Program Files\ffmpeg\bin`, puis `PATH`.
+- Aucune base de données, aucun compte et aucune connexion réseau ne sont nécessaires à l'exécution.
+
+Deux modèles ONNX sont inclus dans `models/` et copiés à côté de l'exécutable : SRCNN ×3 (240 Ko) et RIFE 4.9 (20,5 Mo). Voir [models/README.md](models/README.md). DirectML est utilisé automatiquement pour les moteurs ONNX quand l'iGPU le permet ; sinon, Liseré revient au CPU et le signale dans la note du moteur.
+
+## Démarrage
+
+Depuis la racine du dépôt :
+
+```powershell
+dotnet restore Lisere.slnx
+dotnet run --project src/Lisere
+```
+
+Pour construire l'application sans la lancer :
+
+```powershell
+dotnet build Lisere.slnx
+```
+
+## Utilisation
+
+### Image
+
+1. Cliquez sur **Ouvrir** ou utilisez `Ctrl+O` pour charger une image.
+2. Choisissez un préréglage ou ajustez les curseurs et les champs numériques.
+3. Cliquez sur **Améliorer l'image** ou utilisez `Ctrl+Entrée`.
+4. Faites glisser le séparateur de l'aperçu pour comparer l'avant et l'après.
+5. Cliquez sur **Exporter en JPEG** ou utilisez `Ctrl+S`.
+
+### Vidéo
+
+1. Ouvrez l'onglet **Vidéo**, puis cliquez sur **Ouvrir** (`Ctrl+O`).
+2. Liseré analyse le fichier et affiche un aperçu de la frame située à la position choisie.
+3. Choisissez le moteur, le préréglage et la résolution ; ajustez les réglages, la cadence, le désentrelacement et la stabilisation.
+4. **Rafraîchir l'aperçu** (`Ctrl+Entrée`) recalcule l'image de comparaison.
+5. **Exporter la vidéo** (`Ctrl+S`) demande la destination puis rend le fichier avec progression et annulation.
+6. Pour plusieurs clips, utilisez **Ajouter à la file** puis **Lancer la file** : chaque ajout fige les réglages courants et demande sa destination.
+7. Pour doubler la cadence avec l'IA, activez **Interpolation RIFE ×2**. La liste de cadence est désactivée : RIFE produit exactement deux images par image source.
+
+La stabilisation, le désentrelacement et l'interpolation FFmpeg sont des passes supplémentaires ; RIFE s'exécute pendant la boucle de rendu. Toutes allongent nettement le rendu, particulièrement en HD.
+
+### Préréglages
+
+| Préréglage | Comportement |
+|---|---|
+| Chroma | Préréglage de référence, avec les valeurs de départ recommandées. |
+| Auto (estimation locale) | Analyse l'image ou plusieurs frames du clip et estime les paramètres automatiquement. |
+| Manuel (curseurs) | Applique directement les valeurs saisies. |
+| Auto + relatif moyen | Combine l'estimation automatique et un ajustement relatif moyen. |
+
+Les paramètres principaux sont bornés de `0` à `100`, sauf le lissage des contours qui accepte une valeur négative pour anticiper un flou. La valeur `0` désactive l'effet correspondant en mode manuel.
+
+### Presets vidéo importés
+
+Le bouton **Importer un preset...** lit un fichier JSON de preset exporté par une application d'amélioration vidéo et applique ce que Liseré sait reproduire :
+
+| Champ du preset | Usage dans Liseré |
+|---|---|
+| `enhance.compress`, `denoise`, `sharpen`, `detail`, `dehalo`, `deblur` | Les six curseurs, dans le même ordre. |
+| `enhance.recoverOriginalDetailValue` | Détails d'origine. |
+| `enhance.addNoise` | Ajout de bruit. |
+| `enhance.auto` | Mode Auto si aucune valeur n'est fournie, sinon mode Manuel avec les valeurs du preset. |
+| `output.outSizeMethod` 6 / 7 / 9 | 1080p / 2160p / hauteur explicite. |
+| `output.outFPS` et `outputFps` | Cadence 30, 60 ou 120 i/s. |
+| `stabilize.active` | Stabilisation. |
+| `deinterlace.active` | Désentrelacement. |
+| `grain.active` + `grainStrength` | Approximation prudente de l'ajout de bruit. |
+
+Le modèle mentionné est affiché à titre informatif. **Aucun poids propriétaire n'est chargé** : le rendu utilise le moteur sélectionné dans Liseré (Classic ou ONNX). Le preset reproduit donc la surface de contrôle et la géométrie de sortie, pas le réseau d'origine.
+
+### Raccourcis
+
+| Raccourci | Image | Vidéo |
+|---|---|---|
+| `Ctrl+O` | Ouvrir une image | Ouvrir une vidéo |
+| `Ctrl+Entrée` | Lancer l'amélioration | Rafraîchir l'aperçu |
+| `Ctrl+S` | Exporter en JPEG | Exporter la vidéo |
+
+### Langue
+
+Les boutons **FR** et **EN** de la barre de titre changent la langue de l'interface sans redémarrage. Le choix est enregistré dans `%APPDATA%\Lisere\settings.json` et restauré au lancement suivant.
+
+Les textes sont regroupés dans `src/Lisere/Lang/Strings.resx` (français) et `src/Lisere/Lang/Strings.en.resx` (anglais). `ILocalizationService` résout les clés et notifie les vues à chaque changement de langue.
+
+## Formats et limites
+
+### Image
+
+- Formats d'entrée proposés : `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tif`, `.tiff`, `.gif`, `.ico`, `.wdp`, `.jxr`, `.webp`, `.heic`, `.heif` et `.avif`. Les codecs installés dans Windows déterminent les formats réellement décodables ; le sélecteur propose aussi « Tous les fichiers ».
+- Formats irréguliers : les images CMJN, en niveaux de gris 16 bits, indexées, progressives ou à transparence sont converties en RGB 8 bits avant le traitement.
+- L'orientation EXIF est appliquée au chargement. La transparence est composée sur fond blanc.
+- Pour les images animées ou multipages, seule la première image est utilisée.
+- Taille maximale du fichier : 24 Mo. Limite de décodage : 40 millions de pixels.
+- Format d'export : JPEG, qualité 92.
+
+### Vidéo
+
+- Entrées proposées : `.mp4`, `.mov`, `.mkv`, `.avi`, `.webm`, `.m4v`, `.mts`, `.m2ts`, `.wmv`, `.mpg`, `.mpeg` (selon les codecs FFmpeg).
+- Sortie MP4 uniquement, H.264 ou H.265, audio AAC.
+- L'orientation/rotation portée par les métadonnées vidéo n'est pas appliquée au décodage.
+- La file d'attente est **séquentielle** : un seul rendu à la fois, sans exécution parallèle. Un job en échec est marqué et la file continue ; « Arrêter » annule le job en cours.
+- **RIFE est limité au ×2** et n'accepte pas une cadence arbitraire. Sur l'Intel Iris Xe de cette machine, une inférence 1080p coûte environ **0,83 s** après chauffe (0,037 s en 192×192) : un clip HD long reste lent. Le repli CPU est beaucoup plus lent.
+- **BasicVSR++ n'est pas intégré** : le dépôt officiel ne publie que des poids PyTorch ; son script `pytorch2onnx.py` passe par mmcv et l'alignement DCN dépend de CUDA. Aucun ONNX pré-exporté vérifiable n'est distribué. L'ajouter demanderait un export PyTorch/CUDA vérifié, pas un simple chargement de fichier.
+- **La restauration de visages n'est pas intégrée** : GFPGAN 1.4 pèse 340 Mo (Apache-2.0 avec composants tiers), CodeFormer 377 Mo (licence NTU S-Lab non commerciale). Les deux exigent un détecteur, un alignement 512×512 et un collage ; ce n'est pas un moteur image par image autonome.
+- L'import de presets ne charge aucun poids propriétaire et ne reproduit pas les modèles d'origine : seuls les réglages, la taille et la cadence sont transposés.
+- `outSizeMethod` 6 → 1080p et 7 → 2160p sont **déduits** du corpus de presets installé ; les autres méthodes retombent sur la géométrie source.
+- Le grain du preset (taille, sigma, type) est approximé par un seul dosage de bruit.
+- Le mode Auto échantillonne trois positions du clip ; il ne remplace pas un estimateur neuronal dédié.
+- Les moteurs neuronaux s'exécutent sur **DirectML** quand un adaptateur DirectX 12 est disponible (l'iGPU Intel sur cette machine), avec un **repli CPU** dont la raison est affichée dans la note du moteur. Le repli CPU est bien plus lent : l'upscaling neuronal d'une longue vidéo HD reste long dans les deux cas.
+- Le dossier temporaire de rendu est supprimé à la fin ; une annulation supprime aussi les fichiers partiels.
+
+## Architecture
+
+| Projet | Rôle |
+|---|---|
+| `src/Lisere` | Application WPF, navigation, pages Image et Vidéo, view models, services de dialogue, de fichiers et de localisation. |
+| `src/Lisere.Core` | Modèles d'image, filtres, estimation automatique, validation, pipeline d'amélioration, traitement de clip. |
+| `src/Lisere.Ai` | Abstraction des moteurs (`IFrameEnhancer`, `IFrameInterpolator`), moteur classique, super-résolution ONNX tuilée, interpolation RIFE, sessions DirectML/CPU, catalogue et vérification SHA-256. |
+| `src/Lisere.Video` | Découverte FFmpeg, `ffprobe`, extraction de frames, rendu vidéo, désentrelacement, stabilisation, interpolation, import de presets vidéo, progression et annulation. |
+| `tests/Lisere.Core.Tests` | Pipeline, filtres, paramètres, estimation et parité avec l'implémentation Python de référence. |
+| `tests/Lisere.Ai.Tests` | Catalogue, planification des tuiles, inférence ONNX réelle, disponibilité des moteurs. |
+| `tests/Lisere.Video.Tests` | Parseur ffprobe, construction des commandes FFmpeg, rendu bout en bout avec clip généré. |
+| `tests/Lisere.App.Tests` | View models Image et Vidéo, dialogues, codec d'images, localisation. |
+
+La page Image reste organisée autour de `EnhanceViewModel` et `IEnhancementOrchestrator`. La page Vidéo utilise `VideoViewModel`, qui délègue l'analyse à `IVideoProbe`, l'aperçu à `IVideoFrameExtractor` et le rendu à `IVideoRenderService`. Le choix du moteur se fait par `IFrameEnhancer` : l'interface et le pipeline vidéo ignorent totalement quel modèle est utilisé. La file d'attente est portée par le view model : `VideoQueueItem` fige une requête de rendu complète, puis `VideoRenderService` est appelé séquentiellement.
+
+Le catalogue `models/catalog.json` décrit chaque modèle (fichier, échelle, entrée/sortie, licence, empreinte). Un modèle absent ou modifié est signalé comme indisponible, avec la raison, et ne peut pas être utilisé.
+
+### Documentation
+
+- [models/README.md](models/README.md) : provenance, licence et vérification des modèles.
+
+## Tests
+
+```powershell
+dotnet test Lisere.slnx
+```
+
+La solution contient quatre projets de tests xUnit : `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` et `Lisere.App.Tests`.
+
+État actuel : **133 tests réussis** (32 Core, 12 Ai, 25 Video, 64 App), 0 avertissement de build.
+
+Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le rendu, la conservation de l'audio, le désentrelacement, la taille exacte, l'annulation et l'extraction d'aperçu. Ils sont ignorés silencieusement si FFmpeg est introuvable, afin que le reste de la suite reste exécutable sur une machine sans outillage vidéo.
+
+L'import de presets est testé sur des JSON synthétiques et, lorsque `LISERE_PRESET_SAMPLE_DIR` pointe vers un dossier de presets, sur un corpus local. La file d'attente est testée avec un renderer factice : ordre d'exécution, instantané des réglages, échec isolé, arrêt en cours et états finaux.
+
+RIFE est testé à trois niveaux : inférence réelle sur deux images, rendu vidéo avec un interpolateur factice, puis rendu réel avec le modèle livré (10 → 20 i/s, audio conservé).
+
+## Structure du dépôt
+
+```text
+Lisere.slnx
+src/
+  Lisere/
+  Lisere.Core/
+  Lisere.Ai/
+  Lisere.Video/
+tests/
+  Lisere.App.Tests/
+  Lisere.Core.Tests/
+  Lisere.Ai.Tests/
+  Lisere.Video.Tests/
+models/
+  catalog.json
+  onnx/
+```

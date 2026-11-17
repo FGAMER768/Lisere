@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Lisere.Core\Lisere.Core.csproj" />
+    <ProjectReference Include="..\Lisere.Ai\Lisere.Ai.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "models": [
+    {
+      "id": "onnx-srcnn-3x",
+      "displayName": "Super-Resolution CNN ×3",
+      "family": "super-resolution",
+      "file": "onnx/super-resolution-10.onnx",
+      "sha256": "85f36ff88cc504a24af5e0602148bc56a8aa09a58eca8c0da2756f3e8186035e",
+      "scale": 3,
+      "inputName": "input",
+      "outputName": "output",
+      "tileSize": 224,
+      "plane": "luma",
+      "license": "Apache-2.0",
+      "source": "https://github.com/onnx/models/tree/main/validated/vision/super_resolution/sub_pixel_cnn_2016",
+      "description": "Réseau de super-résolution sous-pixel (Shi et al., 2016) exécuté sur le plan de luminance via ONNX Runtime. Modèle générique, non spécifique à un logiciel propriétaire."
+    },
+    {
+      "id": "rife-4.9-onnx",
+      "displayName": "RIFE 4.9 (interpolation ×2)",
+      "family": "frame-interpolation",
+      "file": "onnx/rife49.onnx",
+      "sha256": "76e4cef9ab42fa7dd4e8f6e4aba47462051e3faa969e4bca6479784fbab0ac6f",
+      "scale": 1,
+      "inputName": "img0",
+      "outputName": "output",
+      "tileSize": 0,
+      "plane": "rgb",
+      "license": "MIT",
+      "source": "https://huggingface.co/edgetools/rife",
+      "description": "Export ONNX de RIFE 4.9 (Practical-RIFE, licence MIT), conditionné par un timestep. Deux images RGB en entrée, une image intermédiaire en sortie. Exécuté via ONNX Runtime, DirectML sur iGPU Intel ou CPU en repli."
+    }
+  ]
+}

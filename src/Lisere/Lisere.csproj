@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>Lisere</AssemblyName>
+    <RootNamespace>Lisere</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Lisere.Core\Lisere.Core.csproj" />
+    <ProjectReference Include="..\Lisere.Ai\Lisere.Ai.csproj" />
+    <ProjectReference Include="..\Lisere.Video\Lisere.Video.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\models\catalog.json" Link="models\catalog.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\models\onnx\*.onnx" Link="models\onnx\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
