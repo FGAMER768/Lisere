@@ -23,7 +23,7 @@ public partial class MainWindow : FluentWindow
 
         InitializeComponent();
         ShowPage(enhancePage, ImageTabButton, VideoTabButton);
-        dialogService.Attach(MessageDialog, WaitDialog);
+        dialogService.Attach(MessageDialog, WaitDialog, RenderPlanDialog);
         dialogService.DialogOpenStateChanged += OnDialogOpenStateChanged;
     }
 

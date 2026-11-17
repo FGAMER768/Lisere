@@ -8,16 +8,42 @@ namespace Lisere.Video.Rendering;
 /// </summary>
 public static class VideoCommandBuilder
 {
-    public static IReadOnlyList<string> BuildDecodeArguments(VideoInfo info) =>
-    [
-        "-v", "error",
-        "-nostdin",
-        "-i", info.Path,
-        "-map", "0:v:0",
-        "-f", "rawvideo",
-        "-pix_fmt", "rgb24",
-        "pipe:1"
-    ];
+    public static IReadOnlyList<string> BuildDecodeArguments(
+        VideoInfo info,
+        double? startSeconds = null,
+        double? durationSeconds = null)
+    {
+        var arguments = new List<string>
+        {
+            "-v", "error",
+            "-nostdin"
+        };
+
+        // Input-side seek: FFmpeg decodes from the previous keyframe and discards
+        // the gap (-accurate_seek is its default when transcoding), so the window
+        // stays exact without decoding the whole file from the start.
+        if (startSeconds is > 0)
+        {
+            arguments.AddRange(["-ss", Format(startSeconds.Value)]);
+        }
+
+        arguments.AddRange(["-i", info.Path]);
+
+        if (durationSeconds is > 0)
+        {
+            arguments.AddRange(["-t", Format(durationSeconds.Value)]);
+        }
+
+        arguments.AddRange(
+        [
+            "-map", "0:v:0",
+            "-f", "rawvideo",
+            "-pix_fmt", "rgb24",
+            "pipe:1"
+        ]);
+
+        return arguments;
+    }
 
     public static IReadOnlyList<string> BuildEncodeArguments(
         string audioSourcePath,
@@ -38,10 +64,17 @@ public static class VideoCommandBuilder
             "-pix_fmt", "rgb24",
             "-s", $"{width}x{height}",
             "-r", Format(frameRate),
-            "-i", "pipe:0",
-            "-i", audioSourcePath,
-            "-map", "0:v:0"
+            "-i", "pipe:0"
         };
+
+        // A preview carries no audio, so opening the source a second time would
+        // only add a decoder for a stream nobody maps.
+        if (hasAudio)
+        {
+            arguments.AddRange(["-i", audioSourcePath]);
+        }
+
+        arguments.AddRange(["-map", "0:v:0"]);
 
         if (hasAudio)
         {

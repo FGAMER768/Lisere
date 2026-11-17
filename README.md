@@ -12,18 +12,20 @@ L'interface propose deux espaces :
 ### Image
 
 - Ouverture des images prises en charge par Windows Imaging Component, avec normalisation des cas irréguliers.
-- Comparaison avant/après avec séparateur déplaçable et curseur de position.
+- Comparaison avant/après avec séparateur déplaçable sur toute la hauteur de l'image et curseur de position.
+- L'ouverture affiche l'original : l'amélioration n'est calculée qu'au clic sur **Améliorer l'image**.
 - Préréglages Chroma, Auto, Manuel et Auto + relatif moyen.
 - Réglages de correction de compression, réduction du bruit, netteté, récupération des détails, réduction du halo et lissage des contours.
 - Réglages complémentaires pour les détails d'origine et l'ajout de bruit.
 - Estimation automatique des paramètres à partir du contenu de l'image.
 - Avertissements lorsque les réglages sortent des plages conseillées.
 - Export JPEG avec une qualité de 92.
+- Annulation des chargements, traitements et exports depuis la fenêtre d'attente.
 
 ### Vidéo
 
 - Analyse du fichier avec `ffprobe` : résolution, cadence, durée, codec, présence et codec audio.
-- Aperçu avant/après sur une image extraite à la position choisie.
+- Aperçu avant/après sur une image extraite à la position choisie ; l'ouverture ne calcule pas l'aperçu, il faut le demander explicitement (`Ctrl+Entrée`).
 - Application des six mêmes paramètres à chaque image, avec estimation Auto échantillonnée sur le clip.
 - Moteurs interchangeables :
   - **Lisere Classic** : pipeline local déterministe, toujours disponible ;
@@ -37,12 +39,19 @@ L'interface propose deux espaces :
 - **File d'attente multi-clips** : chaque job fige la source et les réglages, les exports s'exécutent séquentiellement, un échec n'interrompt pas les suivants, l'arrêt annule le job en cours.
 - Export MP4 H.264 ou H.265, qualité CRF réglable, piste audio d'origine conservée (AAC 192 kbit/s).
 - Progression par étape et annulation réelle des processus FFmpeg.
+- **Estimation avant rendu** : nombre d'images et durée approximative recalculés selon le moteur, la résolution, la cadence, RIFE et les passes optionnelles. Elle apparaît dans la colonne de réglages et dans la carte d'export.
+- **Confirmation avant rendu** : un dialogue montre la source et le rendu courant, les réglages, la destination et l'estimation ; rien n'est lancé sans validation.
+- **Aperçu rendu d'une seconde** : rend le segment réel autour de la position choisie avec les mêmes réglages, puis affiche la frame obtenue.
+- **Export de l'aperçu** : le même segment d'une seconde peut être écrit vers un fichier choisi, sans audio, pour l'inspecter ou le conserver.
+- **Frame en direct** : pendant un rendu, la dernière image produite remplace l'aperçu et reste visible après une annulation.
+- **Zoom synchronisé** : molette, boutons ou touches `+` / `−` / `0` sur la comparaison ; avant et après zooment ensemble, le point sous le curseur reste en place (le centre reste au centre), et un glisser déplace l'image agrandie.
 
 ### Commun
 
 - Interface française et anglaise, bascule immédiate depuis la barre de titre et mémorisation du choix.
 - Traitement asynchrone, dialogues d'attente et messages d'erreur explicites.
 - Raccourcis clavier : `Ctrl+O` ouvrir, `Ctrl+Entrée` lancer l'aperçu ou l'amélioration, `Ctrl+S` exporter.
+- Annulation accessible pour les opérations image, l'analyse et l'aperçu vidéo, les rendus et la file d'attente.
 
 ## Prérequis
 
@@ -74,19 +83,20 @@ dotnet build Lisere.slnx
 
 1. Cliquez sur **Ouvrir** ou utilisez `Ctrl+O` pour charger une image.
 2. Choisissez un préréglage ou ajustez les curseurs et les champs numériques.
-3. Cliquez sur **Améliorer l'image** ou utilisez `Ctrl+Entrée`.
+3. Cliquez sur **Améliorer l'image** ou utilisez `Ctrl+Entrée` : le rendu n'est jamais lancé au chargement.
 4. Faites glisser le séparateur de l'aperçu pour comparer l'avant et l'après.
 5. Cliquez sur **Exporter en JPEG** ou utilisez `Ctrl+S`.
 
 ### Vidéo
 
 1. Ouvrez l'onglet **Vidéo**, puis cliquez sur **Ouvrir** (`Ctrl+O`).
-2. Liseré analyse le fichier et affiche un aperçu de la frame située à la position choisie.
+2. Liseré analyse le fichier et affiche la frame source située à la position choisie, sans calculer l'après.
 3. Choisissez le moteur, le préréglage et la résolution ; ajustez les réglages, la cadence, le désentrelacement et la stabilisation.
-4. **Rafraîchir l'aperçu** (`Ctrl+Entrée`) recalcule l'image de comparaison.
+4. **Rafraîchir l'aperçu** (`Ctrl+Entrée`) calcule l'image de comparaison ; rien n'est rendu avant cette action.
 5. **Exporter la vidéo** (`Ctrl+S`) demande la destination puis rend le fichier avec progression et annulation.
 6. Pour plusieurs clips, utilisez **Ajouter à la file** puis **Lancer la file** : chaque ajout fige les réglages courants et demande sa destination.
-7. Pour doubler la cadence avec l'IA, activez **Interpolation RIFE ×2**. La liste de cadence est désactivée : RIFE produit exactement deux images par image source.
+7. **Exporter l'aperçu (1 s)** écrit le segment de comparaison vers un fichier choisi, sans audio.
+8. Pour doubler la cadence avec l'IA, activez **Interpolation RIFE ×2**. La liste de cadence est désactivée : RIFE produit exactement deux images par image source.
 
 La stabilisation, le désentrelacement et l'interpolation FFmpeg sont des passes supplémentaires ; RIFE s'exécute pendant la boucle de rendu. Toutes allongent nettement le rendu, particulièrement en HD.
 
@@ -157,6 +167,8 @@ Les textes sont regroupés dans `src/Lisere/Lang/Strings.resx` (français) et `s
 - `outSizeMethod` 6 → 1080p et 7 → 2160p sont **déduits** du corpus de presets installé ; les autres méthodes retombent sur la géométrie source.
 - Le grain du preset (taille, sigma, type) est approximé par un seul dosage de bruit.
 - Le mode Auto échantillonne trois positions du clip ; il ne remplace pas un estimateur neuronal dédié.
+- **L'estimation est indicative** : le coût par image est un modèle ancré sur la mesure RIFE 1080p, pas une mesure du clip ; le temps restant affiché pendant le rendu, lui, est calculé sur la progression réelle.
+- **L'aperçu d'une seconde** écrit un MP4 temporaire dans `%TEMP%\Lisere\previews`, purgé après 24 h ; l'export de l'aperçu, lui, va vers le fichier choisi. Les deux conservent les réglages mais pas l'audio.
 - Les moteurs neuronaux s'exécutent sur **DirectML** quand un adaptateur DirectX 12 est disponible (l'iGPU Intel sur cette machine), avec un **repli CPU** dont la raison est affichée dans la note du moteur. Le repli CPU est bien plus lent : l'upscaling neuronal d'une longue vidéo HD reste long dans les deux cas.
 - Le dossier temporaire de rendu est supprimé à la fin ; une annulation supprime aussi les fichiers partiels.
 
@@ -173,12 +185,13 @@ Les textes sont regroupés dans `src/Lisere/Lang/Strings.resx` (français) et `s
 | `tests/Lisere.Video.Tests` | Parseur ffprobe, construction des commandes FFmpeg, rendu bout en bout avec clip généré. |
 | `tests/Lisere.App.Tests` | View models Image et Vidéo, dialogues, codec d'images, localisation. |
 
-La page Image reste organisée autour de `EnhanceViewModel` et `IEnhancementOrchestrator`. La page Vidéo utilise `VideoViewModel`, qui délègue l'analyse à `IVideoProbe`, l'aperçu à `IVideoFrameExtractor` et le rendu à `IVideoRenderService`. Le choix du moteur se fait par `IFrameEnhancer` : l'interface et le pipeline vidéo ignorent totalement quel modèle est utilisé. La file d'attente est portée par le view model : `VideoQueueItem` fige une requête de rendu complète, puis `VideoRenderService` est appelé séquentiellement.
+La page Image reste organisée autour de `EnhanceViewModel` et `IEnhancementOrchestrator`. La page Vidéo utilise `VideoViewModel`, découpé en fichiers partiels par fonction (file d'attente, aperçu, rendu) ; il délègue l'analyse à `IVideoProbe`, les vignettes à `VideoPreviewRenderer`, la construction du plan de confirmation à `VideoRenderPlanFactory` et le rendu à `IVideoRenderService`. Le choix du moteur se fait par `IFrameEnhancer` : l'interface et le pipeline vidéo ignorent totalement quel modèle est utilisé. La file d'attente est portée par `VideoQueueItem`, qui fige une requête de rendu complète ; `VideoQueueRunner` appelle ensuite `VideoRenderService` séquentiellement, sans arrêter la file sur l'échec d'un clip.
 
 Le catalogue `models/catalog.json` décrit chaque modèle (fichier, échelle, entrée/sortie, licence, empreinte). Un modèle absent ou modifié est signalé comme indisponible, avec la raison, et ne peut pas être utilisé.
 
 ### Documentation
 
+- [GUIDE-UTILISATION.md](GUIDE-UTILISATION.md) : guide complet de l'application, des pages Image et Vidéo, de chaque réglage et de l'annulation.
 - [models/README.md](models/README.md) : provenance, licence et vérification des modèles.
 
 ## Tests
@@ -189,7 +202,7 @@ dotnet test Lisere.slnx
 
 La solution contient quatre projets de tests xUnit : `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` et `Lisere.App.Tests`.
 
-État actuel : **133 tests réussis** (32 Core, 12 Ai, 25 Video, 64 App), 0 avertissement de build.
+État actuel : **173 tests réussis** (32 Core, 13 Ai, 35 Video, 93 App), 0 avertissement de build. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model.
 
 Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le rendu, la conservation de l'audio, le désentrelacement, la taille exacte, l'annulation et l'extraction d'aperçu. Ils sont ignorés silencieusement si FFmpeg est introuvable, afin que le reste de la suite reste exécutable sur une machine sans outillage vidéo.
 

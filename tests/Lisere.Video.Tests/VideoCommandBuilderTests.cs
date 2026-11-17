@@ -74,7 +74,7 @@ public class VideoCommandBuilderTests
     }
 
     [Fact]
-    public void EncodingWithoutAudioDoesNotMapAnAudioStream()
+    public void EncodingWithoutAudioDoesNotMapAnAudioStreamOrOpenASecondInput()
     {
         var arguments = VideoCommandBuilder.BuildEncodeArguments(
             "input.mp4",
@@ -89,6 +89,8 @@ public class VideoCommandBuilderTests
 
         Assert.DoesNotContain("1:a:0", arguments);
         Assert.DoesNotContain("-shortest", arguments);
+        Assert.Equal(1, arguments.Count(argument => argument == "-i"));
+        Assert.DoesNotContain("input.mp4", arguments);
     }
 
     [Fact]

@@ -12,6 +12,7 @@ public sealed class DialogService : IDialogService
     private bool _isWaitOpen;
     private MessageDialog? _messageDialog;
     private WaitDialog? _waitDialog;
+    private RenderPlanDialog? _renderPlanDialog;
 
     public DialogService(ILocalizationService localization) =>
         _localization = localization;
@@ -20,10 +21,33 @@ public sealed class DialogService : IDialogService
 
     public event EventHandler? DialogOpenStateChanged;
 
-    public void Attach(MessageDialog messageDialog, WaitDialog waitDialog)
+    public void Attach(
+        MessageDialog messageDialog,
+        WaitDialog waitDialog,
+        RenderPlanDialog renderPlanDialog)
     {
         _messageDialog = messageDialog;
         _waitDialog = waitDialog;
+        _renderPlanDialog = renderPlanDialog;
+    }
+
+    public async Task<bool> ConfirmRenderAsync(RenderPlan plan)
+    {
+        if (_renderPlanDialog is null)
+        {
+            return true;
+        }
+
+        SetMessageOpen(true);
+
+        try
+        {
+            return await _renderPlanDialog.ShowAsync(plan);
+        }
+        finally
+        {
+            SetMessageOpen(false);
+        }
     }
 
     public async Task ShowMessageAsync(string message, DialogKind kind)
@@ -54,7 +78,7 @@ public sealed class DialogService : IDialogService
         }
     }
 
-    public async Task ShowWaitAsync(string message)
+    public async Task ShowWaitAsync(string message, Action? onCancel = null)
     {
         if (_waitDialog is null)
         {
@@ -65,7 +89,12 @@ public sealed class DialogService : IDialogService
 
         try
         {
-            await _waitDialog.ShowAsync(message, _localization["dialogWaitTitle"]);
+            await _waitDialog.ShowAsync(
+                message,
+                _localization["dialogWaitTitle"],
+                _localization["actionCancel"],
+                _localization["statusCanceling"],
+                onCancel);
         }
         catch
         {

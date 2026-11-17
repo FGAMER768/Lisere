@@ -3,7 +3,53 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              AutomationProperties.Name="Comparaison avant et après"
+             KeyDown="OnStageKeyDown"
              x:Name="Root">
+    <UserControl.Resources>
+        <!-- The zoom pill keeps its own dark surface, so its buttons must not
+             inherit the light/dark theme hover brushes: white on white would
+             disappear in light mode. -->
+        <Style x:Key="ZoomButton" TargetType="Button">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="#FFF2F2F2" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#33FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#4DFFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#FF60CDFF" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
@@ -13,38 +59,74 @@
         <Grid x:Name="Stage"
               Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
               ClipToBounds="True"
+              Focusable="True"
+              AutomationProperties.HelpText="Molette ou touches + et − pour zoomer, glisser pour déplacer, 0 pour ajuster."
+              MouseLeftButtonDown="OnStageMouseLeftButtonDown"
+              MouseLeftButtonUp="OnStageMouseLeftButtonUp"
+              MouseMove="OnStageMouseMove"
+              PreviewMouseWheel="OnStageMouseWheel"
               SizeChanged="OnStageSizeChanged">
-            <Grid x:Name="ImageLayer"
-                  HorizontalAlignment="Center"
-                  VerticalAlignment="Center">
-                <Image x:Name="AfterLayerImage"
-                       AutomationProperties.Name="Aperçu après"
-                   RenderOptions.BitmapScalingMode="HighQuality"
-                   Source="{Binding AfterImage, ElementName=Root}"
-                       Stretch="Fill" />
 
-            <Grid x:Name="BeforeLayer"
-                  HorizontalAlignment="Left"
+            <!-- One transformed host carries both layers, so a zoom applies to
+                 the before and after images at the same time. Scaling about the
+                 centre keeps the viewport centre fixed, which is what makes the
+                 wheel zoom feel anchored instead of drifting. -->
+            <Grid x:Name="ZoomHost"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  RenderTransformOrigin="0.5,0.5"
                   ClipToBounds="True">
-                    <Image x:Name="BeforeLayerImage"
-                           Width="{Binding ActualWidth, ElementName=ImageLayer}"
-                           Height="{Binding ActualHeight, ElementName=ImageLayer}"
-                       HorizontalAlignment="Left"
-                       VerticalAlignment="Top"
-                       AutomationProperties.Name="Aperçu avant"
-                       RenderOptions.BitmapScalingMode="HighQuality"
-                       Source="{Binding BeforeImage, ElementName=Root}"
-                           Stretch="Fill" />
+                <Grid.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="ZoomScale" ScaleX="1" ScaleY="1" />
+                        <TranslateTransform x:Name="ZoomTranslate" X="0" Y="0" />
+                    </TransformGroup>
+                </Grid.RenderTransform>
+
+                <Grid x:Name="ImageLayer" ClipToBounds="True">
+                    <Image x:Name="AfterLayerImage"
+                           AutomationProperties.Name="Aperçu après"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           Source="{Binding AfterImage, ElementName=Root}"
+                           Stretch="UniformToFill" />
+
+                    <Grid x:Name="BeforeLayer"
+                          HorizontalAlignment="Left"
+                          ClipToBounds="True">
+                        <Image x:Name="BeforeLayerImage"
+                               Width="{Binding ActualWidth, ElementName=ImageLayer}"
+                               Height="{Binding ActualHeight, ElementName=ImageLayer}"
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Top"
+                               AutomationProperties.Name="Aperçu avant"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               Source="{Binding BeforeImage, ElementName=Root}"
+                               Stretch="UniformToFill" />
+                    </Grid>
+                </Grid>
             </Grid>
 
+            <!-- The guide lives in stage space, not inside the zoom transform:
+                 it keeps a constant thickness and a constant-size grip at any
+                 zoom level, and follows the transformed content position. -->
             <Border x:Name="Divider"
                     Width="2"
                     HorizontalAlignment="Left"
-                    Background="{ui:ThemeResource TextFillColorPrimaryBrush}" />
+                    VerticalAlignment="Top"
+                    Background="#FFF7F7F7"
+                    IsHitTestVisible="False">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="4"
+                                      Color="#FF000000"
+                                      Opacity="0.8"
+                                      ShadowDepth="0" />
+                </Border.Effect>
+            </Border>
 
             <Thumb x:Name="DividerThumb"
-                   Width="24"
+                   Width="28"
                    HorizontalAlignment="Left"
+                   VerticalAlignment="Top"
                    AutomationProperties.HelpText="Utilisez les flèches gauche et droite."
                    AutomationProperties.Name="Position de comparaison"
                    Background="Transparent"
@@ -56,31 +138,90 @@
                 <Thumb.Template>
                     <ControlTemplate TargetType="Thumb">
                         <Grid Background="Transparent">
-                            <Border Width="18"
-                                    Height="34"
+                            <Border x:Name="GripBorder"
+                                    Width="20"
+                                    Height="40"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
-                                    Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-                                    BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="17">
+                                    Background="#F21B1B1B"
+                                    BorderBrush="#FFFFFFFF"
+                                    BorderThickness="1.5"
+                                    CornerRadius="10">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="6"
+                                                      Color="#FF000000"
+                                                      Opacity="0.6"
+                                                      ShadowDepth="1" />
+                                </Border.Effect>
                                 <StackPanel HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Orientation="Horizontal">
                                     <Border Width="2"
                                             Height="12"
                                             Margin="0,0,3,0"
-                                            Background="{ui:ThemeResource TextFillColorSecondaryBrush}" />
+                                            Background="#FFFFFFFF" />
                                     <Border Width="2"
                                             Height="12"
-                                            Background="{ui:ThemeResource TextFillColorSecondaryBrush}" />
+                                            Background="#FFFFFFFF" />
                                 </StackPanel>
                             </Border>
                         </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="GripBorder"
+                                        Property="BorderBrush"
+                                        Value="#FF60CDFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Thumb.Template>
             </Thumb>
-        </Grid>
+
+            <Border Margin="10"
+                    Padding="3"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Background="#E61A1A1A"
+                    BorderBrush="#40FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="10">
+                <StackPanel Orientation="Horizontal">
+                    <Button AutomationProperties.Name="Zoom arrière"
+                            Click="OnZoomOutClick"
+                            Content="−"
+                            Style="{StaticResource ZoomButton}"
+                            ToolTip="Zoom arrière (molette, −)" />
+                    <Border Width="1"
+                            Height="18"
+                            Margin="4,0"
+                            VerticalAlignment="Center"
+                            Background="#33FFFFFF" />
+                    <Button Width="56"
+                            AutomationProperties.Name="Ajuster à la fenêtre"
+                            Click="OnZoomResetClick"
+                            IsEnabled="{Binding IsZoomed, ElementName=Root}"
+                            Style="{StaticResource ZoomButton}"
+                            ToolTip="Ajuster à la fenêtre (0)">
+                        <TextBlock x:Name="ZoomText"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="#FFF2F2F2"
+                                   Text="100%" />
+                    </Button>
+                    <Border Width="1"
+                            Height="18"
+                            Margin="4,0"
+                            VerticalAlignment="Center"
+                            Background="#33FFFFFF" />
+                    <Button AutomationProperties.Name="Zoom avant"
+                            Click="OnZoomInClick"
+                            Content="+"
+                            Style="{StaticResource ZoomButton}"
+                            ToolTip="Zoom avant (molette, +)" />
+                </StackPanel>
+            </Border>
         </Grid>
 
         <Grid Grid.Row="1" Margin="10,8,10,0">
@@ -93,12 +234,14 @@
                        FontSize="12"
                        Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                        Text="Avant" />
-            <Slider Grid.Column="1"
+            <Slider x:Name="ComparisonSlider"
+                    Grid.Column="1"
                     Margin="10,0"
                     AutomationProperties.Name="Position de comparaison"
                     IsSnapToTickEnabled="True"
                     Maximum="100"
                     Minimum="0"
+                    Style="{StaticResource ParameterSlider}"
                     TickFrequency="1"
                     Value="{Binding ComparisonPosition, ElementName=Root, Mode=TwoWay}" />
             <TextBlock Grid.Column="2"

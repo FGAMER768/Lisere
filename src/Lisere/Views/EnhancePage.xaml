@@ -8,12 +8,7 @@
 
 
     <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <Grid Grid.Row="0">
+        <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="18" />
@@ -379,30 +374,5 @@
             </Grid>
         </Grid>
 
-        <Border Grid.Row="1"
-                Margin="0,12,18,0"
-                Padding="12,8"
-                Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-                BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <ui:ProgressRing Width="16"
-                                 Height="16"
-                                 Margin="0,0,8,0"
-                                 IsIndeterminate="True"
-                                 Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibility}}" />
-                <TextBlock Grid.Column="1"
-                           VerticalAlignment="Center"
-                           AutomationProperties.LiveSetting="Polite"
-                           FontSize="13"
-                           Text="{Binding StatusMessage}"
-                           TextTrimming="CharacterEllipsis" />
-            </Grid>
-        </Border>
     </Grid>
 </UserControl>

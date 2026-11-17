@@ -51,6 +51,7 @@ public class EnhanceViewModelDialogTests
         var viewModel = CreateViewModel(dialogs, codec, orchestrator);
 
         await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
 
         var hideIndex = dialogs.Events.IndexOf("hide");
         var warningIndex = FindMessageIndex(dialogs.Events, DialogKind.Warning);
@@ -84,8 +85,8 @@ public class EnhanceViewModelDialogTests
         await viewModel.OpenCommand.ExecuteAsync(null);
 
         Assert.Contains("wait:Chargement de l'image...", dialogs.Events);
-        Assert.Contains("wait:Traitement en cours...", dialogs.Events);
-        Assert.Equal(2, dialogs.Events.Count(entry => entry == "hide"));
+        Assert.DoesNotContain("wait:Traitement en cours...", dialogs.Events);
+        Assert.Equal(1, dialogs.Events.Count(entry => entry == "hide"));
     }
 
     [Fact]
@@ -95,6 +96,7 @@ public class EnhanceViewModelDialogTests
         var viewModel = CreateViewModel(dialogs, new FakeImageCodec(), new FakeOrchestrator());
 
         await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
 
         Assert.DoesNotContain(
             dialogs.Events,
@@ -124,6 +126,28 @@ public class EnhanceViewModelDialogTests
     }
 
     [Fact]
+    public async Task CancelButtonCancelsTheRunningEnhancementAndShowsTheCanceledStatus()
+    {
+        var dialogs = new FakeDialogService();
+        var orchestrator = new BlockingOrchestrator();
+        var viewModel = CreateViewModel(dialogs, new FakeImageCodec(), orchestrator);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        var enhancement = viewModel.EnhanceCommand.ExecuteAsync(null);
+        await orchestrator.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.NotNull(dialogs.WaitCancel);
+        dialogs.WaitCancel!();
+        await enhancement;
+
+        Assert.False(viewModel.IsBusy);
+        Assert.Equal("Opération annulée.", viewModel.StatusMessage);
+        Assert.DoesNotContain(
+            dialogs.Events,
+            entry => entry.StartsWith("message:", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task EnhancementFailureOpensAnErrorDialog()
     {
         var dialogs = new FakeDialogService();
@@ -134,6 +158,7 @@ public class EnhanceViewModelDialogTests
         var viewModel = CreateViewModel(dialogs, new FakeImageCodec(), orchestrator);
 
         await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
 
         Assert.Contains(
             dialogs.Events,
@@ -150,6 +175,7 @@ public class EnhanceViewModelDialogTests
         var viewModel = CreateViewModel(dialogs, codec, new FakeOrchestrator(), files);
 
         await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
         dialogs.Events.Clear();
 
         await viewModel.SaveCommand.ExecuteAsync(null);
@@ -167,6 +193,7 @@ public class EnhanceViewModelDialogTests
         var viewModel = CreateViewModel(dialogs, codec, new FakeOrchestrator());
 
         await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
         dialogs.Events.Clear();
 
         await viewModel.SaveCommand.ExecuteAsync(null);
@@ -187,6 +214,7 @@ public class EnhanceViewModelDialogTests
         var viewModel = CreateViewModel(dialogs, codec, new FakeOrchestrator(), files);
 
         await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
         dialogs.Events.Clear();
 
         await viewModel.SaveCommand.ExecuteAsync(null);
@@ -204,6 +232,7 @@ public class EnhanceViewModelDialogTests
         var viewModel = CreateViewModel(dialogs, new FakeImageCodec(), new FakeOrchestrator());
 
         await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.OpenCommand.CanExecute(null));
         Assert.True(viewModel.EnhanceCommand.CanExecute(null));
@@ -234,6 +263,24 @@ public class EnhanceViewModelDialogTests
         await viewModel.OpenCommand.ExecuteAsync(null);
 
         Assert.Equal(50, viewModel.ComparisonPosition);
+    }
+
+    [Fact]
+    public async Task OpeningAnImageShowsTheSourceWithoutRenderingIt()
+    {
+        var orchestrator = new FakeOrchestrator();
+        var viewModel = CreateViewModel(
+            new FakeDialogService(),
+            new FakeImageCodec(),
+            orchestrator);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.HasImage);
+        Assert.False(viewModel.HasEnhanced);
+        Assert.Null(viewModel.AfterImage);
+        Assert.Equal(0, orchestrator.Calls);
+        Assert.Contains("Image chargée", viewModel.StatusMessage, StringComparison.Ordinal);
     }
 
     private static int FindMessageIndex(
@@ -276,21 +323,28 @@ public class EnhanceViewModelDialogTests
             DialogOpenStateChanged?.Invoke(this, EventArgs.Empty);
         }
 
+        public Task<bool> ConfirmRenderAsync(RenderPlan plan) =>
+            Task.FromResult(true);
+
         public Task ShowMessageAsync(string message, DialogKind kind)
         {
             Events.Add($"message:{kind}:{message}");
             return Task.CompletedTask;
         }
 
-        public Task ShowWaitAsync(string message)
+        public Action? WaitCancel { get; private set; }
+
+        public Task ShowWaitAsync(string message, Action? onCancel = null)
         {
             Events.Add($"wait:{message}");
+            WaitCancel = onCancel;
             return Task.CompletedTask;
         }
 
         public Task HideWaitAsync()
         {
             Events.Add("hide");
+            WaitCancel = null;
             return Task.CompletedTask;
         }
     }
@@ -345,6 +399,26 @@ public class EnhanceViewModelDialogTests
             Task.FromResult<ImageSource>(null!);
     }
 
+    private sealed class BlockingOrchestrator : IEnhancementOrchestrator
+    {
+        public TaskCompletionSource Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<EnhancementResult> EnhanceAsync(
+            EnhancementRequest request,
+            CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return new EnhancementResult(
+                new RgbImage(4, 4),
+                EnhancementParameters.Zero,
+                EnhancementMode.ChromaEnhanceMain,
+                "Chroma",
+                []);
+        }
+    }
+
     private sealed class FakeOrchestrator : IEnhancementOrchestrator
     {
         public EnhancementResult Result { get; init; } = new(
@@ -356,11 +430,16 @@ public class EnhanceViewModelDialogTests
 
         public Exception? EnhanceException { get; set; }
 
+        public int Calls { get; private set; }
+
         public Task<EnhancementResult> EnhanceAsync(
             EnhancementRequest request,
-            CancellationToken cancellationToken) =>
-            EnhanceException is null
+            CancellationToken cancellationToken)
+        {
+            Calls++;
+            return EnhanceException is null
                 ? Task.FromResult(Result)
                 : Task.FromException<EnhancementResult>(EnhanceException);
+        }
     }
 }

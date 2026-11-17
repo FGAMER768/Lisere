@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -19,22 +21,24 @@ namespace Lisere.ViewModels;
 
 public sealed partial class VideoViewModel : ObservableObject, IDisposable
 {
-    private const int PreviewWidth = 1600;
-    private const int PreviewHeight = 900;
     private const int AutoSampleCount = 3;
+    private const double PreviewWindowSeconds = 1;
 
     private readonly IFileDialogService _fileDialogService;
     private readonly IVideoProbe _probe;
-    private readonly IVideoFrameExtractor _frameExtractor;
     private readonly IVideoRenderService _renderService;
-    private readonly IImageCodec _imageCodec;
+    private readonly VideoPreviewRenderer _previewRenderer;
+    private readonly VideoQueueRunner _queueRunner;
     private readonly IDialogService _dialogService;
     private readonly ILocalizationService _localization;
     private readonly IFrameInterpolator? _rife;
+    private readonly Stopwatch _renderWatch = new();
+    private int _frameVersion;
 
     private VideoInfo? _video;
     private RgbImage? _previewFrame;
     private IReadOnlyList<RgbImage>? _autoSamples;
+    private CancellationTokenSource? _busyCancellation;
     private CancellationTokenSource? _renderCancellation;
     private CancellationTokenSource? _presetCancellation;
     private CancellationTokenSource? _queueCancellation;
@@ -52,6 +56,16 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private ImageSource? _afterImage;
+
+    /// <summary>Last frame produced by the running render, kept after a cancel.</summary>
+    [ObservableProperty]
+    private ImageSource? _renderingFrame;
+
+    [ObservableProperty]
+    private string _estimateText = string.Empty;
+
+    [ObservableProperty]
+    private string _previewEstimateText = string.Empty;
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;
@@ -165,9 +179,9 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     {
         _fileDialogService = fileDialogService;
         _probe = probe;
-        _frameExtractor = frameExtractor;
         _renderService = renderService;
-        _imageCodec = imageCodec;
+        _previewRenderer = new VideoPreviewRenderer(frameExtractor, imageCodec, probe);
+        _queueRunner = new VideoQueueRunner(renderService);
         _dialogService = dialogService;
         _localization = localization;
         _rife = interpolators.FirstOrDefault(interpolator => interpolator.IsAvailable)
@@ -241,6 +255,10 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     public bool CanChooseFrameRate => !UseRife;
 
+    public bool IsCancellableBusy => IsBusy && !IsRendering && !IsQueueRunning;
+
+    public bool HasEstimate => EstimateText.Length > 0;
+
     public string RifeNote => _rife is null
         ? Strings["videoRifeMissing"]
         : _rife.IsAvailable
@@ -270,432 +288,22 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
                 ? AppLanguage.English
                 : AppLanguage.French);
 
-    [RelayCommand(CanExecute = nameof(CanOpen), AllowConcurrentExecutions = false)]
-    private async Task OpenAsync()
-    {
-        if (!IsToolchainAvailable)
-        {
-            await ShowErrorAsync("videoErrorToolchain", new InvalidOperationException(ToolchainNote));
-            return;
-        }
-
-        var path = _fileDialogService.PickVideo();
-        if (path is null)
-        {
-            return;
-        }
-
-        IsBusy = true;
-        ClearError();
-        SetStatus("videoStatusProbing");
-        Exception? error = null;
-
-        try
-        {
-            var video = await _probe.ProbeAsync(path, CancellationToken.None);
-            _video = video;
-            _autoSamples = null;
-            _previewFrame = null;
-            AfterImage = null;
-            HasPreview = false;
-            HasVideo = true;
-            ComparisonPosition = 50.0;
-            PreviewPositionPercent = 25.0;
-            UpdateVideoInfo();
-            await LoadPreviewFrameAsync(video);
-
-            // Manual means "use the current sliders": opening another clip must
-            // not wipe values, including a video preset imported before opening.
-            if (SelectedPreset is not { Mode: EnhancementMode.Manual })
-            {
-                await ApplyPresetAsync(SelectedPreset?.Mode ?? EnhancementMode.ChromaEnhanceMain);
-            }
-            else
-            {
-                UpdateWarnings();
-            }
-
-            if (HasAvailableEngine)
-            {
-                await RefreshPreviewCoreAsync();
-                SetStatus("videoStatusOpened");
-            }
-            else
-            {
-                SetStatus("videoStatusEngineUnavailable", EngineUnavailableReason);
-            }
-        }
-        catch (Exception exception)
-        {
-            error = exception;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-
-        if (error is not null)
-        {
-            await ShowErrorAsync("videoErrorProbe", error);
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanAddToQueue))]
-    private void AddToQueue()
-    {
-        if (_video is null || SelectedEngine is null)
-        {
-            return;
-        }
-
-        var target = _fileDialogService.PickVideoTarget(
-            Path.GetFileNameWithoutExtension(_video.Path) + "-lisere.mp4");
-        if (target is null)
-        {
-            return;
-        }
-
-        if (Queue.Any(job => string.Equals(
-            job.OutputPath,
-            target,
-            StringComparison.OrdinalIgnoreCase)))
-        {
-            _ = ShowErrorAsync(
-                "videoErrorQueueDuplicate",
-                new InvalidOperationException(Path.GetFileName(target)));
-            return;
-        }
-
-        var item = new VideoQueueItem(
-            Path.GetFileName(_video.Path),
-            BuildRenderRequest(target));
-        item.StatusText = QueueStateText(VideoQueueState.Pending);
-
-        Queue.Add(item);
-        SetStatus("videoStatusQueued", Path.GetFileName(target));
-    }
-
-    [RelayCommand(CanExecute = nameof(CanRunQueue), AllowConcurrentExecutions = false)]
-    private async Task RunQueueAsync()
-    {
-        if (IsQueueRunning)
-        {
-            return;
-        }
-
-        var jobs = Queue
-            .Where(job => job.State is VideoQueueState.Pending or VideoQueueState.Failed or VideoQueueState.Cancelled)
-            .ToArray();
-        if (jobs.Length == 0)
-        {
-            return;
-        }
-
-        _queueCancellation?.Dispose();
-        var cancellation = new CancellationTokenSource();
-        _queueCancellation = cancellation;
-
-        IsQueueRunning = true;
-        IsBusy = true;
-        ClearError();
-        SetStatus("videoStatusQueueRunning", jobs.Length);
-        var canceled = false;
-
-        try
-        {
-            foreach (var job in jobs)
-            {
-                if (cancellation.IsCancellationRequested)
-                {
-                    canceled = true;
-                    break;
-                }
-
-                job.State = VideoQueueState.Running;
-                job.StatusText = QueueStateText(VideoQueueState.Running);
-                job.ProgressPercent = 0;
-
-                try
-                {
-                    var result = await _renderService.RenderAsync(
-                        job.Request,
-                        new Progress<VideoRenderProgress>(value =>
-                        {
-                            // Progress<T> posts asynchronously; a late report must
-                            // not move a finished job backwards.
-                            if (job.State == VideoQueueState.Running &&
-                                value.OverallPercent >= job.ProgressPercent)
-                            {
-                                job.ProgressPercent = value.OverallPercent;
-                            }
-                        }),
-                        cancellation.Token);
-
-                    job.ProgressPercent = 100;
-                    job.State = VideoQueueState.Completed;
-                    job.StatusText = QueueStateText(VideoQueueState.Completed);
-                    _ = result;
-                }
-                catch (OperationCanceledException)
-                {
-                    canceled = true;
-                    job.State = VideoQueueState.Cancelled;
-                    job.StatusText = QueueStateText(VideoQueueState.Cancelled);
-                    break;
-                }
-                catch (Exception exception)
-                {
-                    // One bad clip must not discard the rest of the queue.
-                    job.ErrorMessage = exception.Message;
-                    job.State = VideoQueueState.Failed;
-                    job.StatusText = QueueStateText(VideoQueueState.Failed, exception.Message);
-                }
-            }
-        }
-        finally
-        {
-            if (ReferenceEquals(_queueCancellation, cancellation))
-            {
-                _queueCancellation = null;
-            }
-
-            cancellation.Dispose();
-            IsQueueRunning = false;
-            IsBusy = false;
-        }
-
-        var completed = Queue.Count(job => job.State == VideoQueueState.Completed);
-        SetStatus(
-            canceled ? "videoStatusQueueStopped" : "videoStatusQueueDone",
-            canceled ? null : completed);
-    }
-
-    [RelayCommand(CanExecute = nameof(CanStopQueue))]
-    private void StopQueue()
-    {
-        _queueCancellation?.Cancel();
-        SetStatus("videoStatusQueueStopping");
-    }
-
-    [RelayCommand(CanExecute = nameof(CanClearQueue))]
-    private void ClearQueue()
-    {
-        Queue.Clear();
-        SetStatus("videoStatusQueueCleared");
-    }
-
-    [RelayCommand(CanExecute = nameof(CanImportPreset), AllowConcurrentExecutions = false)]
-    private async Task ImportVideoPresetAsync()
-    {
-        var path = _fileDialogService.PickVideoPreset();
-        if (path is null)
-        {
-            return;
-        }
-
-        ClearError();
-
-        try
-        {
-            var preset = await Task.Run(
-                () => VideoPresetImporter.ParseFile(path));
-
-            _applyingPreset = true;
-            try
-            {
-                AssignParameters(preset.Parameters);
-                RecoverOriginalDetail = preset.RecoverOriginalDetail;
-                AddNoise = preset.AddNoise;
-                Stabilize = preset.Stabilize;
-                Deinterlace = preset.Deinterlace;
-
-                if (preset.TargetHeight is int height)
-                {
-                    _customTargetHeight = height;
-                    var output = OutputOptions.FirstOrDefault(
-                        option => option.TargetHeight == height);
-                    if (output is null)
-                    {
-                        output = new OutputOption($"{height}p", 1, height);
-                        OutputOptions.Add(output);
-                    }
-
-                    SelectedOutput = output;
-                }
-
-                if (preset.TargetFrameRate is double frameRate)
-                {
-                    _customFrameRate = frameRate;
-                    var cadence = FrameRates.FirstOrDefault(
-                        option => option.FrameRate is double value &&
-                            Math.Abs(value - frameRate) < 0.01);
-                    if (cadence is null)
-                    {
-                        cadence = new FrameRateOption($"{frameRate:0.###} i/s", frameRate);
-                        FrameRates.Add(cadence);
-                    }
-
-                    SelectedFrameRate = cadence;
-                }
-
-                _switchingToManual = true;
-                SelectedPreset = Presets.First(option =>
-                    option.Mode == (preset.Auto ? EnhancementMode.Auto : EnhancementMode.Manual));
-                _switchingToManual = false;
-            }
-            finally
-            {
-                _applyingPreset = false;
-            }
-
-            UpdateWarnings();
-            SetStatus(
-                "videoStatusPresetImported",
-                $"{preset.Name} · {preset.ModelId ?? Strings["videoPresetUnknownModel"]}");
-        }
-        catch (Exception exception)
-        {
-            await ShowErrorAsync("videoErrorPreset", exception);
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanPreview), AllowConcurrentExecutions = false)]
-    private async Task RefreshPreviewAsync()
-    {
-        if (!HasAvailableEngine)
-        {
-            // Refuse explicitly instead of letting the engine throw.
-            AfterImage = null;
-            HasPreview = false;
-            await ShowErrorAsync(
-                "videoErrorEngine",
-                new InvalidOperationException(EngineUnavailableReason));
-            return;
-        }
-
-        IsBusy = true;
-        ClearError();
-        Exception? error = null;
-
-        try
-        {
-            await ReloadPreviewFrameAsync();
-            await RefreshPreviewCoreAsync();
-            SetStatus("videoStatusPreviewReady");
-        }
-        catch (Exception exception)
-        {
-            error = exception;
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-
-        if (error is not null)
-        {
-            await ShowErrorAsync("videoErrorPreview", error);
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanRender), AllowConcurrentExecutions = false)]
-    private async Task RenderAsync()
-    {
-        if (_video is null || SelectedEngine is null)
-        {
-            return;
-        }
-
-        var target = _fileDialogService.PickVideoTarget(
-            Path.GetFileNameWithoutExtension(_video.Path) + "-lisere.mp4");
-        if (target is null)
-        {
-            return;
-        }
-
-        _renderCancellation?.Cancel();
-        _renderCancellation?.Dispose();
-        var cancellation = new CancellationTokenSource();
-        _renderCancellation = cancellation;
-
-        IsRendering = true;
-        IsBusy = true;
-        ClearError();
-        ProgressPercent = 0;
-        ProgressText = Strings["videoProgressPreparing"];
-        SetStatus("videoStatusRendering");
-
-        Exception? error = null;
-        var canceled = false;
-
-        try
-        {
-            var result = await _renderService.RenderAsync(
-                BuildRenderRequest(target),
-                new Progress<VideoRenderProgress>(OnRenderProgress),
-                cancellation.Token);
-
-            ProgressPercent = 100;
-            ProgressText = Strings.Format(
-                "videoProgressDone",
-                result.FramesWritten,
-                result.Elapsed.TotalSeconds);
-            SetStatus("videoStatusRendered", Path.GetFileName(result.OutputPath));
-        }
-        catch (OperationCanceledException)
-        {
-            canceled = true;
-            SetStatus("videoStatusCanceled");
-        }
-        catch (Exception exception)
-        {
-            error = exception;
-        }
-        finally
-        {
-            if (ReferenceEquals(_renderCancellation, cancellation))
-            {
-                _renderCancellation = null;
-            }
-
-            cancellation.Dispose();
-            IsRendering = false;
-            IsBusy = false;
-        }
-
-        if (error is not null)
-        {
-            await ShowErrorAsync("videoErrorRender", error);
-            return;
-        }
-
-        if (canceled)
-        {
-            ProgressText = Strings["videoProgressCanceled"];
-            return;
-        }
-
-        if (HasWarnings)
-        {
-            await _dialogService.ShowMessageAsync(WarningsText, DialogKind.Warning);
-        }
-    }
-
-    [RelayCommand(CanExecute = nameof(CanCancelRender))]
-    private void CancelRender()
-    {
-        _renderCancellation?.Cancel();
-        SetStatus("videoStatusCanceling");
-    }
-
     private bool CanOpen() =>
-        IsToolchainAvailable && !IsBusy && !IsRendering && !_dialogService.IsAnyDialogOpen;
+        IsToolchainAvailable &&
+        !IsBusy &&
+        !IsRendering &&
+        !IsQueueRunning &&
+        !_dialogService.IsAnyDialogOpen;
 
     private bool CanPreview() =>
-        HasVideo && !IsBusy && !IsRendering && !_dialogService.IsAnyDialogOpen;
+        HasVideo &&
+        !IsBusy &&
+        !IsRendering &&
+        !IsQueueRunning &&
+        !_dialogService.IsAnyDialogOpen;
 
     private bool CanImportPreset() =>
-        !IsBusy && !IsRendering && !_dialogService.IsAnyDialogOpen;
+        !IsBusy && !IsRendering && !IsQueueRunning && !_dialogService.IsAnyDialogOpen;
 
     private bool CanAddToQueue() =>
         HasVideo &&
@@ -722,20 +330,44 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         HasVideo &&
         !IsBusy &&
         !IsRendering &&
+        !IsQueueRunning &&
         SelectedEngine is { IsAvailable: true } &&
         IsToolchainAvailable &&
         (!UseRife || IsRifeAvailable) &&
         !_dialogService.IsAnyDialogOpen;
 
+    private bool CanRenderPreview() => CanRender();
+
     private bool CanCancelRender() => IsRendering;
 
-    partial void OnIsBusyChanged(bool value) => NotifyCommandStates();
+    private bool CanCancelBusy() => IsCancellableBusy;
 
-    partial void OnIsRenderingChanged(bool value) => NotifyCommandStates();
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsCancellableBusy));
+        NotifyCommandStates();
+    }
 
-    partial void OnIsQueueRunningChanged(bool value) => NotifyCommandStates();
+    partial void OnIsRenderingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsCancellableBusy));
+        NotifyCommandStates();
+    }
 
-    partial void OnHasVideoChanged(bool value) => NotifyCommandStates();
+    partial void OnIsQueueRunningChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsCancellableBusy));
+        NotifyCommandStates();
+    }
+
+    partial void OnHasVideoChanged(bool value)
+    {
+        UpdateEstimate();
+        NotifyCommandStates();
+    }
+
+    partial void OnEstimateTextChanged(string value) =>
+        OnPropertyChanged(nameof(HasEstimate));
 
     partial void OnHasPreviewChanged(bool value) => NotifyCommandStates();
 
@@ -749,7 +381,10 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         ClearQueueCommand.NotifyCanExecuteChanged();
         RefreshPreviewCommand.NotifyCanExecuteChanged();
         RenderCommand.NotifyCanExecuteChanged();
+        RenderPreviewCommand.NotifyCanExecuteChanged();
+        ExportPreviewCommand.NotifyCanExecuteChanged();
         CancelRenderCommand.NotifyCanExecuteChanged();
+        CancelBusyCommand.NotifyCanExecuteChanged();
     }
 
     private void OnDialogOpenStateChanged(object? sender, EventArgs e) => NotifyCommandStates();
@@ -814,267 +449,6 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     partial void OnPreviewPositionPercentChanged(double value) => UpdatePendingStatus();
 
-    private async Task ApplyPresetInBackgroundAsync(EnhancementMode mode)
-    {
-        try
-        {
-            await ApplyPresetAsync(mode);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception exception)
-        {
-            await ShowErrorAsync("videoErrorEstimate", exception);
-        }
-    }
-
-    private async Task ApplyPresetAsync(EnhancementMode mode)
-    {
-        _presetCancellation?.Cancel();
-        _presetCancellation?.Dispose();
-
-        var cancellation = new CancellationTokenSource();
-        _presetCancellation = cancellation;
-
-        try
-        {
-            var parameters = mode switch
-            {
-                EnhancementMode.ChromaEnhanceMain => EnhancementPresets.ChromaEnhanceMain.Parameters,
-                EnhancementMode.Manual => EnhancementParameters.Zero,
-                EnhancementMode.Auto when _video is not null => await Task.Run(
-                    EstimateAutoParameters,
-                    cancellation.Token),
-                EnhancementMode.AutoRelativeMedium when _video is not null => EnhancementPresets.ApplyRelative(
-                    await Task.Run(EstimateAutoParameters, cancellation.Token),
-                    RelativeLevel.Medium),
-                _ => CurrentParameters
-            };
-
-            cancellation.Token.ThrowIfCancellationRequested();
-            _applyingPreset = true;
-
-            try
-            {
-                AssignParameters(parameters);
-            }
-            finally
-            {
-                _applyingPreset = false;
-            }
-
-            UpdateWarnings();
-            UpdatePendingStatus();
-        }
-        finally
-        {
-            if (ReferenceEquals(_presetCancellation, cancellation))
-            {
-                _presetCancellation = null;
-            }
-
-            cancellation.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// Estimates from up to three clip samples; falls back to the preview frame
-    /// when no sample could be decoded instead of failing the whole open.
-    /// </summary>
-    private EnhancementParameters EstimateAutoParameters()
-    {
-        var samples = EnsureAutoSamples();
-        if (samples.Count > 0)
-        {
-            return AutoEstimator.EstimateClip(samples);
-        }
-
-        return _previewFrame is not null
-            ? AutoEstimator.Estimate(_previewFrame).ToParameters()
-            : EnhancementPresets.ChromaEnhanceMain.Parameters;
-    }
-
-    private IReadOnlyList<RgbImage> EnsureAutoSamples()
-    {
-        if (_autoSamples is not null)
-        {
-            return _autoSamples;
-        }
-
-        if (_video is null)
-        {
-            return [];
-        }
-
-        var samples = new List<RgbImage>();
-        var duration = _video.DurationSeconds;
-        var positions = duration > 0
-            ? new[] { duration * 0.15, duration * 0.5, duration * 0.85 }
-            : new[] { 0.0 };
-
-        foreach (var position in positions.Take(AutoSampleCount))
-        {
-            try
-            {
-                samples.Add(_frameExtractor
-                    .ExtractAsync(_video, position, CancellationToken.None)
-                    .GetAwaiter()
-                    .GetResult());
-            }
-            catch (Exception exception) when (
-                exception is VideoRenderException or IOException)
-            {
-                // A short clip may not contain the requested timestamp; keep the
-                // samples that were decoded.
-            }
-        }
-
-        _autoSamples = samples;
-        return samples;
-    }
-
-    private async Task LoadPreviewFrameAsync(VideoInfo video)
-    {
-        var position = video.DurationSeconds * (PreviewPositionPercent / 100.0);
-        _previewFrame = await _frameExtractor.ExtractAsync(video, position, CancellationToken.None);
-        BeforeImage = await _imageCodec.CreatePreviewAsync(
-            _previewFrame,
-            PreviewWidth,
-            PreviewHeight,
-            CancellationToken.None);
-    }
-
-    private async Task ReloadPreviewFrameAsync()
-    {
-        if (_video is null || _previewFrame is null)
-        {
-            return;
-        }
-
-        await LoadPreviewFrameAsync(_video);
-    }
-
-    private async Task RefreshPreviewCoreAsync()
-    {
-        if (_previewFrame is null)
-        {
-            return;
-        }
-
-        if (!HasAvailableEngine)
-        {
-            AfterImage = null;
-            HasPreview = false;
-            SetStatus("videoStatusEngineUnavailable", EngineUnavailableReason);
-            return;
-        }
-
-        SetStatus("videoStatusPreviewing");
-        var frame = _previewFrame;
-        var request = BuildFrameRequest();
-        var engine = SelectedEngine!.Enhancer;
-
-        var enhanced = await Task.Run(
-            () => engine.Enhance(frame, request, CancellationToken.None));
-
-        AfterImage = await _imageCodec.CreatePreviewAsync(
-            enhanced,
-            PreviewWidth,
-            PreviewHeight,
-            CancellationToken.None);
-        HasPreview = true;
-        ApplyWarnings(ParameterValidator.Validate(CurrentParameters));
-    }
-
-    private FrameEnhancementRequest BuildFrameRequest()
-    {
-        var (width, height) = ResolveTargetSize();
-        return new FrameEnhancementRequest(
-            CurrentParameters,
-            RecoverOriginalDetail,
-            AddNoise,
-            SelectedOutput?.Scale ?? 1,
-            width,
-            height);
-    }
-
-    /// <summary>
-    /// Fits the output width to the source aspect ratio for FHD/4K targets.
-    /// Dimensions are rounded to even numbers because the encoder uses yuv420p.
-    /// </summary>
-    private (int? Width, int? Height) ResolveTargetSize()
-    {
-        if (SelectedOutput?.TargetHeight is not int height || _video is null)
-        {
-            return (null, null);
-        }
-
-        var width = (int)Math.Round(
-            _video.Width * (double)height / _video.Height,
-            MidpointRounding.AwayFromZero);
-
-        return (Even(width), Even(height));
-    }
-
-    private static int Even(int value) => value % 2 == 0 ? value : value - 1;
-
-    private VideoRenderSettings BuildSettings(string outputPath) => new(
-        outputPath,
-        SelectedCodec?.Codec ?? VideoCodec.H264,
-        Quality,
-        Stabilize,
-        Deinterlace,
-        SelectedFrameRate?.FrameRate,
-        InterpolationEngine: UseRife
-            ? FrameInterpolationEngine.Rife
-            : FrameInterpolationEngine.Ffmpeg);
-
-    private VideoRenderRequest BuildRenderRequest(string outputPath)
-    {
-        if (_video is null || SelectedEngine is null)
-        {
-            throw new InvalidOperationException("Aucune vidéo ou aucun moteur sélectionné.");
-        }
-
-        return new VideoRenderRequest(
-            _video,
-            SelectedEngine.Enhancer,
-            BuildFrameRequest(),
-            BuildSettings(outputPath),
-            UseRife ? _rife : null);
-    }
-
-    private void OnRenderProgress(VideoRenderProgress progress)
-    {
-        // Progress<T> posts asynchronously; a queued report must not overwrite
-        // the final state once the render has completed or move it backwards.
-        if (!IsRendering || progress.OverallPercent < ProgressPercent)
-        {
-            return;
-        }
-
-        ProgressPercent = progress.OverallPercent;
-        ProgressText = DescribeProgress(progress);
-    }
-
-    private string DescribeProgress(VideoRenderProgress progress)
-    {
-        var stage = progress.Stage switch
-        {
-            VideoRenderStage.Preparing => Strings["videoStagePreparing"],
-            VideoRenderStage.Deinterlacing => Strings["videoStageDeinterlacing"],
-            VideoRenderStage.Stabilizing => Strings["videoStageStabilizing"],
-            VideoRenderStage.Rendering => Strings["videoStageRendering"],
-            VideoRenderStage.Interpolating => Strings["videoStageInterpolating"],
-            _ => Strings["videoStageFinalizing"]
-        };
-
-        return progress.FramesWritten > 0
-            ? Strings.Format("videoProgressFrames", stage, progress.FramesWritten, progress.OverallPercent)
-            : Strings.Format("videoProgressStage", stage, progress.OverallPercent);
-    }
-
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         foreach (var preset in Presets)
@@ -1090,6 +464,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         RefreshQueueStatuses();
         RenderWarnings();
         UpdateVideoInfo();
+        UpdateEstimate();
         RenderStatus();
     }
 
@@ -1147,23 +522,6 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
             ?? FrameRates[0];
     }
 
-    private void RefreshQueueStatuses()
-    {
-        foreach (var job in Queue)
-        {
-            job.StatusText = QueueStateText(job.State, job.ErrorMessage);
-        }
-    }
-
-    private string QueueStateText(VideoQueueState state, string? error = null) => state switch
-    {
-        VideoQueueState.Running => Strings["videoQueueStatusRunning"],
-        VideoQueueState.Completed => Strings["videoQueueStatusCompleted"],
-        VideoQueueState.Cancelled => Strings["videoQueueStatusCancelled"],
-        VideoQueueState.Failed => Strings.Format("videoQueueStatusFailed", error ?? string.Empty),
-        _ => Strings["videoQueueStatusPending"]
-    };
-
     private void UpdateEngineNote()
     {
         EngineNote = SelectedEngine is null
@@ -1194,6 +552,8 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     private void UpdatePendingStatus()
     {
+        UpdateEstimate();
+
         if (HasVideo && !IsBusy)
         {
             SetStatus("videoStatusDirty");
@@ -1275,8 +635,18 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         _ => "presetManual"
     };
 
+    private enum RenderPurpose
+    {
+        FullVideo,
+        Preview,
+        PreviewExport
+    }
+
     public void Dispose()
     {
+        _busyCancellation?.Cancel();
+        _busyCancellation?.Dispose();
+        _busyCancellation = null;
         _renderCancellation?.Cancel();
         _renderCancellation?.Dispose();
         _renderCancellation = null;

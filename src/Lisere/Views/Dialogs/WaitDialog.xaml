@@ -24,6 +24,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" Margin="24,24,24,0">
@@ -49,7 +50,7 @@
 
                 <Grid Grid.Row="1"
                       MinHeight="56"
-                      Margin="24,18,24,24">
+                      Margin="24,18,24,8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="28" />
                         <ColumnDefinition Width="12" />
@@ -70,6 +71,16 @@
                                TextWrapping="Wrap"
                                VerticalAlignment="Center" />
                 </Grid>
+
+                <ui:Button x:Name="CancelButton"
+                           Grid.Row="2"
+                           MinWidth="112"
+                           Margin="24,0,24,24"
+                           HorizontalAlignment="Right"
+                           Appearance="Secondary"
+                           Click="OnCancelClick"
+                           Content="Annuler"
+                           Visibility="Collapsed" />
             </Grid>
         </Border>
     </Grid>

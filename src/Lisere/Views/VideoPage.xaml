@@ -5,12 +5,7 @@
              xmlns:views="clr-namespace:Lisere.Views">
 
     <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <Grid Grid.Row="0">
+        <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="18" />
@@ -28,6 +23,8 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0"
@@ -56,7 +53,22 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <ui:Button Grid.Column="2"
+                        <ui:ProgressRing Grid.Column="2"
+                                         Width="16"
+                                         Height="16"
+                                         Margin="12,0,0,0"
+                                         VerticalAlignment="Center"
+                                         AutomationProperties.Name="Traitement en cours"
+                                         IsIndeterminate="True"
+                                         Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibility}}" />
+                        <ui:Button Grid.Column="3"
+                                   Margin="12,0,0,0"
+                                   Appearance="Secondary"
+                                   Command="{Binding CancelBusyCommand}"
+                                   Content="{Binding Strings[actionCancel]}"
+                                   Icon="{ui:SymbolIcon Stop24}"
+                                   Visibility="{Binding IsCancellableBusy, Converter={StaticResource BooleanToVisibility}}" />
+                        <ui:Button Grid.Column="4"
                                    Margin="12,0,0,0"
                                    AutomationProperties.AcceleratorKey="Ctrl+O"
                                    Appearance="Secondary"
@@ -204,6 +216,26 @@
                                            Command="{Binding RefreshPreviewCommand}"
                                            Content="{Binding Strings[videoActionPreview]}"
                                            Icon="{ui:SymbolIcon Eye24}" />
+                                <ui:Button Margin="0,6,0,0"
+                                           HorizontalAlignment="Stretch"
+                                           HorizontalContentAlignment="Center"
+                                           Appearance="Secondary"
+                                           Command="{Binding RenderPreviewCommand}"
+                                           Content="{Binding Strings[videoPreviewRender]}"
+                                           Icon="{ui:SymbolIcon Play24}" />
+                                <ui:Button Margin="0,6,0,0"
+                                           HorizontalAlignment="Stretch"
+                                           HorizontalContentAlignment="Center"
+                                           Appearance="Secondary"
+                                           Command="{Binding ExportPreviewCommand}"
+                                           Content="{Binding Strings[videoPreviewExport]}"
+                                           Icon="{ui:SymbolIcon Save24}" />
+                                <TextBlock Margin="0,6,0,0"
+                                           FontSize="12"
+                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding PreviewEstimateText}"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding HasEstimate, Converter={StaticResource BooleanToVisibility}}" />
                             </StackPanel>
                         </Border>
 
@@ -602,13 +634,19 @@
 
                 <Border Grid.Row="1" Margin="0,12,18,0" Style="{StaticResource CardBorder}">
                     <StackPanel>
+                        <TextBlock Margin="0,0,0,6"
+                                   FontSize="12"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding EstimateText}"
+                                   TextWrapping="Wrap"
+                                   Visibility="{Binding HasEstimate, Converter={StaticResource BooleanToVisibility}}" />
                         <ui:Button HorizontalAlignment="Stretch"
                                    HorizontalContentAlignment="Center"
                                    AutomationProperties.AcceleratorKey="Ctrl+S"
                                    Appearance="Primary"
                                    Command="{Binding RenderCommand}"
                                    Content="{Binding Strings[videoActionRender]}"
-                                   Icon="{ui:SymbolIcon ArrowExport24}" />
+                                   Icon="{ui:SymbolIcon Save24}" />
                         <ui:Button Margin="0,8,0,0"
                                    HorizontalAlignment="Stretch"
                                    HorizontalContentAlignment="Center"
@@ -631,30 +669,5 @@
             </Grid>
         </Grid>
 
-        <Border Grid.Row="1"
-                Margin="0,12,18,0"
-                Padding="12,8"
-                Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
-                BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <ui:ProgressRing Width="16"
-                                 Height="16"
-                                 Margin="0,0,8,0"
-                                 IsIndeterminate="True"
-                                 Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibility}}" />
-                <TextBlock Grid.Column="1"
-                           VerticalAlignment="Center"
-                           AutomationProperties.LiveSetting="Polite"
-                           FontSize="13"
-                           Text="{Binding StatusMessage}"
-                           TextTrimming="CharacterEllipsis" />
-            </Grid>
-        </Border>
     </Grid>
 </UserControl>

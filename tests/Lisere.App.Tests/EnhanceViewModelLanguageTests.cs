@@ -90,9 +90,11 @@ public class EnhanceViewModelLanguageTests
             remove { }
         }
 
+        public Task<bool> ConfirmRenderAsync(RenderPlan plan) => Task.FromResult(true);
+
         public Task ShowMessageAsync(string message, DialogKind kind) => Task.CompletedTask;
 
-        public Task ShowWaitAsync(string message) => Task.CompletedTask;
+        public Task ShowWaitAsync(string message, Action? onCancel = null) => Task.CompletedTask;
 
         public Task HideWaitAsync() => Task.CompletedTask;
     }

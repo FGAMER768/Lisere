@@ -24,11 +24,19 @@ public sealed record VideoRenderSettings(
     bool Deinterlace = false,
     double? TargetFrameRate = null,
     string EncodingPreset = "medium",
-    FrameInterpolationEngine InterpolationEngine = FrameInterpolationEngine.Ffmpeg)
+    FrameInterpolationEngine InterpolationEngine = FrameInterpolationEngine.Ffmpeg,
+    double? PreviewStartSeconds = null,
+    double? PreviewDurationSeconds = null)
 {
     public int EffectiveQuality => Math.Clamp(Quality, 0, 51);
 
     public bool UsesRife => InterpolationEngine == FrameInterpolationEngine.Rife;
+
+    /// <summary>
+    /// A preview renders a short window of the source with the exact same
+    /// pipeline. It is a real render, just trimmed and without audio.
+    /// </summary>
+    public bool IsPreview => PreviewDurationSeconds is > 0;
 
     public double ResolveFrameRate(double sourceFrameRate) =>
         UsesRife
@@ -66,13 +74,17 @@ public enum VideoRenderStage
     Finalizing
 }
 
+/// <summary>An enhanced RGB frame sampled during a render, for the live preview.</summary>
+public sealed record VideoFrameSnapshot(int Width, int Height, byte[] Pixels);
+
 public sealed record VideoRenderProgress(
     VideoRenderStage Stage,
     double StagePercent,
     double OverallPercent,
     int FramesWritten,
     int? TotalFrames,
-    string? Detail)
+    string? Detail,
+    VideoFrameSnapshot? Snapshot = null)
 {
     public static VideoRenderProgress Start(VideoRenderStage stage) =>
         new(stage, 0, StageRange.Start(stage), 0, null, null);

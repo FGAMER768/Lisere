@@ -71,6 +71,46 @@ public class VideoRenderIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task PreviewRendersOneSecondWithoutAudio()
+    {
+        if (!_toolchain.IsAvailable)
+        {
+            return;
+        }
+
+        var source = await CreateClipAsync();
+        var info = await new FfprobeVideoProbe(_toolchain)
+            .ProbeAsync(source, CancellationToken.None);
+        var output = Path.Combine(_directory, "preview.mp4");
+        using var engine = new ClassicFrameEnhancer();
+        var service = new VideoRenderService(_toolchain);
+
+        var result = await service.RenderAsync(
+            new VideoRenderRequest(
+                info,
+                engine,
+                new FrameEnhancementRequest(EnhancementParameters.Zero),
+                new VideoRenderSettings(
+                    output,
+                    Quality: 30,
+                    EncodingPreset: "ultrafast",
+                    PreviewStartSeconds: 0,
+                    PreviewDurationSeconds: 1)),
+            null,
+            CancellationToken.None);
+
+        var preview = await new FfprobeVideoProbe(_toolchain)
+            .ProbeAsync(output, CancellationToken.None);
+
+        Assert.True(File.Exists(output));
+        Assert.False(preview.HasAudio, "a preview carries no audio track");
+        Assert.InRange(preview.DurationSeconds, 0.7, 1.3);
+        Assert.Equal(64, preview.Width);
+        Assert.Equal(48, preview.Height);
+        Assert.InRange(result.FramesWritten, 8, 12);
+    }
+
+    [Fact]
     public async Task RendersAnExactTargetSizeAfterDeinterlacing()
     {
         if (!_toolchain.IsAvailable)

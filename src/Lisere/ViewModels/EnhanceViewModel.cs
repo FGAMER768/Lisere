@@ -23,7 +23,9 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     private RgbImage? _source;
     private RgbImage? _enhanced;
     private string _sourceName = string.Empty;
+    private CancellationTokenSource? _loadCancellation;
     private CancellationTokenSource? _enhanceCancellation;
+    private CancellationTokenSource? _saveCancellation;
     private CancellationTokenSource? _presetCancellation;
     private bool _isApplyingPreset;
     private bool _isPresetEstimationPending;
@@ -164,16 +166,24 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         }
 
         CancelPresetEstimation();
+        _loadCancellation?.Cancel();
+        _loadCancellation?.Dispose();
+
+        var cancellation = new CancellationTokenSource();
+        _loadCancellation = cancellation;
         IsBusy = true;
         ClearError();
         SetStatus("statusLoading");
-        await _dialogService.ShowWaitAsync(StatusMessage);
-        var loaded = false;
+        await _dialogService.ShowWaitAsync(StatusMessage, () =>
+        {
+            cancellation.Cancel();
+            CancelPresetEstimation();
+        });
         Exception? error = null;
+        var canceled = false;
 
         try
         {
-            using var cancellation = new CancellationTokenSource();
             var source = await _imageCodec.LoadAsync(path, cancellation.Token);
 
             _source = source;
@@ -181,23 +191,35 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             _enhanced = null;
             HasEnhanced = false;
             ComparisonPosition = 50.0;
+            AfterImage = null;
             BeforeImage = await _imageCodec.CreatePreviewAsync(
                 source,
                 PreviewWidth,
                 PreviewHeight,
                 cancellation.Token);
-            AfterImage = null;
             HasImage = true;
             UpdateImageInfo();
+            cancellation.Token.ThrowIfCancellationRequested();
 
             if (SelectedPreset is
                 { Mode: EnhancementMode.Auto or EnhancementMode.AutoRelativeMedium })
             {
                 await ApplyPresetAsync(SelectedPreset.Mode);
             }
+            else
+            {
+                UpdateWarnings();
+            }
 
+            cancellation.Token.ThrowIfCancellationRequested();
+
+            // Loading shows the source only: the enhanced image is a deliberate
+            // render, never a side effect of opening a file.
             SetStatus("statusLoaded");
-            loaded = true;
+        }
+        catch (OperationCanceledException)
+        {
+            canceled = true;
         }
         catch (Exception exception)
         {
@@ -206,18 +228,25 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         finally
         {
             await _dialogService.HideWaitAsync();
-            IsBusy = false;
+
+            if (ReferenceEquals(_loadCancellation, cancellation))
+            {
+                _loadCancellation = null;
+                IsBusy = false;
+            }
+
+            cancellation.Dispose();
+        }
+
+        if (canceled)
+        {
+            SetStatus("statusCanceled");
+            return;
         }
 
         if (error is not null)
         {
             await ShowErrorAsync("errorLoad", error);
-            return;
-        }
-
-        if (loaded)
-        {
-            await EnhanceAsync();
         }
     }
 
@@ -245,17 +274,15 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         IsBusy = true;
         ClearError();
         SetStatus("statusProcessing");
-        await _dialogService.ShowWaitAsync(StatusMessage);
+        await _dialogService.ShowWaitAsync(StatusMessage, cancellation.Cancel);
         Exception? error = null;
         var completed = false;
+        var canceled = false;
 
         try
         {
             var result = await _orchestrator.EnhanceAsync(request, cancellation.Token);
-            if (cancellation.IsCancellationRequested)
-            {
-                return;
-            }
+            cancellation.Token.ThrowIfCancellationRequested();
 
             _enhanced = result.Image;
 
@@ -277,6 +304,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         }
         catch (OperationCanceledException)
         {
+            canceled = true;
         }
         catch (Exception exception)
         {
@@ -293,6 +321,12 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             }
 
             cancellation.Dispose();
+        }
+
+        if (canceled)
+        {
+            SetStatus("statusCanceled");
+            return;
         }
 
         if (error is not null)
@@ -321,16 +355,27 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             return;
         }
 
+        _saveCancellation?.Cancel();
+        _saveCancellation?.Dispose();
+
+        var cancellation = new CancellationTokenSource();
+        _saveCancellation = cancellation;
+        var targetExisted = File.Exists(path);
         IsBusy = true;
         ClearError();
         SetStatus("statusExporting");
-        await _dialogService.ShowWaitAsync(StatusMessage);
+        await _dialogService.ShowWaitAsync(StatusMessage, cancellation.Cancel);
         Exception? error = null;
+        var canceled = false;
 
         try
         {
-            await _imageCodec.SaveJpegAsync(_enhanced, path, CancellationToken.None);
+            await _imageCodec.SaveJpegAsync(_enhanced, path, cancellation.Token);
             SetStatus("statusExported", Path.GetFileName(path));
+        }
+        catch (OperationCanceledException)
+        {
+            canceled = true;
         }
         catch (Exception exception)
         {
@@ -339,7 +384,25 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         finally
         {
             await _dialogService.HideWaitAsync();
-            IsBusy = false;
+
+            if (ReferenceEquals(_saveCancellation, cancellation))
+            {
+                _saveCancellation = null;
+                IsBusy = false;
+            }
+
+            cancellation.Dispose();
+        }
+
+        if (canceled)
+        {
+            if (!targetExisted)
+            {
+                TryDelete(path);
+            }
+
+            SetStatus("statusCanceled");
+            return;
         }
 
         if (error is not null)
@@ -624,6 +687,21 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     private void CancelPresetEstimation() => _presetCancellation?.Cancel();
 
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // A partial export that cannot be removed must not hide the cancel.
+        }
+    }
+
     private PresetOption CreatePreset(EnhancementMode mode) =>
         new(Strings[PresetLabelKey(mode)], mode);
 
@@ -653,9 +731,15 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _loadCancellation?.Cancel();
+        _loadCancellation?.Dispose();
+        _loadCancellation = null;
         _enhanceCancellation?.Cancel();
         _enhanceCancellation?.Dispose();
         _enhanceCancellation = null;
+        _saveCancellation?.Cancel();
+        _saveCancellation?.Dispose();
+        _saveCancellation = null;
         _presetCancellation?.Cancel();
         _presetCancellation?.Dispose();
         _presetCancellation = null;

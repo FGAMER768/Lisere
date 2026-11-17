@@ -34,4 +34,26 @@ public class BeforeAfterLayoutTests
 
         Assert.Equal(new Rect(0, 0, 640, 480), bounds);
     }
+
+    [Fact]
+    public void SquareImageIsCenteredInALandscapeStage()
+    {
+        var bounds = BeforeAfterView.CalculateImageBounds(900, 500, 500, 500);
+
+        Assert.Equal(500, bounds.Width, 3);
+        Assert.Equal(500, bounds.Height, 3);
+        Assert.Equal(200, bounds.X, 3);
+        Assert.Equal(0, bounds.Y, 3);
+    }
+
+    [Fact]
+    public void UltrawideImageIsLetterboxedInASquareStage()
+    {
+        var bounds = BeforeAfterView.CalculateImageBounds(500, 500, 2100, 900);
+
+        Assert.Equal(500, bounds.Width, 3);
+        Assert.Equal(214.286, bounds.Height, 2);
+        Assert.Equal(0, bounds.X, 3);
+        Assert.Equal(142.857, bounds.Y, 2);
+    }
 }

@@ -39,6 +39,9 @@
   <data name="actionExport" xml:space="preserve">
     <value>Export as JPEG</value>
   </data>
+  <data name="actionCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
   <data name="imageNone" xml:space="preserve">
     <value>No image</value>
   </data>
@@ -124,10 +127,16 @@
     <value>Loading the image...</value>
   </data>
   <data name="statusLoaded" xml:space="preserve">
-    <value>Image loaded.</value>
+    <value>Image loaded. Run the enhancement.</value>
   </data>
   <data name="statusProcessing" xml:space="preserve">
     <value>Processing...</value>
+  </data>
+  <data name="statusCanceling" xml:space="preserve">
+    <value>Cancelling...</value>
+  </data>
+  <data name="statusCanceled" xml:space="preserve">
+    <value>Operation cancelled.</value>
   </data>
   <data name="statusApplied" xml:space="preserve">
     <value>{0} applied.</value>
@@ -322,7 +331,7 @@
     <value>Analysing the video...</value>
   </data>
   <data name="videoStatusOpened" xml:space="preserve">
-    <value>Video analysed and preview ready.</value>
+    <value>Video analysed. Refresh the preview to compare.</value>
   </data>
   <data name="videoStatusPreviewing" xml:space="preserve">
     <value>Computing the preview...</value>
@@ -338,6 +347,12 @@
   </data>
   <data name="videoStatusCanceled" xml:space="preserve">
     <value>Render cancelled.</value>
+  </data>
+  <data name="videoStatusLoadCanceled" xml:space="preserve">
+    <value>Loading cancelled.</value>
+  </data>
+  <data name="videoStatusPreviewCanceled" xml:space="preserve">
+    <value>Preview cancelled.</value>
   </data>
   <data name="videoStatusCanceling" xml:space="preserve">
     <value>Cancelling the render...</value>
@@ -476,5 +491,56 @@
   </data>
   <data name="fileFilterMp4" xml:space="preserve">
     <value>MP4 video</value>
+  </data>
+  <data name="videoEstimateLabel" xml:space="preserve">
+    <value>Estimate</value>
+  </data>
+  <data name="videoEstimateText" xml:space="preserve">
+    <value>≈ {0} frames · {1}</value>
+  </data>
+  <data name="videoRemaining" xml:space="preserve">
+    <value>≈ {0} left</value>
+  </data>
+  <data name="videoPlanTitle" xml:space="preserve">
+    <value>Prepare the render</value>
+  </data>
+  <data name="videoPlanIntro" xml:space="preserve">
+    <value>Check the source and the result, then start the render.</value>
+  </data>
+  <data name="videoPlanSource" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="videoPlanDestination" xml:space="preserve">
+    <value>Destination</value>
+  </data>
+  <data name="videoPlanSettings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="videoPlanNoEffects" xml:space="preserve">
+    <value>no extra effect</value>
+  </data>
+  <data name="videoPlanConfirm" xml:space="preserve">
+    <value>Start the render</value>
+  </data>
+  <data name="videoPlanCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="videoPreviewRender" xml:space="preserve">
+    <value>Render 1 second</value>
+  </data>
+  <data name="videoPreviewRendering" xml:space="preserve">
+    <value>Rendering the preview…</value>
+  </data>
+  <data name="videoPreviewReady" xml:space="preserve">
+    <value>Preview rendered: 1 s at {0} %.</value>
+  </data>
+  <data name="videoPreviewExport" xml:space="preserve">
+    <value>Export the 1 s preview</value>
+  </data>
+  <data name="videoPreviewExporting" xml:space="preserve">
+    <value>Exporting the preview…</value>
+  </data>
+  <data name="videoPreviewExported" xml:space="preserve">
+    <value>Preview exported: {0}.</value>
   </data>
 </root>

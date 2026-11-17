@@ -27,6 +27,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0" Title="Liseré">
@@ -96,11 +97,25 @@
                        Icon="{ui:SymbolIcon Video24}" />
         </StackPanel>
         <ContentControl x:Name="PageHost" Grid.Row="2" />
+        <Border Grid.Row="3"
+                Margin="16,0,16,10"
+                Padding="0,6,0,0"
+                BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0">
+            <TextBlock AutomationProperties.LiveSetting="Polite"
+                       FontSize="12"
+                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                       Text="{Binding StatusMessage}"
+                       TextTrimming="CharacterEllipsis" />
+        </Border>
         <dialogs:WaitDialog x:Name="WaitDialog"
-                            Grid.RowSpan="3"
+                            Grid.RowSpan="4"
                             Panel.ZIndex="99" />
         <dialogs:MessageDialog x:Name="MessageDialog"
-                               Grid.RowSpan="3"
+                               Grid.RowSpan="4"
                                Panel.ZIndex="100" />
+        <dialogs:RenderPlanDialog x:Name="RenderPlanDialog"
+                                  Grid.RowSpan="4"
+                                  Panel.ZIndex="101" />
     </Grid>
 </ui:FluentWindow>

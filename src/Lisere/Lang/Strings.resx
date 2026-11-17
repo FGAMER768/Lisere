@@ -39,6 +39,9 @@
   <data name="actionExport" xml:space="preserve">
     <value>Exporter en JPEG</value>
   </data>
+  <data name="actionCancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
   <data name="imageNone" xml:space="preserve">
     <value>Aucune image</value>
   </data>
@@ -124,10 +127,16 @@
     <value>Chargement de l'image...</value>
   </data>
   <data name="statusLoaded" xml:space="preserve">
-    <value>Image chargée.</value>
+    <value>Image chargée. Lancez l'amélioration.</value>
   </data>
   <data name="statusProcessing" xml:space="preserve">
     <value>Traitement en cours...</value>
+  </data>
+  <data name="statusCanceling" xml:space="preserve">
+    <value>Annulation...</value>
+  </data>
+  <data name="statusCanceled" xml:space="preserve">
+    <value>Opération annulée.</value>
   </data>
   <data name="statusApplied" xml:space="preserve">
     <value>{0} appliqué.</value>
@@ -322,7 +331,7 @@
     <value>Analyse de la vidéo...</value>
   </data>
   <data name="videoStatusOpened" xml:space="preserve">
-    <value>Vidéo analysée et aperçu prêt.</value>
+    <value>Vidéo analysée. Lancez l'aperçu pour comparer.</value>
   </data>
   <data name="videoStatusPreviewing" xml:space="preserve">
     <value>Calcul de l'aperçu...</value>
@@ -338,6 +347,12 @@
   </data>
   <data name="videoStatusCanceled" xml:space="preserve">
     <value>Rendu annulé.</value>
+  </data>
+  <data name="videoStatusLoadCanceled" xml:space="preserve">
+    <value>Chargement annulé.</value>
+  </data>
+  <data name="videoStatusPreviewCanceled" xml:space="preserve">
+    <value>Aperçu annulé.</value>
   </data>
   <data name="videoStatusCanceling" xml:space="preserve">
     <value>Annulation du rendu...</value>
@@ -476,5 +491,56 @@
   </data>
   <data name="fileFilterMp4" xml:space="preserve">
     <value>Vidéo MP4</value>
+  </data>
+  <data name="videoEstimateLabel" xml:space="preserve">
+    <value>Estimation</value>
+  </data>
+  <data name="videoEstimateText" xml:space="preserve">
+    <value>≈ {0} images · {1}</value>
+  </data>
+  <data name="videoRemaining" xml:space="preserve">
+    <value>≈ {0} restant</value>
+  </data>
+  <data name="videoPlanTitle" xml:space="preserve">
+    <value>Préparer le rendu</value>
+  </data>
+  <data name="videoPlanIntro" xml:space="preserve">
+    <value>Vérifiez la source et le résultat, puis lancez le rendu.</value>
+  </data>
+  <data name="videoPlanSource" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="videoPlanDestination" xml:space="preserve">
+    <value>Destination</value>
+  </data>
+  <data name="videoPlanSettings" xml:space="preserve">
+    <value>Réglages</value>
+  </data>
+  <data name="videoPlanNoEffects" xml:space="preserve">
+    <value>aucun effet supplémentaire</value>
+  </data>
+  <data name="videoPlanConfirm" xml:space="preserve">
+    <value>Lancer le rendu</value>
+  </data>
+  <data name="videoPlanCancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="videoPreviewRender" xml:space="preserve">
+    <value>Rendre 1 seconde</value>
+  </data>
+  <data name="videoPreviewRendering" xml:space="preserve">
+    <value>Rendu de l'aperçu…</value>
+  </data>
+  <data name="videoPreviewReady" xml:space="preserve">
+    <value>Aperçu rendu : 1 s à {0} %.</value>
+  </data>
+  <data name="videoPreviewExport" xml:space="preserve">
+    <value>Exporter l'aperçu (1 s)</value>
+  </data>
+  <data name="videoPreviewExporting" xml:space="preserve">
+    <value>Export de l'aperçu…</value>
+  </data>
+  <data name="videoPreviewExported" xml:space="preserve">
+    <value>Aperçu exporté : {0}.</value>
   </data>
 </root>

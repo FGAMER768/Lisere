@@ -26,6 +26,8 @@ public interface IVideoRenderService
 /// </summary>
 public sealed class VideoRenderService : IVideoRenderService
 {
+    private static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(1);
+
     private readonly VideoToolchain _toolchain;
     private readonly VideoPasses _passes;
 
@@ -199,16 +201,20 @@ public sealed class VideoRenderService : IVideoRenderService
     {
         var frameBytes = checked(source.Width * source.Height * 3);
         var interpolationFactor = settings.UsesRife ? 2 : 1;
+        var segmentSeconds = settings.PreviewDurationSeconds ?? source.DurationSeconds;
         var totalFrames = (int)Math.Min(
             int.MaxValue,
-            source.EstimatedFrameCount * interpolationFactor);
+            Math.Ceiling(Math.Max(1, segmentSeconds * source.FrameRate)) * interpolationFactor);
         var encoderFrameRate = settings.UsesRife
             ? source.FrameRate * 2
             : source.FrameRate;
 
         using var decoder = FfmpegRunner.Start(
             tools.FfmpegPath,
-            VideoCommandBuilder.BuildDecodeArguments(source),
+            VideoCommandBuilder.BuildDecodeArguments(
+                source,
+                settings.PreviewStartSeconds,
+                settings.PreviewDurationSeconds),
             redirectStandardInput: false);
 
         Process encoderProcess;
@@ -222,7 +228,7 @@ public sealed class VideoRenderService : IVideoRenderService
                     outputWidth,
                     outputHeight,
                     encoderFrameRate,
-                    source.HasAudio,
+                    source.HasAudio && !settings.IsPreview,
                     settings.Codec,
                     settings.EffectiveQuality,
                     settings.EncodingPreset),
@@ -255,6 +261,8 @@ public sealed class VideoRenderService : IVideoRenderService
 
         var stopwatch = Stopwatch.StartNew();
         var lastReport = TimeSpan.Zero;
+        var lastSnapshot = TimeSpan.Zero;
+        VideoFrameSnapshot? snapshot = null;
         var frames = 0;
         var completed = false;
         RgbImage? previous = null;
@@ -315,13 +323,23 @@ public sealed class VideoRenderService : IVideoRenderService
                         ? Math.Clamp(frames * 100.0 / totalFrames, 0, 99.5)
                         : 0;
 
+                    if (stopwatch.Elapsed - lastSnapshot >= SnapshotInterval)
+                    {
+                        lastSnapshot = stopwatch.Elapsed;
+                        snapshot = new VideoFrameSnapshot(
+                            enhanced.Width,
+                            enhanced.Height,
+                            enhanced.Pixels.ToArray());
+                    }
+
                     progress?.Report(new VideoRenderProgress(
                         VideoRenderStage.Rendering,
                         percent,
                         StageRange.Map(VideoRenderStage.Rendering, percent),
                         frames,
                         totalFrames > 0 ? totalFrames : null,
-                        DescribeThroughput(frames, stopwatch.Elapsed)));
+                        DescribeThroughput(frames, stopwatch.Elapsed),
+                        snapshot));
                 }
             }
 
@@ -390,7 +408,8 @@ public sealed class VideoRenderService : IVideoRenderService
             StageRange.Map(VideoRenderStage.Rendering, 100),
             frames,
             frames,
-            DescribeThroughput(frames, stopwatch.Elapsed)));
+            DescribeThroughput(frames, stopwatch.Elapsed),
+            snapshot));
 
         return frames;
     }

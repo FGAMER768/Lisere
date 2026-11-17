@@ -123,7 +123,11 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
     {
         ImageFilters.ToYCbCr(image, out var luma, out _, out _);
 
-        var tiles = TilePlanner.Plan(luma.Width, luma.Height, _tileSize, _overlap);
+        // The model input is exactly _tileSize. The core must leave room for the
+        // context on every side, otherwise CopyTile reads past the prediction
+        // for full-size tiles that are not on the top/left edge.
+        var coreSize = Math.Max(1, _tileSize - (2 * _overlap));
+        var tiles = TilePlanner.Plan(luma.Width, luma.Height, coreSize, _overlap);
         var outputWidth = checked(luma.Width * scale);
         var outputHeight = checked(luma.Height * scale);
         var destination = new byte[checked(outputWidth * outputHeight)];

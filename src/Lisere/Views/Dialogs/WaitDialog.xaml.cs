@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -8,6 +9,8 @@ namespace Lisere.Views.Dialogs;
 public partial class WaitDialog : UserControl
 {
     private bool _isOpen;
+    private Action? _onCancel;
+    private string _cancelingText = string.Empty;
 
     public WaitDialog()
     {
@@ -15,9 +18,22 @@ public partial class WaitDialog : UserControl
         Visibility = Visibility.Collapsed;
     }
 
-    public async Task ShowAsync(string message, string title)
+    public async Task ShowAsync(
+        string message,
+        string title,
+        string? cancelText = null,
+        string? cancelingText = null,
+        Action? onCancel = null)
     {
         TitleText.Text = title;
+        _onCancel = onCancel;
+        _cancelingText = cancelingText ?? cancelText ?? string.Empty;
+        CancelButton.Content = cancelText ?? "Annuler";
+        AutomationProperties.SetName(CancelButton, CancelButton.Content.ToString());
+        CancelButton.IsEnabled = onCancel is not null;
+        CancelButton.Visibility = onCancel is null
+            ? Visibility.Collapsed
+            : Visibility.Visible;
 
         if (_isOpen)
         {
@@ -32,6 +48,26 @@ public partial class WaitDialog : UserControl
         await Task.Delay(250);
     }
 
+    private void OnCancelClick(object sender, RoutedEventArgs e)
+    {
+        var onCancel = _onCancel;
+        if (onCancel is null)
+        {
+            return;
+        }
+
+        // One click requests cancellation; the operation owns the final hide.
+        _onCancel = null;
+        CancelButton.IsEnabled = false;
+
+        if (!string.IsNullOrEmpty(_cancelingText))
+        {
+            CancelButton.Content = _cancelingText;
+        }
+
+        onCancel();
+    }
+
     public async Task HideAsync()
     {
         if (!_isOpen)
@@ -40,6 +76,9 @@ public partial class WaitDialog : UserControl
         }
 
         _isOpen = false;
+        _onCancel = null;
+        CancelButton.Visibility = Visibility.Collapsed;
+        CancelButton.IsEnabled = true;
         var completion = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
