@@ -45,7 +45,6 @@ public class EnhanceViewModelDialogTests
                 new RgbImage(4, 4),
                 EnhancementParameters.Zero,
                 EnhancementMode.ChromaEnhanceMain,
-                "Chroma",
                 [new ParameterWarning(ParameterWarningCode.RecoverDetailsAboveGuidance, 85)])
         };
         var viewModel = CreateViewModel(dialogs, codec, orchestrator);
@@ -414,7 +413,6 @@ public class EnhanceViewModelDialogTests
                 new RgbImage(4, 4),
                 EnhancementParameters.Zero,
                 EnhancementMode.ChromaEnhanceMain,
-                "Chroma",
                 []);
         }
     }
@@ -425,7 +423,6 @@ public class EnhanceViewModelDialogTests
             new RgbImage(4, 4),
             EnhancementParameters.Zero,
             EnhancementMode.ChromaEnhanceMain,
-            "Chroma",
             []);
 
         public Exception? EnhanceException { get; set; }

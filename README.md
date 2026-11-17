@@ -4,7 +4,7 @@ Liseré est une application de bureau Windows pour améliorer **une image ou une
 
 L'interface propose deux espaces :
 
-- **Image** : pipeline déterministe six paramètres, préréglages, estimation automatique, export JPEG.
+- **Image** : pipeline déterministe six paramètres, préréglages, estimation automatique, menu de colorimétrie séparé, export JPEG.
 - **Vidéo** : analyse FFmpeg, aperçu avant/après, rendu image par image, moteurs interchangeables (pipeline local ou modèles ONNX), résolutions FHD/4K, cadence 30/60/120 i/s, interpolation neuronale RIFE ×2, désentrelacement, stabilisation, file d'attente et export MP4 avec audio.
 
 ## Fonctionnalités
@@ -14,7 +14,9 @@ L'interface propose deux espaces :
 - Ouverture des images prises en charge par Windows Imaging Component, avec normalisation des cas irréguliers.
 - Comparaison avant/après avec séparateur déplaçable sur toute la hauteur de l'image et curseur de position.
 - L'ouverture affiche l'original : l'amélioration n'est calculée qu'au clic sur **Améliorer l'image**.
-- Préréglages Chroma, Auto, Manuel et Auto + relatif moyen.
+- Deux menus de paramètres, **Amélioration (IA)** et **Colorimétrie**, chacun avec son préréglage et ses curseurs.
+- Préréglages d'amélioration Chroma, Auto, Manuel et Auto + relatif moyen.
+- Préréglages de colorimétrie **Ultron CC**, **Matrix CC**, **Infinity CC** et **Nebulus CC**, reproductions de presets After Effects appliquées après l'amélioration (`docs/ULTRON-CC-ANALYSE.md` et `docs/PRESETS-ANALYSE.md`).
 - Réglages de correction de compression, réduction du bruit, netteté, récupération des détails, réduction du halo et lissage des contours.
 - Réglages complémentaires pour les détails d'origine et l'ajout de bruit.
 - Estimation automatique des paramètres à partir du contenu de l'image.
@@ -82,7 +84,7 @@ dotnet build Lisere.slnx
 ### Image
 
 1. Cliquez sur **Ouvrir** ou utilisez `Ctrl+O` pour charger une image.
-2. Choisissez un préréglage ou ajustez les curseurs et les champs numériques.
+2. Choisissez un préréglage d'amélioration ou ajustez les curseurs et les champs numériques ; le bouton **Colorimétrie** ouvre le second menu, avec son préréglage et ses quatre curseurs.
 3. Cliquez sur **Améliorer l'image** ou utilisez `Ctrl+Entrée` : le rendu n'est jamais lancé au chargement.
 4. Faites glisser le séparateur de l'aperçu pour comparer l'avant et l'après.
 5. Cliquez sur **Exporter en JPEG** ou utilisez `Ctrl+S`.
@@ -108,8 +110,21 @@ La stabilisation, le désentrelacement et l'interpolation FFmpeg sont des passes
 | Auto (estimation locale) | Analyse l'image ou plusieurs frames du clip et estime les paramètres automatiquement. |
 | Manuel (curseurs) | Applique directement les valeurs saisies. |
 | Auto + relatif moyen | Combine l'estimation automatique et un ajustement relatif moyen. |
+| Aucune amélioration | Aucune correction : seuls le préréglage de colorimétrie et l'export s'appliquent. |
 
-Les paramètres principaux sont bornés de `0` à `100`, sauf le lissage des contours qui accepte une valeur négative pour anticiper un flou. La valeur `0` désactive l'effet correspondant en mode manuel.
+### Colorimétrie
+
+Le menu **Colorimétrie** de la page Image est indépendant des préréglages d'amélioration ; l'étalonnage s'applique après l'amélioration.
+
+| Préréglage | Comportement |
+|---|---|
+| Aucune | Aucun étalonnage : l'image garde les couleurs de l'amélioration. |
+| Ultron CC | Étalonnage du preset After Effects `Ultron_CC.ffx` : saturation 129,997 %, luminosité +5, contraste +7, vibrance +50, plus les accentuations. Les quatre curseurs sont initialisés aux valeurs du preset et restent réglables ; les accentuations sont fixes. |
+| Matrix CC | Étalonnage du preset After Effects `Matrix_CC.ffx` : luminosité +30, contraste +20 et trois accentuations (30 % / 15 px, 10 %, 15 % / 30 px). Valeurs fixes, sans curseurs. |
+| Infinity CC | Étalonnage du preset After Effects `Infinity_CC.ffx` : accentuation multi-échelles, unsharp mask 16 % / rayon 9,8, halo doux, puis exposition −0,36. Valeurs fixes. |
+| Nebulus CC | Étalonnage du preset After Effects `Nebulus_CC.ffx` : accentuation multi-échelles, unsharp mask 10 % / rayon 20 et halo marqué. Valeurs fixes. |
+
+Les paramètres principaux sont bornés de `0` à `100`, sauf le lissage des contours qui accepte une valeur négative pour anticiper un flou. La valeur `0` désactive l'effet correspondant en mode manuel. Le préréglage **Aucune amélioration** grise les curseurs : l'image traverse le pipeline sans correction, ce qui permet de n'appliquer que la colorimétrie.
 
 ### Presets vidéo importés
 
@@ -202,9 +217,13 @@ dotnet test Lisere.slnx
 
 La solution contient quatre projets de tests xUnit : `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` et `Lisere.App.Tests`.
 
-État actuel : **173 tests réussis** (32 Core, 13 Ai, 35 Video, 93 App), 0 avertissement de build. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model.
+État actuel : **229 tests** (77 Core, 13 Ai, 35 Video, 104 App), 0 avertissement de build. Deux tests vidéo dépendants du temps peuvent échouer lors d'une exécution parallèle de la solution et réussissent isolément. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model.
 
 Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le rendu, la conservation de l'audio, le désentrelacement, la taille exacte, l'annulation et l'extraction d'aperçu. Ils sont ignorés silencieusement si FFmpeg est introuvable, afin que le reste de la suite reste exécutable sur une machine sans outillage vidéo.
+
+Le corpus complet des presets After Effects (47 fichiers, dossier `Experimental` exclu) est inventorié dans `docs/PRESETS-ANALYSE.md`, avec les valeurs brutes dans `docs/presets/PRESETS-INVENTAIRE.md` et les JSON de `docs/presets/scan/`. Seuls les presets documentés y sont décrits ; aucun n'est encore implémenté hormis Ultron.
+
+Les préréglages de colorimétrie sont couverts par des tests d'étalonnage : pour Ultron, saturation pondérée luma, contraste légacy, vibrance, accentuations par bandes, enchaînement complet et réglages (`tests/Lisere.Core.Tests/UltronCcLookTests.cs`) ; pour Matrix, valeurs extraites, courbe tonal approchée, accentuations et ignorance des réglages Ultron (`MatrixLookTests.cs`) ; pour Infinity et Nebulus, valeurs extraites, exposition en lumière linéaire, halo qui épargne les aplats et déborde d'une zone claire (`InfinityLookTests.cs`, `NebulusLookTests.cs`). Un test de non-régression applique les quatre presets à une photo de test versionnée et compare l'empreinte SHA-256 des pixels (`ColorPresetRegressionTests.cs`). La séparation des deux menus est couverte dans `tests/Lisere.App.Tests/EnhanceViewModelLanguageTests.cs` : indépendance des préréglages, onglets exclusifs et statut mentionnant l'étalonnage.
 
 L'import de presets est testé sur des JSON synthétiques et, lorsque `LISERE_PRESET_SAMPLE_DIR` pointe vers un dossier de presets, sur un corpus local. La file d'attente est testée avec un renderer factice : ordre d'exécution, instantané des réglages, échec isolé, arrêt en cours et états finaux.
 

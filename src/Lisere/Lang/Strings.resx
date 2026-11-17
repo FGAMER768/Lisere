@@ -96,6 +96,78 @@
   <data name="presetAutoRelative" xml:space="preserve">
     <value>Auto + relatif moyen</value>
   </data>
+  <data name="presetNone" xml:space="preserve">
+    <value>Aucune amélioration</value>
+  </data>
+  <data name="presetNoneNote" xml:space="preserve">
+    <value>Aucune correction : seul le préréglage de colorimétrie s'applique. Les six curseurs et les deux réglages complémentaires sont ignorés.</value>
+  </data>
+  <data name="sectionParameters" xml:space="preserve">
+    <value>Paramètres</value>
+  </data>
+  <data name="tabEnhancement" xml:space="preserve">
+    <value>Amélioration (IA)</value>
+  </data>
+  <data name="tabColor" xml:space="preserve">
+    <value>Colorimétrie</value>
+  </data>
+  <data name="colorSectionPreset" xml:space="preserve">
+    <value>Préréglage de colorimétrie</value>
+  </data>
+  <data name="colorSectionSettings" xml:space="preserve">
+    <value>Paramètres de colorimétrie</value>
+  </data>
+  <data name="colorNone" xml:space="preserve">
+    <value>Aucune</value>
+  </data>
+  <data name="colorUltron" xml:space="preserve">
+    <value>Ultron CC</value>
+  </data>
+  <data name="colorMatrix" xml:space="preserve">
+    <value>Matrix CC</value>
+  </data>
+  <data name="colorMatrixNote" xml:space="preserve">
+    <value>Étalonnage du preset After Effects Matrix_CC : luminosité +30, contraste +20 et trois accentuations. Les valeurs du fichier sont fixes : les curseurs ci-dessous ne s'appliquent pas.</value>
+  </data>
+  <data name="colorInfinity" xml:space="preserve">
+    <value>Infinity CC</value>
+  </data>
+  <data name="colorInfinityNote" xml:space="preserve">
+    <value>Étalonnage du preset After Effects Infinity_CC : accentuation multi-échelles, unsharp mask à 16 %, halo doux, puis exposition −0,36. Valeurs fixes : les curseurs ci-dessous ne s'appliquent pas.</value>
+  </data>
+  <data name="colorNebulus" xml:space="preserve">
+    <value>Nebulus CC</value>
+  </data>
+  <data name="colorNebulusNote" xml:space="preserve">
+    <value>Étalonnage du preset After Effects Nebulus_CC : accentuation multi-échelles, unsharp mask à 10 % et halo marqué. Valeurs fixes : les curseurs ci-dessous ne s'appliquent pas.</value>
+  </data>
+  <data name="colorNoneNote" xml:space="preserve">
+    <value>Aucun étalonnage : l'image garde les couleurs du préréglage IA.</value>
+  </data>
+  <data name="colorUltronNote" xml:space="preserve">
+    <value>Étalonnage du preset After Effects Ultron_CC. Choisir ce préréglage remet ses curseurs aux valeurs enregistrées dans le preset.</value>
+  </data>
+  <data name="paramColorSaturation" xml:space="preserve">
+    <value>Saturation</value>
+  </data>
+  <data name="paramColorBrightness" xml:space="preserve">
+    <value>Luminosité</value>
+  </data>
+  <data name="paramColorContrast" xml:space="preserve">
+    <value>Contraste</value>
+  </data>
+  <data name="paramColorVibrance" xml:space="preserve">
+    <value>Vibrance</value>
+  </data>
+  <data name="statusColorOnly" xml:space="preserve">
+    <value>Colorimétrie seule : {0}.</value>
+  </data>
+  <data name="statusNothing" xml:space="preserve">
+    <value>Aucun traitement appliqué.</value>
+  </data>
+  <data name="statusAppliedColor" xml:space="preserve">
+    <value>{0} appliqué. Colorimétrie : {1}.</value>
+  </data>
   <data name="presetChromaNote" xml:space="preserve">
     <value>Préréglage de référence, à ajuster selon l'image.</value>
   </data>
@@ -108,6 +180,7 @@
   <data name="presetAutoRelativeNote" xml:space="preserve">
     <value>Estimation automatique de l'image, puis ajustements du préréglage relatif moyen.</value>
   </data>
+
   <data name="modeChroma" xml:space="preserve">
     <value>Chroma</value>
   </data>
@@ -120,6 +193,7 @@
   <data name="modeAutoRelative" xml:space="preserve">
     <value>Auto + relatif moyen</value>
   </data>
+
   <data name="statusStart" xml:space="preserve">
     <value>Ouvrez une image pour commencer.</value>
   </data>

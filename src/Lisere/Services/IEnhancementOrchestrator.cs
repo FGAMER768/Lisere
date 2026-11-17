@@ -1,4 +1,5 @@
 using Lisere.Core.Enhancement;
+using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 using Lisere.Models;
 
@@ -9,13 +10,14 @@ public sealed record EnhancementRequest(
     EnhancementMode Mode,
     EnhancementParameters ManualParameters,
     double RecoverOriginalDetail,
-    double AddNoise);
+    double AddNoise,
+    ColorPreset Color = ColorPreset.None,
+    UltronCcSettings? ColorSettings = null);
 
 public sealed record EnhancementResult(
     RgbImage Image,
     EnhancementParameters Parameters,
     EnhancementMode Mode,
-    string ModeLabel,
     IReadOnlyList<ParameterWarning> Warnings);
 
 public interface IEnhancementOrchestrator

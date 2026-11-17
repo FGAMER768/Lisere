@@ -5,5 +5,6 @@ public enum EnhancementMode
     ChromaEnhanceMain,
     Auto,
     Manual,
-    AutoRelativeMedium
+    AutoRelativeMedium,
+    None
 }

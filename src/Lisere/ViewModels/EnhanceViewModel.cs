@@ -3,6 +3,7 @@ using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Lisere.Core.Enhancement;
+using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 using Lisere.Models;
 using Lisere.Services;
@@ -77,6 +78,30 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     private PresetOption? _selectedPreset;
 
     [ObservableProperty]
+    private ColorPresetOption? _selectedColorPreset;
+
+    [ObservableProperty]
+    private bool _isEnhancementTab = true;
+
+    [ObservableProperty]
+    private bool _isColorTab;
+
+    [ObservableProperty]
+    private double _colorSaturation;
+
+    [ObservableProperty]
+    private double _colorBrightness;
+
+    [ObservableProperty]
+    private double _colorContrast;
+
+    [ObservableProperty]
+    private double _colorVibrance;
+
+    [ObservableProperty]
+    private string _colorPresetNote = string.Empty;
+
+    [ObservableProperty]
     private double _fixCompression;
 
     [ObservableProperty]
@@ -118,10 +143,21 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             CreatePreset(EnhancementMode.ChromaEnhanceMain),
             CreatePreset(EnhancementMode.Auto),
             CreatePreset(EnhancementMode.Manual),
-            CreatePreset(EnhancementMode.AutoRelativeMedium)
+            CreatePreset(EnhancementMode.AutoRelativeMedium),
+            CreatePreset(EnhancementMode.None)
+        ];
+
+        ColorPresets =
+        [
+            CreateColorPreset(ColorPreset.None),
+            CreateColorPreset(ColorPreset.UltronCc),
+            CreateColorPreset(ColorPreset.Matrix),
+            CreateColorPreset(ColorPreset.Infinity),
+            CreateColorPreset(ColorPreset.Nebulus)
         ];
 
         SelectedPreset = Presets[0];
+        SelectedColorPreset = ColorPresets[0];
         _localization.LanguageChanged += OnLanguageChanged;
         _dialogService.DialogOpenStateChanged += OnDialogOpenStateChanged;
 
@@ -130,6 +166,20 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     }
 
     public IReadOnlyList<PresetOption> Presets { get; }
+
+    public IReadOnlyList<ColorPresetOption> ColorPresets { get; }
+
+    /// <summary>Un étalonnage autre que « Aucune » est sélectionné.</summary>
+    public bool IsColorGradingActive => ActiveColorPreset is not null;
+
+    /// <summary>Seul Ultron expose des curseurs ; les autres presets gardent les valeurs du fichier.</summary>
+    public bool HasAdjustableColorSettings => SelectedColorPreset?.Preset is ColorPreset.UltronCc;
+
+    /// <summary>Une amélioration autre que « Aucune » est sélectionnée.</summary>
+    public bool IsEnhancementActive => SelectedPreset is not { Mode: EnhancementMode.None };
+
+    private ColorPresetOption? ActiveColorPreset =>
+        SelectedColorPreset is { Preset: not ColorPreset.None } option ? option : null;
 
     public ILocalizationService Strings => _localization;
 
@@ -148,6 +198,28 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         RecoverDetails,
         Dehalo,
         AntialiasDeblur).Clamp();
+
+    public UltronCcSettings CurrentColorSettings => new(
+        ColorSaturation,
+        ColorBrightness,
+        ColorContrast,
+        ColorVibrance);
+
+    public double ColorSaturationMinimum => UltronCcSettings.SaturationMinimum;
+
+    public double ColorSaturationMaximum => UltronCcSettings.SaturationMaximum;
+
+    public double ColorBrightnessMinimum => UltronCcSettings.BrightnessMinimum;
+
+    public double ColorBrightnessMaximum => UltronCcSettings.BrightnessMaximum;
+
+    public double ColorContrastMinimum => UltronCcSettings.ContrastMinimum;
+
+    public double ColorContrastMaximum => UltronCcSettings.ContrastMaximum;
+
+    public double ColorVibranceMinimum => UltronCcSettings.VibranceMinimum;
+
+    public double ColorVibranceMaximum => UltronCcSettings.VibranceMaximum;
 
     [RelayCommand]
     private void SetLanguage(string? language) =>
@@ -264,7 +336,9 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             mode,
             CurrentParameters,
             RecoverOriginalDetail,
-            AddNoise);
+            AddNoise,
+            SelectedColorPreset?.Preset ?? ColorPreset.None,
+            SelectedColorPreset?.Preset is ColorPreset.UltronCc ? CurrentColorSettings : null);
 
         _enhanceCancellation?.Cancel();
         _enhanceCancellation?.Dispose();
@@ -441,7 +515,13 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             preset.Label = Strings[PresetLabelKey(preset.Mode)];
         }
 
+        foreach (var preset in ColorPresets)
+        {
+            preset.Label = Strings[ColorPresetLabelKey(preset.Preset)];
+        }
+
         UpdatePresetNote();
+        UpdateColorNote();
         RenderWarnings();
         UpdateImageInfo();
         RenderStatus();
@@ -478,6 +558,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         }
 
         UpdatePresetNote();
+        OnPropertyChanged(nameof(IsEnhancementActive));
 
         if (_switchingToManual)
         {
@@ -486,6 +567,39 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
         _ = ApplyPresetInBackgroundAsync(value.Mode);
     }
+
+    partial void OnSelectedColorPresetChanged(ColorPresetOption? value)
+    {
+        UpdateColorNote();
+        ApplyColorDefaults(value?.Preset ?? ColorPreset.None);
+        OnPropertyChanged(nameof(IsColorGradingActive));
+        OnPropertyChanged(nameof(HasAdjustableColorSettings));
+        UpdatePendingStatus();
+    }
+
+    partial void OnIsEnhancementTabChanged(bool value)
+    {
+        if (value)
+        {
+            IsColorTab = false;
+        }
+    }
+
+    partial void OnIsColorTabChanged(bool value)
+    {
+        if (value)
+        {
+            IsEnhancementTab = false;
+        }
+    }
+
+    partial void OnColorSaturationChanged(double value) => OnColorParameterChanged();
+
+    partial void OnColorBrightnessChanged(double value) => OnColorParameterChanged();
+
+    partial void OnColorContrastChanged(double value) => OnColorParameterChanged();
+
+    partial void OnColorVibranceChanged(double value) => OnColorParameterChanged();
 
     partial void OnFixCompressionChanged(double value) => OnParameterChanged();
 
@@ -535,7 +649,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             var parameters = mode switch
             {
                 EnhancementMode.ChromaEnhanceMain => EnhancementPresets.ChromaEnhanceMain.Parameters,
-                EnhancementMode.Manual => EnhancementParameters.Zero,
+                EnhancementMode.Manual or EnhancementMode.None => EnhancementParameters.Zero,
                 EnhancementMode.Auto when source is null => EnhancementParameters.Zero,
                 EnhancementMode.Auto => (await Task.Run(
                     () => AutoEstimator.Estimate(source),
@@ -603,6 +717,13 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         AntialiasDeblur = parameters.AntialiasDeblur;
     }
 
+    private void OnColorParameterChanged()
+    {
+        // Un réglage de colorimétrie ne touche pas au préréglage IA : les deux
+        // menus restent indépendants.
+        UpdatePendingStatus();
+    }
+
     private void OnParameterChanged()
     {
         if (_isApplyingPreset)
@@ -637,10 +758,29 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         RenderStatus();
     }
 
-    private void RenderStatus() =>
-        StatusMessage = _statusKey == "statusApplied" && _statusArgument is EnhancementMode mode
-            ? Strings.Format("statusApplied", Strings[ModeLabelKey(mode)])
-            : Strings.Format(_statusKey, _statusArgument);
+    private void RenderStatus()
+    {
+        if (_statusKey == "statusApplied" && _statusArgument is EnhancementMode mode)
+        {
+            var color = ActiveColorPreset;
+
+            if (mode is EnhancementMode.None)
+            {
+                StatusMessage = color is null
+                    ? Strings["statusNothing"]
+                    : Strings.Format("statusColorOnly", color.Label);
+                return;
+            }
+
+            var modeLabel = Strings[ModeLabelKey(mode)];
+            StatusMessage = color is null
+                ? Strings.Format("statusApplied", modeLabel)
+                : Strings.Format("statusAppliedColor", modeLabel, color.Label);
+            return;
+        }
+
+        StatusMessage = Strings.Format(_statusKey, _statusArgument);
+    }
 
     private void UpdateImageInfo() =>
         ImageInfo = _source is null
@@ -670,6 +810,25 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         PresetNote = SelectedPreset is null
             ? string.Empty
             : Strings[PresetNoteKey(SelectedPreset.Mode)];
+
+    private void UpdateColorNote() =>
+        ColorPresetNote = SelectedColorPreset is null
+            ? string.Empty
+            : Strings[ColorPresetNoteKey(SelectedColorPreset.Preset)];
+
+    private void ApplyColorDefaults(ColorPreset preset)
+    {
+        if (preset is not ColorPreset.UltronCc)
+        {
+            return;
+        }
+
+        var settings = UltronCcSettings.FromPreset;
+        ColorSaturation = settings.SaturationPercent;
+        ColorBrightness = settings.Brightness;
+        ColorContrast = settings.Contrast;
+        ColorVibrance = settings.Vibrance;
+    }
 
     private void ClearError()
     {
@@ -705,8 +864,30 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     private PresetOption CreatePreset(EnhancementMode mode) =>
         new(Strings[PresetLabelKey(mode)], mode);
 
+    private ColorPresetOption CreateColorPreset(ColorPreset preset) =>
+        new(Strings[ColorPresetLabelKey(preset)], preset);
+
+    private static string ColorPresetLabelKey(ColorPreset preset) => preset switch
+    {
+        ColorPreset.UltronCc => "colorUltron",
+        ColorPreset.Matrix => "colorMatrix",
+        ColorPreset.Infinity => "colorInfinity",
+        ColorPreset.Nebulus => "colorNebulus",
+        _ => "colorNone"
+    };
+
+    private static string ColorPresetNoteKey(ColorPreset preset) => preset switch
+    {
+        ColorPreset.UltronCc => "colorUltronNote",
+        ColorPreset.Matrix => "colorMatrixNote",
+        ColorPreset.Infinity => "colorInfinityNote",
+        ColorPreset.Nebulus => "colorNebulusNote",
+        _ => "colorNoneNote"
+    };
+
     private static string PresetLabelKey(EnhancementMode mode) => mode switch
     {
+        EnhancementMode.None => "presetNone",
         EnhancementMode.ChromaEnhanceMain => "presetChroma",
         EnhancementMode.Auto => "presetAuto",
         EnhancementMode.AutoRelativeMedium => "presetAutoRelative",
@@ -715,6 +896,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     private static string PresetNoteKey(EnhancementMode mode) => mode switch
     {
+        EnhancementMode.None => "presetNoneNote",
         EnhancementMode.ChromaEnhanceMain => "presetChromaNote",
         EnhancementMode.Auto => "presetAutoNote",
         EnhancementMode.AutoRelativeMedium => "presetAutoRelativeNote",

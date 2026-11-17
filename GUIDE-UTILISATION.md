@@ -18,7 +18,7 @@ Liseré améliore une **image** ou une **vidéo**, puis permet de comparer le r�
 | **Image** | Ouvrir une photo, appliquer un pipeline de six réglages, estimer automatiquement les paramètres, comparer avant/après et exporter en JPEG. |
 | **Vidéo** | Analyser un clip avec FFmpeg, préparer un aperçu, rendre une seconde de test, exporter le clip complet en MP4 avec audio, ou traiter plusieurs clips dans une file d'attente. |
 
-Les deux espaces partagent les mêmes six paramètres principaux et les mêmes préréglages. La vidéo ajoute les moteurs d'amélioration, la résolution, la cadence, la stabilisation, le désentrelacement, l'interpolation RIFE, le codec et la file d'attente.
+Les deux espaces partagent les mêmes six paramètres principaux et les mêmes préréglages d'amélioration ; l'étalonnage Ultron est propre à la page Image. La vidéo ajoute les moteurs d'amélioration, la résolution, la cadence, la stabilisation, le désentrelacement, l'interpolation RIFE, le codec et la file d'attente.
 
 ---
 
@@ -107,16 +107,17 @@ Le zoom est **synchronisé** : l'avant et l'après zooment ensemble. Le point so
 
 1. Cliquez sur **Ouvrir** ou appuyez sur `Ctrl+O`.
 2. Choisissez une image. L'aperçu affiche **l'original**, pas encore le résultat.
-3. Choisissez un **préréglage** :
+3. Dans le menu **Amélioration (IA)**, choisissez un **préréglage** :
    - **Chroma** pour un point de départ équilibré ;
    - **Auto** pour laisser Liseré estimer les six paramètres ;
    - **Manuel** pour régler vous-même ;
    - **Auto + relatif moyen** pour combiner estimation et ajustement modéré.
-4. Ajustez les curseurs ou les champs numériques si nécessaire. Les avertissements apparaissent si vous sortez des plages conseillées.
-5. Cliquez sur **Améliorer l'image** ou appuyez sur `Ctrl+Entrée`.
-6. Comparez avec le séparateur, le zoom et le déplacement.
-7. Si le résultat ne convient pas, modifiez les réglages et relancez l'amélioration.
-8. Cliquez sur **Exporter en JPEG** ou appuyez sur `Ctrl+S`, puis choisissez le fichier de destination.
+4. Si vous voulez aussi étalonner les couleurs, cliquez sur **Colorimétrie** et choisissez **Ultron CC** ; **Aucune** n'applique rien. Les deux menus sont indépendants.
+5. Ajustez les curseurs ou les champs numériques si nécessaire. Les avertissements apparaissent si vous sortez des plages conseillées.
+6. Cliquez sur **Améliorer l'image** ou appuyez sur `Ctrl+Entrée`.
+7. Comparez avec le séparateur, le zoom et le déplacement.
+8. Si le résultat ne convient pas, modifiez les réglages et relancez l'amélioration.
+9. Cliquez sur **Exporter en JPEG** ou appuyez sur `Ctrl+S`, puis choisissez le fichier de destination.
 
 > L'ouverture ne déclenche jamais l'amélioration. Le calcul du résultat est toujours une action volontaire.
 
@@ -181,9 +182,13 @@ Traitements automatiques au chargement :
 
 Si un format n'est pas reconnu, installez le codec Windows correspondant ou convertissez l'image en PNG/JPEG.
 
-### 5.2 Le préréglage
+### 5.2 Les deux menus de paramètres
 
-Le menu **Préréglage** propose quatre modes :
+La colonne de droite de la page Image se divise en deux menus, accessibles par les boutons **Amélioration (IA)** et **Colorimétrie**. Ils sont indépendants : changer l'un ne modifie pas l'autre.
+
+#### Amélioration (IA)
+
+Le menu **Préréglage** propose quatre modes ; la page Vidéo propose les mêmes quatre modes :
 
 | Préréglage | Comportement | Quand l'utiliser |
 |---|---|---|
@@ -191,6 +196,25 @@ Le menu **Préréglage** propose quatre modes :
 | **Auto (estimation locale)** | Analyse le contenu et estime les six paramètres. Pour une vidéo, plusieurs frames du clip sont échantillonnées. | Source inconnue, lot d'images ou réglage rapide. |
 | **Manuel (curseurs)** | Applique exactement les valeurs saisies ; `0` désactive l'effet correspondant. | Vous savez ce que vous voulez régler. |
 | **Auto + relatif moyen** | Estimation automatique, puis ajustement relatif moyen. | Résultat auto un peu trop timide, sans repartir de zéro. |
+| **Aucune amélioration** | Aucune correction : les six curseurs et les deux réglages complémentaires sont ignorés. | Ne travailler que la colorimétrie, ou comparer un étalonnage à l'image d'origine. |
+
+#### Colorimétrie
+
+Le menu **Préréglage de colorimétrie** propose :
+
+| Préréglage | Comportement | Quand l'utiliser |
+|---|---|---|
+| **Aucune** | Aucun étalonnage : l'image garde les couleurs de l'amélioration. | Par défaut. |
+| **Ultron CC** | Étalonnage du preset After Effects `Ultron_CC.ffx` : saturation 129,997 %, luminosité +5, contraste +7, vibrance +50, plus les accentuations. | Retrouver le rendu du preset sans After Effects ni plug-ins. |
+| **Matrix CC** | Étalonnage du preset After Effects `Matrix_CC.ffx` : luminosité +30, contraste +20 et trois accentuations (30 % / 15 px, 10 %, 15 % / 30 px). Valeurs fixes, sans curseurs. | Un rendu plus clair et plus contrasté, sans réglage à faire. |
+| **Infinity CC** | Étalonnage du preset After Effects `Infinity_CC.ffx` : accentuation multi-échelles, unsharp mask 16 % / rayon 9,8, halo doux, exposition −0,36. Valeurs fixes. | Un rendu net et légèrement assombri, avec un halo discret sur les hautes lumières. |
+| **Nebulus CC** | Étalonnage du preset After Effects `Nebulus_CC.ffx` : accentuation multi-échelles, unsharp mask 10 % / rayon 20, halo marqué. Valeurs fixes. | Un rendu net et lumineux, avec un halo prononcé autour des zones claires. |
+
+Les deux menus se cumulent dans cet ordre : amélioration d'abord, colorimétrie ensuite. Choisir **Aucune** dans le premier menu n'applique que l'étalonnage ; choisir **Aucune** dans le second n'applique que l'amélioration. Le halo de **Nebulus CC** est marqué : il convient aux scènes sombres ou contrastées, alors que sur une image déjà très claire il éclaircit fortement le ciel. **Infinity CC** reste plus discret et assombrit légèrement l'image.
+
+Choisir **Ultron CC** initialise les quatre curseurs de colorimétrie aux valeurs du preset ; ils restent réglables. **Matrix CC**, **Infinity CC** et **Nebulus CC** appliquent leurs valeurs du fichier et laissent les curseurs désactivés, avec une note qui l'explique. Les accentuations, propres à chaque preset, gardent les valeurs du fichier et ne sont pas exposées. L'étalonnage s'applique **après** l'amélioration : les six curseurs IA et la colorimétrie se cumulent, et **Aucune** laisse l'image telle que l'amélioration la produit.
+
+Ultron CC est une reproduction documentée : les effets natifs d'After Effects sont exacts, les plug-ins tiers (Magic Bullet Looks, Sapphire, Boris Continuum) sont approchés d'après leurs paramètres enregistrés, et les outils propriétaires non décodables du graphe Looks ne sont pas reproduits. L'analyse complète est dans `docs/ULTRON-CC-ANALYSE.md`.
 
 La note sous le menu explique le mode actif. Changer un curseur alors qu'un préréglage automatique est actif fait basculer Liseré en **Manuel** : c'est volontaire, vos valeurs ne sont pas écrasées par une nouvelle estimation.
 

@@ -96,6 +96,78 @@
   <data name="presetAutoRelative" xml:space="preserve">
     <value>Auto + relative medium</value>
   </data>
+  <data name="presetNone" xml:space="preserve">
+    <value>No enhancement</value>
+  </data>
+  <data name="presetNoneNote" xml:space="preserve">
+    <value>No correction: only the color preset applies. The six sliders and the two extra settings are ignored.</value>
+  </data>
+  <data name="sectionParameters" xml:space="preserve">
+    <value>Parameters</value>
+  </data>
+  <data name="tabEnhancement" xml:space="preserve">
+    <value>Enhancement (AI)</value>
+  </data>
+  <data name="tabColor" xml:space="preserve">
+    <value>Color grading</value>
+  </data>
+  <data name="colorSectionPreset" xml:space="preserve">
+    <value>Color preset</value>
+  </data>
+  <data name="colorSectionSettings" xml:space="preserve">
+    <value>Color grading parameters</value>
+  </data>
+  <data name="colorNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="colorUltron" xml:space="preserve">
+    <value>Ultron CC</value>
+  </data>
+  <data name="colorMatrix" xml:space="preserve">
+    <value>Matrix CC</value>
+  </data>
+  <data name="colorMatrixNote" xml:space="preserve">
+    <value>Color grade of the After Effects Matrix_CC preset: +30 brightness, +20 contrast and three sharpening passes. The recorded values are fixed: the sliders below do not apply.</value>
+  </data>
+  <data name="colorInfinity" xml:space="preserve">
+    <value>Infinity CC</value>
+  </data>
+  <data name="colorInfinityNote" xml:space="preserve">
+    <value>Color grade of the After Effects Infinity_CC preset: multi-scale sharpening, a 16% unsharp mask, a soft glow, then -0.36 exposure. The recorded values are fixed: the sliders below do not apply.</value>
+  </data>
+  <data name="colorNebulus" xml:space="preserve">
+    <value>Nebulus CC</value>
+  </data>
+  <data name="colorNebulusNote" xml:space="preserve">
+    <value>Color grade of the After Effects Nebulus_CC preset: multi-scale sharpening, a 10% unsharp mask and a strong glow. The recorded values are fixed: the sliders below do not apply.</value>
+  </data>
+  <data name="colorNoneNote" xml:space="preserve">
+    <value>No grading: the image keeps the enhancement preset colors.</value>
+  </data>
+  <data name="colorUltronNote" xml:space="preserve">
+    <value>Color grade of the After Effects Ultron_CC preset. Picking it resets its sliders to the values recorded in the preset.</value>
+  </data>
+  <data name="paramColorSaturation" xml:space="preserve">
+    <value>Saturation</value>
+  </data>
+  <data name="paramColorBrightness" xml:space="preserve">
+    <value>Brightness</value>
+  </data>
+  <data name="paramColorContrast" xml:space="preserve">
+    <value>Contrast</value>
+  </data>
+  <data name="paramColorVibrance" xml:space="preserve">
+    <value>Vibrance</value>
+  </data>
+  <data name="statusColorOnly" xml:space="preserve">
+    <value>Grading only: {0}.</value>
+  </data>
+  <data name="statusNothing" xml:space="preserve">
+    <value>No processing applied.</value>
+  </data>
+  <data name="statusAppliedColor" xml:space="preserve">
+    <value>{0} applied. Color grading: {1}.</value>
+  </data>
   <data name="presetChromaNote" xml:space="preserve">
     <value>Reference preset; adjust it to the image.</value>
   </data>
@@ -108,6 +180,7 @@
   <data name="presetAutoRelativeNote" xml:space="preserve">
     <value>Automatic estimate of the image, then relative-medium preset adjustments.</value>
   </data>
+
   <data name="modeChroma" xml:space="preserve">
     <value>Chroma</value>
   </data>
@@ -120,6 +193,7 @@
   <data name="modeAutoRelative" xml:space="preserve">
     <value>Auto + relative medium</value>
   </data>
+
   <data name="statusStart" xml:space="preserve">
     <value>Open an image to start.</value>
   </data>
