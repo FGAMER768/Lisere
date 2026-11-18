@@ -16,7 +16,8 @@ public static class ImageResampler
         GrayImage source,
         int width,
         int height,
-        ResampleMethod method = ResampleMethod.Bicubic)
+        ResampleMethod method = ResampleMethod.Bicubic,
+        ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
@@ -24,6 +25,7 @@ public static class ImageResampler
 
         if (source.Width == width && source.Height == height)
         {
+            work?.Complete();
             return source.Clone();
         }
 
@@ -33,14 +35,16 @@ public static class ImageResampler
             source.Height,
             width,
             height,
-            method));
+            method,
+            work));
     }
 
     public static RgbImage Resize(
         RgbImage source,
         int width,
         int height,
-        ResampleMethod method = ResampleMethod.Bicubic)
+        ResampleMethod method = ResampleMethod.Bicubic,
+        ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
@@ -48,6 +52,7 @@ public static class ImageResampler
 
         if (source.Width == width && source.Height == height)
         {
+            work?.Complete();
             return source.Clone();
         }
 
@@ -67,9 +72,12 @@ public static class ImageResampler
 
         var count = checked(width * height);
 
-        red = ResizePlane(red, source.Width, source.Height, width, height, method);
-        green = ResizePlane(green, source.Width, source.Height, width, height, method);
-        blue = ResizePlane(blue, source.Width, source.Height, width, height, method);
+        red = ResizePlane(
+            red, source.Width, source.Height, width, height, method, work?.Slice(0, 1.0 / 3.0));
+        green = ResizePlane(
+            green, source.Width, source.Height, width, height, method, work?.Slice(1.0 / 3.0, 2.0 / 3.0));
+        blue = ResizePlane(
+            blue, source.Width, source.Height, width, height, method, work?.Slice(2.0 / 3.0, 1.0));
 
         var pixels = new byte[checked(count * 3)];
         for (var i = 0; i < count; i++)
@@ -89,15 +97,20 @@ public static class ImageResampler
         int sourceHeight,
         int width,
         int height,
-        ResampleMethod method)
+        ResampleMethod method,
+        ImagingWork? work = null)
     {
         var support = method == ResampleMethod.Bicubic ? 2.0 : 1.0;
         var horizontal = Precompute(sourceWidth, width, support, method);
         var vertical = Precompute(sourceHeight, height, support, method);
 
         var horizontalPixels = new byte[checked(width * sourceHeight)];
+        var horizontalWork = work?.Slice(0, 0.5);
+        var verticalWork = work?.Slice(0.5, 1.0);
         for (var y = 0; y < sourceHeight; y++)
         {
+            horizontalWork?.Report(y, sourceHeight);
+
             var sourceRow = y * sourceWidth;
             var targetRow = y * width;
 
@@ -120,6 +133,8 @@ public static class ImageResampler
         var result = new byte[checked(width * height)];
         for (var y = 0; y < height; y++)
         {
+            verticalWork?.Report(y, height);
+
             var start = vertical.Starts[y];
             var count = vertical.Counts[y];
             var coefficientOffset = y * vertical.KernelSize;
@@ -139,6 +154,7 @@ public static class ImageResampler
             }
         }
 
+        work?.Complete();
         return result;
     }
 

@@ -26,6 +26,8 @@ public static class RenderReassurance
             EnhancementStage.Sharpen => strings["imageWaitSharpen"],
             EnhancementStage.Detail => strings["imageWaitDetail"],
             EnhancementStage.Halo => strings["imageWaitHalo"],
+            EnhancementStage.Grading => strings["imageWaitGrading"],
+            EnhancementStage.Preview => strings["imageWaitPreview"],
             _ => strings["imageWaitFinish"]
         };
 

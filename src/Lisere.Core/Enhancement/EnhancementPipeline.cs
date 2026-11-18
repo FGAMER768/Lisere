@@ -11,13 +11,15 @@ public enum EnhancementStage
     Sharpen,
     Detail,
     Halo,
-    Finish
+    Finish,
+    Grading,
+    Preview
 }
 
 /// <summary>
-/// A pass that actually started, with the percentage of the pipeline it opens.
-/// The value never reaches 100 before the result exists, so the wait dialog
-/// cannot announce a render that is still running as complete.
+/// A pass that actually started, with the percentage of the pipeline's own
+/// work it opens. The pipeline reports many updates inside a pass; the
+/// orchestrator maps them onto the share left after grading and preview.
 /// </summary>
 public sealed record EnhancementProgress(EnhancementStage Stage, double Percent);
 
@@ -28,9 +30,11 @@ public static class EnhancementPipeline
         EnhancementParameters parameters,
         double recoverOriginalDetail = 0.0,
         double addNoise = 0.0,
-        IProgress<EnhancementProgress>? progress = null)
+        IProgress<EnhancementProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var clamped = parameters.Clamp();
         var model = clamped.ToModelScale();
@@ -84,24 +88,20 @@ public static class EnhancementPipeline
         }
 
         stages.Add(EnhancementStage.Finish);
-        var step = 0;
-
-        void Report(EnhancementStage stage)
-        {
-            step++;
-            progress?.Report(new EnhancementProgress(
-                stage,
-                Math.Min(95.0, 95.0 * step / stages.Count)));
-        }
+        var plan = new EnhancementProgressPlan(
+            stages.Select(stage => (stage, StageCost(stage))).ToArray(),
+            progress,
+            cancellationToken);
 
         if (fixCompression)
         {
-            Report(EnhancementStage.Compression);
-            var median = ImageFilters.Median3(output);
+            var work = plan.Begin(EnhancementStage.Compression);
+            var median = ImageFilters.Median3(output, work?.Slice(0, 0.6));
             var blurred = ImageFilters.GaussianBlur(
                 median,
                 (float)(EnhancementTuning.Pipeline.CompressionBlurBase +
-                    (model.Compression * EnhancementTuning.Pipeline.CompressionBlurScale)));
+                    (model.Compression * EnhancementTuning.Pipeline.CompressionBlurScale)),
+                work?.Slice(0.6, 0.9));
 
             output = ImageFilters.BlendImages(
                 output,
@@ -110,21 +110,39 @@ public static class EnhancementPipeline
                     EnhancementTuning.Pipeline.CompressionBlendMaximum,
                     EnhancementTuning.Pipeline.CompressionBlendBase +
                     (model.Compression * EnhancementTuning.Pipeline.CompressionBlendScale)));
+            work?.Complete();
+            plan.Complete();
         }
 
         if (reduceNoise)
         {
-            Report(EnhancementStage.Noise);
-            ImageFilters.ToYCbCr(output, out var luma, out var blueChroma, out var redChroma);
+            var work = plan.Begin(EnhancementStage.Noise);
+            ImageFilters.ToYCbCr(
+                output,
+                out var luma,
+                out var blueChroma,
+                out var redChroma,
+                work?.Slice(0, 0.08));
 
             var lumaBlur = ImageFilters.GaussianBlur(
                 luma,
-                (float)(model.Noise * EnhancementTuning.Pipeline.NoiseLumaScale));
+                (float)(model.Noise * EnhancementTuning.Pipeline.NoiseLumaScale),
+                work?.Slice(0.08, 0.35));
             var chromaRadius = (float)(EnhancementTuning.Pipeline.NoiseChromaBase +
                 (model.Noise * EnhancementTuning.Pipeline.NoiseChromaScale));
-            var blueBlur = ImageFilters.GaussianBlur(blueChroma, chromaRadius);
-            var redBlur = ImageFilters.GaussianBlur(redChroma, chromaRadius);
-            var strong = ImageFilters.FromYCbCr(lumaBlur, blueBlur, redBlur);
+            var blueBlur = ImageFilters.GaussianBlur(
+                blueChroma,
+                chromaRadius,
+                work?.Slice(0.35, 0.6));
+            var redBlur = ImageFilters.GaussianBlur(
+                redChroma,
+                chromaRadius,
+                work?.Slice(0.6, 0.85));
+            var strong = ImageFilters.FromYCbCr(
+                lumaBlur,
+                blueBlur,
+                redBlur,
+                work?.Slice(0.85, 0.92));
 
             output = ImageFilters.BlendImages(
                 output,
@@ -132,6 +150,8 @@ public static class EnhancementPipeline
                 Math.Min(
                     EnhancementTuning.Pipeline.NoiseBlendMaximum,
                     model.Noise * EnhancementTuning.Pipeline.NoiseBlendScale));
+            work?.Complete();
+            plan.Complete();
         }
 
         // Référence sans accentuation : les bornes du détail s'appuient dessus,
@@ -139,13 +159,15 @@ public static class EnhancementPipeline
         var detailReference = output;
         if (antialias)
         {
-            Report(EnhancementStage.Antialias);
+            var work = plan.Begin(EnhancementStage.Antialias);
             var antialiased = ImageFilters.GaussianBlur(
                 output,
-                (float)(-preBlur * EnhancementTuning.Pipeline.AntialiasBlurScale));
+                (float)(-preBlur * EnhancementTuning.Pipeline.AntialiasBlurScale),
+                work?.Slice(0, 0.5));
             var mask = ImageFilters.EdgeMask(
                 output,
-                EnhancementTuning.Pipeline.AntialiasEdgeGain);
+                EnhancementTuning.Pipeline.AntialiasEdgeGain,
+                work?.Slice(0.5, 0.9));
             var blended = ImageFilters.BlendImages(
                 output,
                 antialiased,
@@ -154,33 +176,41 @@ public static class EnhancementPipeline
                     -preBlur * EnhancementTuning.Pipeline.AntialiasBlendScale));
 
             output = ImageFilters.Composite(blended, output, mask);
+            work?.Complete();
+            plan.Complete();
         }
         else if (deblur)
         {
-            Report(EnhancementStage.Deblur);
+            var work = plan.Begin(EnhancementStage.Deblur);
             output = ImageFilters.UnsharpMask(
                 output,
                 2.0f,
                 (int)(EnhancementTuning.Pipeline.DeblurPercentBase +
                     (preBlur * EnhancementTuning.Pipeline.DeblurPercentScale)),
                 EnhancementTuning.Pipeline.DeblurThreshold,
-                EnhancementTuning.Pipeline.SharpenOvershoot);
+                EnhancementTuning.Pipeline.SharpenOvershoot,
+                work);
+            work?.Complete();
+            plan.Complete();
         }
 
         if (sharpen)
         {
-            Report(EnhancementStage.Sharpen);
+            var work = plan.Begin(EnhancementStage.Sharpen);
             output = ImageFilters.UnsharpMask(
                 output,
                 2.0f,
                 (int)(model.Blur * EnhancementTuning.Pipeline.SharpenPercentScale),
                 EnhancementTuning.Pipeline.SharpenThreshold,
-                EnhancementTuning.Pipeline.SharpenOvershoot);
+                EnhancementTuning.Pipeline.SharpenOvershoot,
+                work);
+            work?.Complete();
+            plan.Complete();
         }
 
         if (detail)
         {
-            Report(EnhancementStage.Detail);
+            var work = plan.Begin(EnhancementStage.Detail);
             output = ImageFilters.Color(
                 output,
                 1.0 + (model.Details * EnhancementTuning.Pipeline.DetailColorScale));
@@ -192,43 +222,73 @@ public static class EnhancementPipeline
             var detailScale = ImageFilters.DetailScale(
                 output,
                 EnhancementTuning.Pipeline.DetailReferenceAcutance,
-                EnhancementTuning.Pipeline.DetailMinimumScale);
+                EnhancementTuning.Pipeline.DetailMinimumScale,
+                work?.Slice(0.1, 0.4));
             output = ImageFilters.MultiScaleSharpen(
                 output,
                 EnhancementTuning.Pipeline.DetailRadii,
                 EnhancementTuning.Pipeline.DetailGains,
                 model.Details * detailScale,
                 EnhancementTuning.Pipeline.DetailOvershoot,
-                detailReference);
+                detailReference,
+                work?.Slice(0.4, 1.0));
+            work?.Complete();
+            plan.Complete();
         }
 
         if (applyHalo)
         {
-            Report(EnhancementStage.Halo);
+            var work = plan.Begin(EnhancementStage.Halo);
             var halo = model.Halo;
             var effective = halo * (1.0 - (halo * EnhancementTuning.Pipeline.DehaloSaturationScale));
             var blurred = ImageFilters.GaussianBlur(
                 output,
                 (float)(EnhancementTuning.Pipeline.DehaloBlurBase +
-                    (effective * EnhancementTuning.Pipeline.DehaloBlurScale)));
+                    (effective * EnhancementTuning.Pipeline.DehaloBlurScale)),
+                work?.Slice(0, 0.5));
             var mask = ImageFilters.EdgeMask(
                 output,
                 EnhancementTuning.Pipeline.DehaloEdgeGainBase +
-                (effective * EnhancementTuning.Pipeline.DehaloEdgeGainScale));
+                (effective * EnhancementTuning.Pipeline.DehaloEdgeGainScale),
+                work?.Slice(0.5, 0.85));
             var reduced = ImageFilters.Point(
                 mask,
                 value => (int)(value * effective * EnhancementTuning.Pipeline.DehaloMaskScale));
 
             output = ImageFilters.Composite(blurred, output, reduced);
+            work?.Complete();
+            plan.Complete();
         }
 
-        Report(EnhancementStage.Finish);
+        var finishWork = plan.Begin(EnhancementStage.Finish);
         var recover = Math.Clamp(recoverOriginalDetail, 0.0, 100.0) / 100.0;
         if (recover > EnhancementTuning.Pipeline.RecoverOriginalDetailThreshold)
         {
             output = ImageFilters.BlendImages(output, original, recover);
         }
 
-        return ImageFilters.AddNoise(output, addNoise);
+        output = ImageFilters.AddNoise(output, addNoise, finishWork);
+        finishWork?.Complete();
+        plan.Complete();
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return output;
     }
+
+    /// <summary>
+    /// Coûts relatifs mesurés sur une image 5K (14,75 Mpx). Ils ne servent
+    /// qu'à répartir la barre : les passes elles-mêmes rapportent leurs lignes.
+    /// </summary>
+    private static double StageCost(EnhancementStage stage) => stage switch
+    {
+        EnhancementStage.Compression => 4.3,
+        EnhancementStage.Noise => 1.6,
+        EnhancementStage.Antialias => 6.5,
+        EnhancementStage.Deblur => 6.5,
+        EnhancementStage.Sharpen => 6.5,
+        EnhancementStage.Detail => 3.5,
+        EnhancementStage.Halo => 2.1,
+        EnhancementStage.Finish => 0.15,
+        _ => 1.0
+    };
 }

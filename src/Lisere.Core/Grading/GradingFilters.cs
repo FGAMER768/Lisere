@@ -25,20 +25,28 @@ internal static class GradingFilters
         double saturation,
         double lumaRed,
         double lumaGreen,
-        double lumaBlue)
+        double lumaBlue,
+        ImagingWork? work = null)
     {
         var pixels = new byte[source.Pixels.Length];
 
-        for (var i = 0; i < pixels.Length; i += 3)
+        for (var y = 0; y < source.Height; y++)
         {
-            double red = source.Pixels[i];
-            double green = source.Pixels[i + 1];
-            double blue = source.Pixels[i + 2];
-            var luma = (lumaRed * red) + (lumaGreen * green) + (lumaBlue * blue);
+            work?.Report(y, source.Height);
+            var row = y * source.Width * 3;
 
-            pixels[i] = Clip(luma + (saturation * (red - luma)));
-            pixels[i + 1] = Clip(luma + (saturation * (green - luma)));
-            pixels[i + 2] = Clip(luma + (saturation * (blue - luma)));
+            for (var x = 0; x < source.Width; x++)
+            {
+                var i = row + (x * 3);
+                double red = source.Pixels[i];
+                double green = source.Pixels[i + 1];
+                double blue = source.Pixels[i + 2];
+                var luma = (lumaRed * red) + (lumaGreen * green) + (lumaBlue * blue);
+
+                pixels[i] = Clip(luma + (saturation * (red - luma)));
+                pixels[i + 1] = Clip(luma + (saturation * (green - luma)));
+                pixels[i + 2] = Clip(luma + (saturation * (blue - luma)));
+            }
         }
 
         return new RgbImage(source.Width, source.Height, pixels);
@@ -54,16 +62,25 @@ internal static class GradingFilters
         RgbImage source,
         double brightness,
         double contrast,
-        double pivot)
+        double pivot,
+        ImagingWork? work = null)
     {
         var scale = 1.0 + (contrast / 100.0);
         var offset = brightness / 255.0;
         var pixels = new byte[source.Pixels.Length];
+        var stride = source.Width * 3;
 
-        for (var i = 0; i < pixels.Length; i++)
+        for (var y = 0; y < source.Height; y++)
         {
-            var normalized = (source.Pixels[i] / 255.0) - pivot;
-            pixels[i] = Clip(((normalized * scale) + pivot + offset) * 255.0);
+            work?.Report(y, source.Height);
+            var start = y * stride;
+            var end = start + stride;
+
+            for (var i = start; i < end; i++)
+            {
+                var normalized = (source.Pixels[i] / 255.0) - pivot;
+                pixels[i] = Clip(((normalized * scale) + pivot + offset) * 255.0);
+            }
         }
 
         return new RgbImage(source.Width, source.Height, pixels);
@@ -77,7 +94,8 @@ internal static class GradingFilters
         double lumaBlue,
         double skinProtection,
         double skinHueStart,
-        double skinHueEnd)
+        double skinHueEnd,
+        ImagingWork? work = null)
     {
         if (amount == 0.0)
         {
@@ -87,12 +105,18 @@ internal static class GradingFilters
         var strength = amount / 100.0;
         var pixels = new byte[source.Pixels.Length];
 
-        for (var i = 0; i < pixels.Length; i += 3)
+        for (var y = 0; y < source.Height; y++)
         {
-            double red = source.Pixels[i];
-            double green = source.Pixels[i + 1];
-            double blue = source.Pixels[i + 2];
-            var maximum = Math.Max(red, Math.Max(green, blue));
+            work?.Report(y, source.Height);
+            var row = y * source.Width * 3;
+
+            for (var x = 0; x < source.Width; x++)
+            {
+                var i = row + (x * 3);
+                double red = source.Pixels[i];
+                double green = source.Pixels[i + 1];
+                double blue = source.Pixels[i + 2];
+                var maximum = Math.Max(red, Math.Max(green, blue));
             var minimum = Math.Min(red, Math.Min(green, blue));
             var delta = maximum - minimum;
 
@@ -113,9 +137,10 @@ internal static class GradingFilters
             var factor = Math.Max(0.0, 1.0 + (strength * (1.0 - saturation) * protection));
             var luma = (lumaRed * red) + (lumaGreen * green) + (lumaBlue * blue);
 
-            pixels[i] = Clip(luma + (factor * (red - luma)));
-            pixels[i + 1] = Clip(luma + (factor * (green - luma)));
-            pixels[i + 2] = Clip(luma + (factor * (blue - luma)));
+                pixels[i] = Clip(luma + (factor * (red - luma)));
+                pixels[i + 1] = Clip(luma + (factor * (green - luma)));
+                pixels[i + 2] = Clip(luma + (factor * (blue - luma)));
+            }
         }
 
         return new RgbImage(source.Width, source.Height, pixels);
@@ -131,25 +156,33 @@ internal static class GradingFilters
         RgbImage source,
         double radius,
         double amountPercent,
-        double threshold) =>
+        double threshold,
+        ImagingWork? work = null) =>
         ImageFilters.UnsharpMask(
             source,
             (float)(radius * 0.5),
             (int)amountPercent,
-            (int)Math.Round(threshold * 255.0));
+            (int)Math.Round(threshold * 255.0),
+            -1,
+            work);
 
     /// <summary>
     /// Exposition en stops, appliquée en lumière linéaire : c'est le
     /// comportement d'After Effects quand « Ignorer la conversion de lumière
     /// linéaire » est décoché.
     /// </summary>
-    public static RgbImage Exposure(RgbImage source, double stops)
+    public static RgbImage Exposure(RgbImage source, double stops, ImagingWork? work = null)
     {
         var gain = Math.Pow(2.0, stops);
         var pixels = new byte[source.Pixels.Length];
 
         for (var i = 0; i < pixels.Length; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             pixels[i] = Clip(ToSrgb(ToLinear(source.Pixels[i] / 255.0) * gain) * 255.0);
         }
 
@@ -161,7 +194,10 @@ internal static class GradingFilters
     /// maître d'After Effects. Les courbes du fichier sont stockées sous cette
     /// forme : un octet de sortie par niveau d'entrée.
     /// </summary>
-    public static RgbImage CurveTable(RgbImage source, IReadOnlyList<byte> lookup)
+    public static RgbImage CurveTable(
+        RgbImage source,
+        IReadOnlyList<byte> lookup,
+        ImagingWork? work = null)
     {
         if (lookup.Count != 256)
         {
@@ -171,6 +207,11 @@ internal static class GradingFilters
         var pixels = new byte[source.Pixels.Length];
         for (var i = 0; i < pixels.Length; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             pixels[i] = lookup[source.Pixels[i]];
         }
 
@@ -189,7 +230,8 @@ internal static class GradingFilters
         double amountPercent,
         double angleOfViewDegrees,
         double centerX,
-        double centerY)
+        double centerY,
+        ImagingWork? work = null)
     {
         if (amountPercent == 0.0)
         {
@@ -205,6 +247,8 @@ internal static class GradingFilters
 
         for (var y = 0; y < source.Height; y++)
         {
+            work?.Report(y, source.Height);
+
             for (var x = 0; x < source.Width; x++)
             {
                 var dx = x + 0.5 - centerPixelX;
@@ -221,6 +265,7 @@ internal static class GradingFilters
             }
         }
 
+        work?.Complete();
         return new RgbImage(source.Width, source.Height, pixels);
     }
 
@@ -235,7 +280,8 @@ internal static class GradingFilters
         double threshold,
         double width,
         double brightness,
-        IReadOnlyList<double> channelWidths)
+        IReadOnlyList<double> channelWidths,
+        ImagingWork? work = null)
     {
         if (channelWidths.Count != 3)
         {
@@ -247,6 +293,11 @@ internal static class GradingFilters
 
         for (var i = 0; i < source.Pixels.Length; i += 3)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             double red = source.Pixels[i];
             double green = source.Pixels[i + 1];
             double blue = source.Pixels[i + 2];
@@ -264,16 +315,26 @@ internal static class GradingFilters
 
         for (var channel = 0; channel < 3; channel++)
         {
+            var channelWork = work?.Slice(channel / 3.0, (channel + 1) / 3.0);
             var blurred = ImageFilters.GaussianBlur(
                 masked,
-                (float)(width * 0.5 * channelWidths[channel]));
+                (float)(width * 0.5 * channelWidths[channel]),
+                channelWork?.Slice(0, 0.9));
 
             for (var i = channel; i < pixels.Length; i += 3)
             {
+                if ((i & 0xFFFFF) == 0)
+                {
+                    channelWork?.Pulse();
+                }
+
                 pixels[i] = Clip(pixels[i] + (brightness * blurred.Pixels[i]));
             }
+
+            channelWork?.Complete();
         }
 
+        work?.Complete();
         return new RgbImage(source.Width, source.Height, pixels);
     }
 
@@ -284,46 +345,83 @@ internal static class GradingFilters
         double amplitude,
         double lumaAmount,
         double chromaAmount,
-        double edgeThreshold)
+        double edgeThreshold,
+        ImagingWork? work = null)
     {
         var count = source.Width * source.Height;
         var luma = new double[count];
         var blueChroma = new double[count];
         var redChroma = new double[count];
-        ToYCbCr(source, luma, blueChroma, redChroma);
+        ToYCbCr(source, luma, blueChroma, redChroma, work?.Slice(0, 0.05));
 
-        var lumaDetail = BandDetail(luma, source.Width, source.Height, baseRadius, bandWeights);
+        var lumaDetail = BandDetail(
+            luma,
+            source.Width,
+            source.Height,
+            baseRadius,
+            bandWeights,
+            work: work?.Slice(0.05, chromaAmount > 0.0 ? 0.5 : 0.9));
         var threshold = edgeThreshold * 255.0;
         var lumaGain = amplitude * lumaAmount;
         var chromaGain = amplitude * chromaAmount;
         // Les plans de chrominance sont signés : le flou 8 bits les décale de
         // ChromaBias pour rester dans la plage d'un octet.
         var blueDetail = chromaGain > 0.0
-            ? BandDetail(blueChroma, source.Width, source.Height, baseRadius, bandWeights, ChromaBias)
+            ? BandDetail(
+                blueChroma,
+                source.Width,
+                source.Height,
+                baseRadius,
+                bandWeights,
+                ChromaBias,
+                work?.Slice(0.5, 0.7))
             : null;
         var redDetail = chromaGain > 0.0
-            ? BandDetail(redChroma, source.Width, source.Height, baseRadius, bandWeights, ChromaBias)
+            ? BandDetail(
+                redChroma,
+                source.Width,
+                source.Height,
+                baseRadius,
+                bandWeights,
+                ChromaBias,
+                work?.Slice(0.7, 0.9))
             : null;
 
-        for (var i = 0; i < count; i++)
+        var finalWork = work?.Slice(0.9, 0.95);
+        for (var y = 0; y < source.Height; y++)
         {
-            // Edge Threshold : seuls les écarts suffisants sont accentués, ce
-            // qui épargne le bruit et les aplats.
-            if (Math.Abs(lumaDetail[i]) < threshold)
-            {
-                continue;
-            }
+            finalWork?.Report(y, source.Height);
+            var start = y * source.Width;
+            var end = start + source.Width;
 
-            luma[i] += lumaGain * lumaDetail[i];
-
-            if (blueDetail is not null && redDetail is not null)
+            for (var i = start; i < end; i++)
             {
-                blueChroma[i] += chromaGain * blueDetail[i];
-                redChroma[i] += chromaGain * redDetail[i];
+                // Edge Threshold : seuls les écarts suffisants sont accentués, ce
+                // qui épargne le bruit et les aplats.
+                if (Math.Abs(lumaDetail[i]) < threshold)
+                {
+                    continue;
+                }
+
+                luma[i] += lumaGain * lumaDetail[i];
+
+                if (blueDetail is not null && redDetail is not null)
+                {
+                    blueChroma[i] += chromaGain * blueDetail[i];
+                    redChroma[i] += chromaGain * redDetail[i];
+                }
             }
         }
 
-        return FromYCbCr(source.Width, source.Height, luma, blueChroma, redChroma);
+        var result = FromYCbCr(
+            source.Width,
+            source.Height,
+            luma,
+            blueChroma,
+            redChroma,
+            work?.Slice(0.95, 1.0));
+        work?.Complete();
+        return result;
     }
 
     public static RgbImage BandLumaSharpen(
@@ -332,32 +430,52 @@ internal static class GradingFilters
         double primaryGain,
         double secondaryRadius,
         double secondaryGain,
-        double thresholdLevels)
+        double thresholdLevels,
+        ImagingWork? work = null)
     {
         var count = source.Width * source.Height;
         var luma = new double[count];
         var blueChroma = new double[count];
         var redChroma = new double[count];
-        ToYCbCr(source, luma, blueChroma, redChroma);
+        ToYCbCr(source, luma, blueChroma, redChroma, work?.Slice(0, 0.05));
 
-        var primary = BlurDetail(luma, source.Width, source.Height, primaryRadius);
-        var secondary = BlurDetail(luma, source.Width, source.Height, secondaryRadius);
+        var primary = BlurDetail(
+            luma,
+            source.Width,
+            source.Height,
+            primaryRadius,
+            work: work?.Slice(0.05, 0.45));
+        var secondary = BlurDetail(
+            luma,
+            source.Width,
+            source.Height,
+            secondaryRadius,
+            work: work?.Slice(0.45, 0.85));
         var pixels = new byte[source.Pixels.Length];
+        var finalWork = work?.Slice(0.85, 1.0);
 
-        for (var i = 0; i < count; i++)
+        for (var y = 0; y < source.Height; y++)
         {
-            var delta = (primaryGain * primary[i]) + (secondaryGain * secondary[i]);
-            if (Math.Abs(delta) < thresholdLevels)
-            {
-                delta = 0.0;
-            }
+            finalWork?.Report(y, source.Height);
+            var start = y * source.Width;
+            var end = start + source.Width;
 
-            var offset = i * 3;
-            pixels[offset] = Clip(source.Pixels[offset] + delta);
-            pixels[offset + 1] = Clip(source.Pixels[offset + 1] + delta);
-            pixels[offset + 2] = Clip(source.Pixels[offset + 2] + delta);
+            for (var i = start; i < end; i++)
+            {
+                var delta = (primaryGain * primary[i]) + (secondaryGain * secondary[i]);
+                if (Math.Abs(delta) < thresholdLevels)
+                {
+                    delta = 0.0;
+                }
+
+                var offset = i * 3;
+                pixels[offset] = Clip(source.Pixels[offset] + delta);
+                pixels[offset + 1] = Clip(source.Pixels[offset + 1] + delta);
+                pixels[offset + 2] = Clip(source.Pixels[offset + 2] + delta);
+            }
         }
 
+        work?.Complete();
         return new RgbImage(source.Width, source.Height, pixels);
     }
 
@@ -367,13 +485,15 @@ internal static class GradingFilters
         int height,
         double baseRadius,
         IReadOnlyList<double> bandWeights,
-        double bias = 0.0)
+        double bias = 0.0,
+        ImagingWork? work = null)
     {
         var detail = new double[plane.Length];
         var totalWeight = bandWeights.Sum();
 
         if (totalWeight <= 0.0)
         {
+            work?.Complete();
             return detail;
         }
 
@@ -385,7 +505,15 @@ internal static class GradingFilters
                 continue;
             }
 
-            var bandDetail = BlurDetail(plane, width, height, baseRadius * (1 << band), bias);
+            var bandDetail = BlurDetail(
+                plane,
+                width,
+                height,
+                baseRadius * (1 << band),
+                bias,
+                work?.Slice(
+                    band / (double)bandWeights.Count,
+                    (band + 1) / (double)bandWeights.Count));
             for (var i = 0; i < detail.Length; i++)
             {
                 detail[i] += weight * bandDetail[i];
@@ -397,6 +525,7 @@ internal static class GradingFilters
             detail[i] /= totalWeight;
         }
 
+        work?.Complete();
         return detail;
     }
 
@@ -405,39 +534,66 @@ internal static class GradingFilters
         int width,
         int height,
         double radius,
-        double bias = 0.0)
+        double bias = 0.0,
+        ImagingWork? work = null)
     {
         var bytes = new byte[plane.Length];
         for (var i = 0; i < bytes.Length; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             bytes[i] = Clip(plane[i] + bias);
         }
 
-        var blurred = ImageFilters.GaussianBlur(new GrayImage(width, height, bytes), (float)radius);
+        var blurred = ImageFilters.GaussianBlur(
+            new GrayImage(width, height, bytes),
+            (float)radius,
+            work?.Slice(0, 0.9));
         var detail = new double[plane.Length];
 
         for (var i = 0; i < detail.Length; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             // Le décalage est retiré : le flou d'un plan décalé est le flou du
             // plan plus le décalage, puisque ses poids somment à 1.
             detail[i] = plane[i] - (blurred.Pixels[i] - bias);
         }
 
+        work?.Complete();
         return detail;
     }
 
-    private static void ToYCbCr(RgbImage source, double[] luma, double[] blueChroma, double[] redChroma)
+    private static void ToYCbCr(
+        RgbImage source,
+        double[] luma,
+        double[] blueChroma,
+        double[] redChroma,
+        ImagingWork? work = null)
     {
-        for (var i = 0; i < luma.Length; i++)
+        for (var y = 0; y < source.Height; y++)
         {
-            var offset = i * 3;
-            double red = source.Pixels[offset];
-            double green = source.Pixels[offset + 1];
-            double blue = source.Pixels[offset + 2];
+            work?.Report(y, source.Height);
+            var start = y * source.Width;
+            var end = start + source.Width;
 
-            luma[i] = (0.299 * red) + (0.587 * green) + (0.114 * blue);
-            blueChroma[i] = (CbRed * red) + (CbGreen * green) + (CbBlue * blue);
-            redChroma[i] = (CrRed * red) + (CrGreen * green) + (CrBlue * blue);
+            for (var i = start; i < end; i++)
+            {
+                var offset = i * 3;
+                double red = source.Pixels[offset];
+                double green = source.Pixels[offset + 1];
+                double blue = source.Pixels[offset + 2];
+
+                luma[i] = (0.299 * red) + (0.587 * green) + (0.114 * blue);
+                blueChroma[i] = (CbRed * red) + (CbGreen * green) + (CbBlue * blue);
+                redChroma[i] = (CrRed * red) + (CrGreen * green) + (CrBlue * blue);
+            }
         }
     }
 
@@ -446,19 +602,27 @@ internal static class GradingFilters
         int height,
         double[] luma,
         double[] blueChroma,
-        double[] redChroma)
+        double[] redChroma,
+        ImagingWork? work = null)
     {
         var pixels = new byte[checked(width * height * 3)];
 
-        for (var i = 0; i < luma.Length; i++)
+        for (var y = 0; y < height; y++)
         {
-            var offset = i * 3;
-            var red = redChroma[i];
-            var blue = blueChroma[i];
+            work?.Report(y, height);
+            var start = y * width;
+            var end = start + width;
 
-            pixels[offset] = Clip(luma[i] + (1.402 * red));
-            pixels[offset + 1] = Clip(luma[i] - (0.344136 * blue) - (0.714136 * red));
-            pixels[offset + 2] = Clip(luma[i] + (1.772 * blue));
+            for (var i = start; i < end; i++)
+            {
+                var offset = i * 3;
+                var red = redChroma[i];
+                var blue = blueChroma[i];
+
+                pixels[offset] = Clip(luma[i] + (1.402 * red));
+                pixels[offset + 1] = Clip(luma[i] - (0.344136 * blue) - (0.714136 * red));
+                pixels[offset + 2] = Clip(luma[i] + (1.772 * blue));
+            }
         }
 
         return new RgbImage(width, height, pixels);

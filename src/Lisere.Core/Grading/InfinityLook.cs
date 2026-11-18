@@ -14,7 +14,7 @@ namespace Lisere.Core.Grading;
 /// </summary>
 public static class InfinityLook
 {
-    public static RgbImage Apply(RgbImage source)
+    public static RgbImage Apply(RgbImage source, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -25,21 +25,29 @@ public static class InfinityLook
             InfinityTuning.SapphireSharpen.Amplitude,
             InfinityTuning.SapphireSharpen.LumaAmount,
             InfinityTuning.SapphireSharpen.ChromaAmount,
-            InfinityTuning.SapphireSharpen.EdgeThreshold);
+            InfinityTuning.SapphireSharpen.EdgeThreshold,
+            work?.Slice(0, 0.5));
 
         output = GradingFilters.UnsharpMaskFromRadius(
             output,
             InfinityTuning.BccUnsharpMask.Radius,
             InfinityTuning.BccUnsharpMask.AmountPercent,
-            InfinityTuning.BccUnsharpMask.Threshold);
+            InfinityTuning.BccUnsharpMask.Threshold,
+            work?.Slice(0.5, 0.65));
 
         output = GradingFilters.Glow(
             output,
             InfinityTuning.SapphireGlow.Threshold,
             InfinityTuning.SapphireGlow.Width,
             InfinityTuning.SapphireGlow.Brightness,
-            InfinityTuning.SapphireGlow.ChannelWidths);
+            InfinityTuning.SapphireGlow.ChannelWidths,
+            work?.Slice(0.65, 0.95));
 
-        return GradingFilters.Exposure(output, InfinityTuning.Exposure);
+        output = GradingFilters.Exposure(
+            output,
+            InfinityTuning.Exposure,
+            work?.Slice(0.95, 1.0));
+
+        return output;
     }
 }

@@ -62,13 +62,13 @@ public class PipelineTests
     }
 
     [Fact]
-    public void ProgressReportsOnlyThePassesThatRun()
+    public void ProgressReportsOnlyThePassesThatRunAndMovesInsideThem()
     {
         var reports = new List<EnhancementProgress>();
         var progress = new SynchronousProgress(reports);
 
         EnhancementPipeline.Enhance(
-            TestImages.CreatePattern(),
+            TestImages.CreatePattern(256),
             new EnhancementParameters(60, 0, 0, 80, 0, 0),
             0,
             0,
@@ -81,11 +81,28 @@ public class PipelineTests
                 EnhancementStage.Detail,
                 EnhancementStage.Finish
             },
-            reports.Select(report => report.Stage).ToArray());
+            reports.Select(report => report.Stage).Distinct().ToArray());
+        Assert.True(reports.Count > 3, $"la progression doit avancer dans les passes ({reports.Count} rapports)");
         Assert.Equal(
             reports.OrderBy(report => report.Percent).Select(report => report.Percent),
             reports.Select(report => report.Percent));
-        Assert.All(reports, report => Assert.InRange(report.Percent, 0, 95));
+        Assert.All(reports, report => Assert.InRange(report.Percent, 0, 100));
+    }
+
+    [Fact]
+    public void CancellationStopsThePipelineInsideAPass()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var progress = new ActionProgress(cancellation.Cancel);
+
+        Assert.Throws<OperationCanceledException>(() =>
+            EnhancementPipeline.Enhance(
+                TestImages.CreatePattern(512),
+                EnhancementPresets.ChromaEnhanceMain.Parameters,
+                EnhancementPresets.ChromaEnhanceMain.RecoverOriginalDetail,
+                EnhancementPresets.ChromaEnhanceMain.AddNoise,
+                progress,
+                cancellation.Token));
     }
 
     [Fact]
@@ -146,5 +163,10 @@ public class PipelineTests
         : IProgress<EnhancementProgress>
     {
         public void Report(EnhancementProgress value) => reports.Add(value);
+    }
+
+    private sealed class ActionProgress(Action onReport) : IProgress<EnhancementProgress>
+    {
+        public void Report(EnhancementProgress value) => onReport();
     }
 }

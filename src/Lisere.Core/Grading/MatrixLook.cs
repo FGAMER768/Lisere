@@ -19,7 +19,7 @@ namespace Lisere.Core.Grading;
 /// </summary>
 public static class MatrixLook
 {
-    public static RgbImage Apply(RgbImage source)
+    public static RgbImage Apply(RgbImage source, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -27,24 +27,31 @@ public static class MatrixLook
             source,
             MatrixTuning.BrightnessContrast.Brightness,
             MatrixTuning.BrightnessContrast.Contrast,
-            MatrixTuning.BrightnessContrast.Pivot);
+            MatrixTuning.BrightnessContrast.Pivot,
+            work?.Slice(0, 0.05));
 
         output = GradingFilters.UnsharpMaskFromRadius(
             output,
             MatrixTuning.UnsharpMask.Radius,
             MatrixTuning.UnsharpMask.AmountPercent,
-            MatrixTuning.UnsharpMask.Threshold);
+            MatrixTuning.UnsharpMask.Threshold,
+            work?.Slice(0.05, 0.35));
 
         output = ImageFilters.UnsharpMask(
             output,
             (float)MatrixTuning.Sharpen.Sigma,
             (int)MatrixTuning.Sharpen.AmountPercent,
-            0);
+            0,
+            -1,
+            work?.Slice(0.35, 0.65));
 
-        return GradingFilters.UnsharpMaskFromRadius(
+        output = GradingFilters.UnsharpMaskFromRadius(
             output,
             MatrixTuning.BccUnsharpMask.Radius,
             MatrixTuning.BccUnsharpMask.AmountPercent,
-            MatrixTuning.BccUnsharpMask.Threshold);
+            MatrixTuning.BccUnsharpMask.Threshold,
+            work?.Slice(0.65, 1.0));
+
+        return output;
     }
 }

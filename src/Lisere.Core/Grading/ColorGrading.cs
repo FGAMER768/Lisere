@@ -7,18 +7,28 @@ namespace Lisere.Core.Grading;
 /// </summary>
 public static class ColorGrading
 {
-    public static RgbImage Apply(RgbImage source, ColorPreset preset, UltronCcSettings? settings = null)
+    public static RgbImage Apply(
+        RgbImage source,
+        ColorPreset preset,
+        UltronCcSettings? settings = null,
+        ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        return preset switch
+        var output = preset switch
         {
-            ColorPreset.UltronCc => UltronCcLook.Apply(source, settings ?? UltronCcSettings.FromPreset),
-            ColorPreset.Matrix => MatrixLook.Apply(source),
-            ColorPreset.Infinity => InfinityLook.Apply(source),
-            ColorPreset.Nebulus => NebulusLook.Apply(source),
-            ColorPreset.Splendida => SplendidaLook.Apply(source),
+            ColorPreset.UltronCc => UltronCcLook.Apply(
+                source,
+                settings ?? UltronCcSettings.FromPreset,
+                work),
+            ColorPreset.Matrix => MatrixLook.Apply(source, work),
+            ColorPreset.Infinity => InfinityLook.Apply(source, work),
+            ColorPreset.Nebulus => NebulusLook.Apply(source, work),
+            ColorPreset.Splendida => SplendidaLook.Apply(source, work),
             _ => source.Clone()
         };
+
+        work?.Complete();
+        return output;
     }
 }

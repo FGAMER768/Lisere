@@ -359,7 +359,12 @@ public sealed class ImageCodec : IImageCodec
         var height = Math.Max(1, (int)Math.Round(image.Height * scale));
         var preview = width == image.Width && height == image.Height
             ? image
-            : ImageResampler.Resize(image, width, height, ResampleMethod.Bicubic);
+            : ImageResampler.Resize(
+                image,
+                width,
+                height,
+                ResampleMethod.Bicubic,
+                new ImagingWork(cancellationToken));
 
         cancellationToken.ThrowIfCancellationRequested();
 

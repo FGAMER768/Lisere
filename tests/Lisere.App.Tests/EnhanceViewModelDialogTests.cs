@@ -107,6 +107,14 @@ public class EnhanceViewModelDialogTests
             dialogs.Events,
             entry => entry.StartsWith("update:Reconstruction du détail", StringComparison.Ordinal) &&
                 entry.Contains("progresse", StringComparison.Ordinal));
+        Assert.Contains(
+            dialogs.Events,
+            entry => entry.StartsWith("update:Préparation de l'aperçu", StringComparison.Ordinal) &&
+                entry.EndsWith(":95", StringComparison.Ordinal));
+        Assert.Contains(
+            dialogs.Events,
+            entry => entry.StartsWith("update:Préparation de l'aperçu", StringComparison.Ordinal) &&
+                entry.EndsWith(":99", StringComparison.Ordinal));
     }
 
     [Fact]

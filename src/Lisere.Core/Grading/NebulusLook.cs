@@ -13,7 +13,7 @@ namespace Lisere.Core.Grading;
 /// </summary>
 public static class NebulusLook
 {
-    public static RgbImage Apply(RgbImage source)
+    public static RgbImage Apply(RgbImage source, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -24,19 +24,24 @@ public static class NebulusLook
             NebulusTuning.SapphireSharpen.Amplitude,
             NebulusTuning.SapphireSharpen.LumaAmount,
             NebulusTuning.SapphireSharpen.ChromaAmount,
-            NebulusTuning.SapphireSharpen.EdgeThreshold);
+            NebulusTuning.SapphireSharpen.EdgeThreshold,
+            work?.Slice(0, 0.55));
 
         output = GradingFilters.UnsharpMaskFromRadius(
             output,
             NebulusTuning.BccUnsharpMask.Radius,
             NebulusTuning.BccUnsharpMask.AmountPercent,
-            NebulusTuning.BccUnsharpMask.Threshold);
+            NebulusTuning.BccUnsharpMask.Threshold,
+            work?.Slice(0.55, 0.7));
 
-        return GradingFilters.Glow(
+        output = GradingFilters.Glow(
             output,
             NebulusTuning.SapphireGlow.Threshold,
             NebulusTuning.SapphireGlow.Width,
             NebulusTuning.SapphireGlow.Brightness,
-            NebulusTuning.SapphireGlow.ChannelWidths);
+            NebulusTuning.SapphireGlow.ChannelWidths,
+            work?.Slice(0.7, 1.0));
+
+        return output;
     }
 }

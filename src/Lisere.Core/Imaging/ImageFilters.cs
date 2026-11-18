@@ -22,23 +22,29 @@ public static class ImageFilters
     private static readonly int[] GreenCr = BuildOffsetTable(-0.71414);
     private static readonly int[] BlueCb = BuildOffsetTable(1.77200);
 
-    public static GrayImage ToGray(RgbImage source)
+    public static GrayImage ToGray(RgbImage source, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         var pixels = new byte[checked(source.Width * source.Height)];
         for (var i = 0; i < pixels.Length; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             var offset = i * 3;
             pixels[i] = (byte)(((19595 * source.Pixels[offset]) +
                 (38470 * source.Pixels[offset + 1]) +
                 (7471 * source.Pixels[offset + 2]) + GrayBias) >> 16);
         }
 
+        work?.Complete();
         return new GrayImage(source.Width, source.Height, pixels);
     }
 
-    public static GrayImage FindEdges(GrayImage source)
+    public static GrayImage FindEdges(GrayImage source, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -49,7 +55,7 @@ public static class ImageFilters
             -1, -1, -1
         ];
 
-        return Filter3x3(source, kernel, 0.0f);
+        return Filter3x3(source, kernel, 0.0f, work);
     }
 
     public static RgbImage Detail(RgbImage source)
@@ -85,7 +91,8 @@ public static class ImageFilters
         IReadOnlyList<double> gains,
         double strength,
         int overshoot,
-        RgbImage? clampReference = null)
+        RgbImage? clampReference = null,
+        ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(radii);
@@ -100,18 +107,28 @@ public static class ImageFilters
             return source.Clone();
         }
 
-        var luma = ToGray(source);
+        var luma = ToGray(source, work?.Slice(0, 0.02));
         var detail = new float[luma.Pixels.Length];
         var radius = (int)Math.Ceiling(radii.Max());
 
         // Les bornes viennent de l'image non accentuée quand elle est fournie :
         // les halos d'un unsharp antérieur ne servent alors pas de marge.
-        var extremaSource = clampReference is null ? luma : ToGray(clampReference);
-        var (localMin, localMax) = LocalExtrema(extremaSource, radius);
+        var extremaSource = clampReference is null
+            ? luma
+            : ToGray(clampReference, work?.Slice(0.02, 0.04));
+        var extremaStart = clampReference is null ? 0.02 : 0.04;
+        var (localMin, localMax) = LocalExtrema(
+            extremaSource,
+            radius,
+            work?.Slice(extremaStart, 0.22));
 
+        var bandSpan = 0.62 / radii.Count;
         for (var band = 0; band < radii.Count; band++)
         {
-            var blurred = GaussianBlur(luma, radii[band]);
+            var blurred = GaussianBlur(
+                luma,
+                radii[band],
+                work?.Slice(0.22 + (band * bandSpan), 0.22 + ((band + 1) * bandSpan)));
             var gain = (float)(gains[band] * strength);
 
             for (var i = 0; i < detail.Length; i++)
@@ -124,6 +141,11 @@ public static class ImageFilters
 
         for (var i = 0; i < detail.Length; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             var low = Math.Max(0, localMin[i] - overshoot);
             var high = Math.Min(255, localMax[i] + overshoot);
             var target = Math.Clamp(luma.Pixels[i] + detail[i], low, high);
@@ -134,6 +156,7 @@ public static class ImageFilters
             pixels[offset + 2] = PixelMath.Clip8(source.Pixels[offset + 2] + delta);
         }
 
+        work?.Complete();
         return new RgbImage(source.Width, source.Height, pixels);
     }
 
@@ -143,19 +166,26 @@ public static class ImageFilters
     /// est ménagée (facteur minimal). Le rapport énergie de contour / écart-type
     /// vaut ~0,04 sur une photo floue et ~0,3–0,6 sur une photo nette.
     /// </summary>
-    public static double DetailScale(RgbImage source, double referenceAcutance, double minimum)
+    public static double DetailScale(
+        RgbImage source,
+        double referenceAcutance,
+        double minimum,
+        ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var luma = ToGray(source);
+        var luma = ToGray(source, work?.Slice(0, 0.5));
         var width = source.Width;
         double edge = 0;
         double sum = 0;
         double sumSquares = 0;
         var count = 0;
 
+        var scanWork = work?.Slice(0.5, 1.0);
         for (var y = 1; y < source.Height - 1; y++)
         {
+            scanWork?.Report(y, source.Height);
+
             for (var x = 1; x < width - 1; x++)
             {
                 var index = (y * width) + x;
@@ -168,6 +198,8 @@ public static class ImageFilters
                 count++;
             }
         }
+
+        work?.Complete();
 
         if (count == 0)
         {
@@ -191,24 +223,36 @@ public static class ImageFilters
     /// horizontal puis vertical avec une file monotone, au lieu des 81
     /// comparaisons d'une fenêtre 9 × 9.
     /// </summary>
-    private static (byte[] Min, byte[] Max) LocalExtrema(GrayImage source, int radius) =>
-        LocalExtrema(source.Pixels, source.Width, source.Height, radius);
+    private static (byte[] Min, byte[] Max) LocalExtrema(
+        GrayImage source,
+        int radius,
+        ImagingWork? work = null) =>
+        LocalExtrema(source.Pixels, source.Width, source.Height, radius, work);
 
     private static (byte[] Min, byte[] Max) LocalExtrema(
         byte[] pixels,
         int width,
         int height,
-        int radius)
+        int radius,
+        ImagingWork? work = null)
     {
         var length = pixels.Length;
         var horizontal = new byte[length];
         var minimum = new byte[length];
         var maximum = new byte[length];
 
-        SlidingExtreme(pixels, width, height, radius, horizontal, minimum, takeMax: false);
-        SlidingExtreme(minimum, width, height, radius, horizontal, minimum, takeMax: false);
-        SlidingExtreme(pixels, width, height, radius, horizontal, maximum, takeMax: true);
-        SlidingExtreme(maximum, width, height, radius, horizontal, maximum, takeMax: true);
+        SlidingExtreme(
+            pixels, width, height, radius, horizontal, minimum, takeMax: false,
+            work?.Slice(0, 0.25));
+        SlidingExtreme(
+            minimum, width, height, radius, horizontal, minimum, takeMax: false,
+            work?.Slice(0.25, 0.5));
+        SlidingExtreme(
+            pixels, width, height, radius, horizontal, maximum, takeMax: true,
+            work?.Slice(0.5, 0.75));
+        SlidingExtreme(
+            maximum, width, height, radius, horizontal, maximum, takeMax: true,
+            work?.Slice(0.75, 1.0));
 
         return (minimum, maximum);
     }
@@ -220,12 +264,17 @@ public static class ImageFilters
         int radius,
         byte[] horizontal,
         byte[] result,
-        bool takeMax)
+        bool takeMax,
+        ImagingWork? work = null)
     {
         var deque = new int[Math.Max(width, height)];
+        var horizontalWork = work?.Slice(0, 0.5);
+        var verticalWork = work?.Slice(0.5, 1.0);
 
         for (var y = 0; y < height; y++)
         {
+            horizontalWork?.Report(y, height);
+
             var row = y * width;
             var head = 0;
             var tail = 0;
@@ -260,6 +309,8 @@ public static class ImageFilters
 
         for (var x = 0; x < width; x++)
         {
+            verticalWork?.Report(x, width);
+
             var head = 0;
             var tail = 0;
 
@@ -290,12 +341,14 @@ public static class ImageFilters
                 result[x + (outIndex * width)] = horizontal[x + (deque[head] * width)];
             }
         }
+
+        work?.Complete();
     }
 
     private static bool Pops(byte existing, byte value, bool takeMax) =>
         takeMax ? existing <= value : existing >= value;
 
-    public static GrayImage Median3(GrayImage source)
+    public static GrayImage Median3(GrayImage source, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -304,6 +357,8 @@ public static class ImageFilters
 
         for (var y = 0; y < source.Height; y++)
         {
+            work?.Report(y, source.Height);
+
             for (var x = 0; x < source.Width; x++)
             {
                 var index = 0;
@@ -322,23 +377,28 @@ public static class ImageFilters
             }
         }
 
+        work?.Complete();
         return new GrayImage(source.Width, source.Height, result);
     }
 
-    public static RgbImage Median3(RgbImage source)
+    public static RgbImage Median3(RgbImage source, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        return MapPlanes(source, (plane, width, height) =>
-            Median3(new GrayImage(width, height, plane)).Pixels);
+        return MapPlanes(
+            source,
+            (plane, width, height, planeWork) =>
+                Median3(new GrayImage(width, height, plane), planeWork).Pixels,
+            work);
     }
 
-    public static GrayImage GaussianBlur(GrayImage source, float radius)
+    public static GrayImage GaussianBlur(GrayImage source, float radius, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         if (radius <= 0.0f)
         {
+            work?.Complete();
             return source.Clone();
         }
 
@@ -347,32 +407,54 @@ public static class ImageFilters
 
         for (var pass = 0; pass < 3; pass++)
         {
-            result = BoxBlurHorizontal(result, source.Width, source.Height, boxRadius);
+            result = BoxBlurHorizontal(
+                result,
+                source.Width,
+                source.Height,
+                boxRadius,
+                work?.Slice(pass * 0.15, (pass + 1) * 0.15));
         }
 
-        var transposed = Transpose(result, source.Width, source.Height);
+        var transposed = Transpose(
+            result,
+            source.Width,
+            source.Height,
+            work?.Slice(0.45, 0.5));
         for (var pass = 0; pass < 3; pass++)
         {
-            transposed = BoxBlurHorizontal(transposed, source.Height, source.Width, boxRadius);
+            transposed = BoxBlurHorizontal(
+                transposed,
+                source.Height,
+                source.Width,
+                boxRadius,
+                work?.Slice(0.5 + (pass * 0.15), 0.5 + ((pass + 1) * 0.15)));
         }
 
         return new GrayImage(
             source.Width,
             source.Height,
-            Transpose(transposed, source.Height, source.Width));
+            Transpose(
+                transposed,
+                source.Height,
+                source.Width,
+                work?.Slice(0.95, 1.0)));
     }
 
-    public static RgbImage GaussianBlur(RgbImage source, float radius)
+    public static RgbImage GaussianBlur(RgbImage source, float radius, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         if (radius <= 0.0f)
         {
+            work?.Complete();
             return source.Clone();
         }
 
-        return MapPlanes(source, (plane, width, height) =>
-            GaussianBlur(new GrayImage(width, height, plane), radius).Pixels);
+        return MapPlanes(
+            source,
+            (plane, width, height, planeWork) =>
+                GaussianBlur(new GrayImage(width, height, plane), radius, planeWork).Pixels,
+            work);
     }
 
     /// <summary>
@@ -385,17 +467,23 @@ public static class ImageFilters
         float radius,
         int percent,
         int threshold,
-        int overshoot = -1)
+        int overshoot = -1,
+        ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentOutOfRangeException.ThrowIfNegative(percent);
         ArgumentOutOfRangeException.ThrowIfNegative(threshold);
 
-        var blurred = GaussianBlur(source, radius);
+        var blurred = GaussianBlur(source, radius, work?.Slice(0, 0.68));
         var pixels = new byte[source.Pixels.Length];
 
         for (var i = 0; i < pixels.Length; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             var original = source.Pixels[i];
             var difference = original - blurred.Pixels[i];
             if (difference > threshold || difference < -threshold)
@@ -410,7 +498,16 @@ public static class ImageFilters
 
         if (overshoot >= 0)
         {
-            ClampToLocalRange(source, pixels, (int)Math.Ceiling(radius), overshoot);
+            ClampToLocalRange(
+                source,
+                pixels,
+                (int)Math.Ceiling(radius),
+                overshoot,
+                work?.Slice(0.68, 1.0));
+        }
+        else
+        {
+            work?.Complete();
         }
 
         return new RgbImage(source.Width, source.Height, pixels);
@@ -420,27 +517,47 @@ public static class ImageFilters
         RgbImage source,
         byte[] target,
         int radius,
-        int overshoot)
+        int overshoot,
+        ImagingWork? work = null)
     {
         var length = source.Width * source.Height;
         var plane = new byte[length];
 
         for (var channel = 0; channel < 3; channel++)
         {
+            var channelWork = work?.Slice(channel / 3.0, (channel + 1) / 3.0);
+
             for (var i = 0; i < length; i++)
             {
+                if ((i & 0xFFFFF) == 0)
+                {
+                    channelWork?.Pulse();
+                }
+
                 plane[i] = source.Pixels[(i * 3) + channel];
             }
 
-            var (minimum, maximum) = LocalExtrema(plane, source.Width, source.Height, radius);
+            var (minimum, maximum) = LocalExtrema(
+                plane,
+                source.Width,
+                source.Height,
+                radius,
+                channelWork?.Slice(0, 0.8));
 
             for (var i = 0; i < length; i++)
             {
+                if ((i & 0xFFFFF) == 0)
+                {
+                    channelWork?.Pulse();
+                }
+
                 var low = Math.Max(0, minimum[i] - overshoot);
                 var high = Math.Min(255, maximum[i] + overshoot);
                 var offset = (i * 3) + channel;
                 target[offset] = (byte)Math.Clamp(target[offset], low, high);
             }
+
+            channelWork?.Complete();
         }
     }
 
@@ -485,20 +602,28 @@ public static class ImageFilters
         return new RgbImage(source.Width, source.Height, pixels);
     }
 
-    public static GrayImage EdgeMask(RgbImage source, double gain)
+    public static GrayImage EdgeMask(RgbImage source, double gain, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var edges = FindEdges(ToGray(source));
+        var edges = FindEdges(
+            ToGray(source, work?.Slice(0, 0.3)),
+            work?.Slice(0.3, 0.9));
         var pixels = new byte[edges.Pixels.Length];
 
         for (var i = 0; i < pixels.Length; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             pixels[i] = (byte)Math.Min(
                 EnhancementTuning.Pipeline.EdgeMaskMaximum,
                 (int)(edges.Pixels[i] * gain));
         }
 
+        work?.Complete();
         return new GrayImage(edges.Width, edges.Height, pixels);
     }
 
@@ -584,7 +709,12 @@ public static class ImageFilters
         return new GrayImage(first.Width, first.Height, pixels);
     }
 
-    public static void ToYCbCr(RgbImage source, out GrayImage luma, out GrayImage blueChroma, out GrayImage redChroma)
+    public static void ToYCbCr(
+        RgbImage source,
+        out GrayImage luma,
+        out GrayImage blueChroma,
+        out GrayImage redChroma,
+        ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -595,6 +725,11 @@ public static class ImageFilters
 
         for (var i = 0; i < count; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             var offset = i * 3;
             var red = source.Pixels[offset];
             var green = source.Pixels[offset + 1];
@@ -605,12 +740,17 @@ public static class ImageFilters
             cr[i] = (byte)(((CrRed[red] + CrGreen[green] + CrBlue[blue]) >> Scale) + 128);
         }
 
+        work?.Complete();
         luma = new GrayImage(source.Width, source.Height, y);
         blueChroma = new GrayImage(source.Width, source.Height, cb);
         redChroma = new GrayImage(source.Width, source.Height, cr);
     }
 
-    public static RgbImage FromYCbCr(GrayImage luma, GrayImage blueChroma, GrayImage redChroma)
+    public static RgbImage FromYCbCr(
+        GrayImage luma,
+        GrayImage blueChroma,
+        GrayImage redChroma,
+        ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(luma);
         ArgumentNullException.ThrowIfNull(blueChroma);
@@ -622,6 +762,11 @@ public static class ImageFilters
 
         for (var i = 0; i < luma.Pixels.Length; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             var y = luma.Pixels[i];
             var cb = blueChroma.Pixels[i];
             var cr = redChroma.Pixels[i];
@@ -632,16 +777,18 @@ public static class ImageFilters
             pixels[offset + 2] = PixelMath.Clip8(y + (BlueCb[cb] >> Scale));
         }
 
+        work?.Complete();
         return new RgbImage(luma.Width, luma.Height, pixels);
     }
 
-    public static RgbImage AddNoise(RgbImage source, double amount)
+    public static RgbImage AddNoise(RgbImage source, double amount, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         var clamped = Math.Clamp(amount, 0.0, EnhancementTuning.Noise.Maximum);
         if (clamped <= EnhancementTuning.Noise.ActiveThreshold)
         {
+            work?.Complete();
             return source.Clone();
         }
 
@@ -670,21 +817,33 @@ public static class ImageFilters
         var pixels = new byte[source.Pixels.Length];
         for (var i = 0; i < pixels.Length; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             var original = source.Pixels[i];
             var added = (byte)Math.Min(255, original + EnhancementTuning.Noise.GrainAddAmount);
             pixels[i] = PixelMath.BlendMask(mask.Pixels[i / 3], original, added);
         }
 
+        work?.Complete();
         return new RgbImage(source.Width, source.Height, pixels);
     }
 
-    private static GrayImage Filter3x3(GrayImage source, float[] kernel, float offset)
+    private static GrayImage Filter3x3(
+        GrayImage source,
+        float[] kernel,
+        float offset,
+        ImagingWork? work = null)
     {
         var result = new byte[source.Pixels.Length];
         CopyBorders(source, result);
 
         for (var y = 1; y < source.Height - 1; y++)
         {
+            work?.Report(y, source.Height);
+
             for (var x = 1; x < source.Width - 1; x++)
             {
                 var sum = offset + 0.5f;
@@ -702,13 +861,16 @@ public static class ImageFilters
             }
         }
 
+        work?.Complete();
         return new GrayImage(source.Width, source.Height, result);
     }
 
     private static RgbImage FilterRgb3x3(RgbImage source, float[] kernel, float offset)
     {
-        return MapPlanes(source, (plane, width, height) =>
-            Filter3x3(new GrayImage(width, height, plane), kernel, offset).Pixels);
+        return MapPlanes(
+            source,
+            (plane, width, height, planeWork) =>
+                Filter3x3(new GrayImage(width, height, plane), kernel, offset, planeWork).Pixels);
     }
 
     private static void CopyBorders(GrayImage source, byte[] target)
@@ -730,7 +892,8 @@ public static class ImageFilters
 
     private static RgbImage MapPlanes(
         RgbImage source,
-        Func<byte[], int, int, byte[]> transform)
+        Func<byte[], int, int, ImagingWork?, byte[]> transform,
+        ImagingWork? work = null)
     {
         var count = source.Width * source.Height;
         var red = new byte[count];
@@ -739,15 +902,20 @@ public static class ImageFilters
 
         for (var i = 0; i < count; i++)
         {
+            if ((i & 0xFFFFF) == 0)
+            {
+                work?.Pulse();
+            }
+
             var offset = i * 3;
             red[i] = source.Pixels[offset];
             green[i] = source.Pixels[offset + 1];
             blue[i] = source.Pixels[offset + 2];
         }
 
-        red = transform(red, source.Width, source.Height);
-        green = transform(green, source.Width, source.Height);
-        blue = transform(blue, source.Width, source.Height);
+        red = transform(red, source.Width, source.Height, work?.Slice(0, 1.0 / 3.0));
+        green = transform(green, source.Width, source.Height, work?.Slice(1.0 / 3.0, 2.0 / 3.0));
+        blue = transform(blue, source.Width, source.Height, work?.Slice(2.0 / 3.0, 1.0));
 
         var pixels = new byte[checked(count * 3)];
         for (var i = 0; i < count; i++)
@@ -761,15 +929,22 @@ public static class ImageFilters
         return new RgbImage(source.Width, source.Height, pixels);
     }
 
-    private static byte[] BoxBlurHorizontal(byte[] source, int width, int height, float floatRadius)
+    private static byte[] BoxBlurHorizontal(
+        byte[] source,
+        int width,
+        int height,
+        float floatRadius,
+        ImagingWork? work = null)
     {
         var result = new byte[source.Length];
 
         for (var y = 0; y < height; y++)
         {
+            work?.Report(y, height);
             BoxBlurRow(source, result, y * width, width, floatRadius);
         }
 
+        work?.Complete();
         return result;
     }
 
@@ -870,17 +1045,20 @@ public static class ImageFilters
         return (byte)((value + (1u << 23)) >> 24);
     }
 
-    private static byte[] Transpose(byte[] source, int width, int height)
+    private static byte[] Transpose(byte[] source, int width, int height, ImagingWork? work = null)
     {
         var result = new byte[source.Length];
         for (var y = 0; y < height; y++)
         {
+            work?.Report(y, height);
+
             for (var x = 0; x < width; x++)
             {
                 result[(x * height) + y] = source[(y * width) + x];
             }
         }
 
+        work?.Complete();
         return result;
     }
 

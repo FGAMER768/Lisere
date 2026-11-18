@@ -692,6 +692,12 @@
   <data name="imageWaitFinish" xml:space="preserve">
     <value>Finishing</value>
   </data>
+  <data name="imageWaitGrading" xml:space="preserve">
+    <value>Color grading</value>
+  </data>
+  <data name="imageWaitPreview" xml:space="preserve">
+    <value>Preparing the preview</value>
+  </data>
   <data name="renderReassuranceStart" xml:space="preserve">
     <value>Everything is going as planned.</value>
   </data>

@@ -20,7 +20,7 @@ namespace Lisere.Core.Grading;
 /// </summary>
 public static class SplendidaLook
 {
-    public static RgbImage Apply(RgbImage source)
+    public static RgbImage Apply(RgbImage source, ImagingWork? work = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -28,27 +28,37 @@ public static class SplendidaLook
             source,
             (float)SplendidaTuning.Sharpen.Sigma,
             (int)SplendidaTuning.Sharpen.AmountPercent,
-            0);
+            0,
+            -1,
+            work?.Slice(0, 0.35));
 
         output = GradingFilters.UnsharpMaskFromRadius(
             output,
             SplendidaTuning.BccUnsharpMask.Radius,
             SplendidaTuning.BccUnsharpMask.AmountPercent,
-            SplendidaTuning.BccUnsharpMask.Threshold);
+            SplendidaTuning.BccUnsharpMask.Threshold,
+            work?.Slice(0.35, 0.55));
 
         output = GradingFilters.Vignette(
             output,
             SplendidaTuning.Vignette.AmountPercent,
             SplendidaTuning.Vignette.AngleOfView,
             SplendidaTuning.Vignette.CenterX,
-            SplendidaTuning.Vignette.CenterY);
+            SplendidaTuning.Vignette.CenterY,
+            work?.Slice(0.55, 0.7));
 
         output = GradingFilters.BrightnessContrast(
             output,
             SplendidaTuning.BrightnessContrast.Brightness,
             SplendidaTuning.BrightnessContrast.Contrast,
-            SplendidaTuning.BrightnessContrast.Pivot);
+            SplendidaTuning.BrightnessContrast.Pivot,
+            work?.Slice(0.7, 0.85));
 
-        return GradingFilters.CurveTable(output, SplendidaTuning.MasterCurve);
+        output = GradingFilters.CurveTable(
+            output,
+            SplendidaTuning.MasterCurve,
+            work?.Slice(0.85, 1.0));
+
+        return output;
     }
 }

@@ -399,11 +399,21 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
                 SetParametersAndRefresh(result.Parameters);
             }
 
+            if (isLongRender)
+            {
+                ReportPreview(95.0);
+            }
+
             AfterImage = await _imageCodec.CreatePreviewAsync(
                 result.Image,
                 PreviewWidth,
                 PreviewHeight,
                 cancellation.Token);
+
+            if (isLongRender)
+            {
+                ReportPreview(99.0);
+            }
             HasEnhanced = true;
             ApplyWarnings(result.Warnings);
             SetStatus("statusApplied", result.Mode);
@@ -1012,6 +1022,13 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void ReportPreview(double percent) =>
+        _dialogService.UpdateWait(
+            RenderReassurance.DescribeImage(
+                _localization,
+                new EnhancementProgress(EnhancementStage.Preview, percent)),
+            percent);
+
     private PresetOption CreatePreset(EnhancementMode mode) =>
         new(Strings[PresetLabelKey(mode)], mode);
 
@@ -1063,19 +1080,6 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         EnhancementMode.AutoRelativeMedium => "modeAutoRelative",
         _ => "modeManual"
     };
-
-    /// <summary>
-    /// Reports on the thread that runs the pipeline; DialogService marshals the
-    /// actual UI update, which keeps the progress sequence deterministic.
-    /// </summary>
-    private sealed class DirectProgress<T> : IProgress<T>
-    {
-        private readonly Action<T> _report;
-
-        public DirectProgress(Action<T> report) => _report = report;
-
-        public void Report(T value) => _report(value);
-    }
 
     public void Dispose()
     {

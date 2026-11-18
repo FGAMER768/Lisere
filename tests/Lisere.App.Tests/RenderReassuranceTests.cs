@@ -27,6 +27,16 @@ public class RenderReassuranceTests
         Assert.Contains("progresse", middle, StringComparison.Ordinal);
         Assert.Contains("halos", end, StringComparison.Ordinal);
         Assert.Contains("Dernière ligne droite", end, StringComparison.Ordinal);
+
+        var grading = RenderReassurance.DescribeImage(
+            strings,
+            new EnhancementProgress(EnhancementStage.Grading, 90));
+        var preview = RenderReassurance.DescribeImage(
+            strings,
+            new EnhancementProgress(EnhancementStage.Preview, 97));
+
+        Assert.Contains("Étalonnage", grading, StringComparison.Ordinal);
+        Assert.Contains("aperçu", preview, StringComparison.Ordinal);
     }
 
     [Fact]
