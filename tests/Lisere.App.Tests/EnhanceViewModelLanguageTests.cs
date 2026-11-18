@@ -256,6 +256,10 @@ public class EnhanceViewModelLanguageTests
 
         public Task ShowWaitAsync(string message, Action? onCancel = null) => Task.CompletedTask;
 
+        public void UpdateWait(string message, double? percent = null)
+        {
+        }
+
         public Task HideWaitAsync() => Task.CompletedTask;
     }
 

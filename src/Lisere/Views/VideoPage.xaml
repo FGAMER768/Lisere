@@ -664,6 +664,12 @@
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                    Text="{Binding ProgressText}"
                                    TextWrapping="Wrap" />
+                        <TextBlock Margin="0,2,0,0"
+                                   FontSize="12"
+                                   Foreground="{ui:ThemeResource AccentTextFillColorPrimaryBrush}"
+                                   Text="{Binding ProgressHint}"
+                                   TextWrapping="Wrap"
+                                   Visibility="{Binding HasProgressHint, Converter={StaticResource BooleanToVisibility}}" />
                     </StackPanel>
                 </Border>
             </Grid>

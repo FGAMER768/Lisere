@@ -345,7 +345,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         // Le détail multi-échelles coûte ~2,4 s par mégapixel : sur une grande
         // image, on annonce la durée avant de lancer plutôt que de la subir.
         var estimate = ImageRenderEstimator.Estimate(_source, request.Mode);
-        if (estimate >= ImageRenderEstimator.ConfirmationThreshold &&
+        var isLongRender = estimate >= ImageRenderEstimator.ConfirmationThreshold;
+        if (isLongRender &&
             !await _dialogService.ConfirmRenderAsync(ImageRenderPlanFactory.Create(
                 _localization,
                 _source,
@@ -366,14 +367,28 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         IsBusy = true;
         ClearError();
         SetStatus("statusProcessing");
-        await _dialogService.ShowWaitAsync(StatusMessage, cancellation.Cancel);
+        await _dialogService.ShowWaitAsync(
+            isLongRender
+                ? _localization.Format(
+                    "imageWaitPreparing",
+                    VideoRenderPlanFactory.FormatDuration(estimate))
+                : StatusMessage,
+            cancellation.Cancel);
+        var progress = isLongRender
+            ? new DirectProgress<EnhancementProgress>(value =>
+                _dialogService.UpdateWait(
+                    RenderReassurance.DescribeImage(_localization, value),
+                    value.Percent))
+            : null;
         Exception? error = null;
         var completed = false;
         var canceled = false;
 
         try
         {
-            var result = await _orchestrator.EnhanceAsync(request, cancellation.Token);
+            var result = await _orchestrator.EnhanceAsync(
+                progress is null ? request : request with { Progress = progress },
+                cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
 
             _enhanced = result.Image;
@@ -1048,6 +1063,19 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         EnhancementMode.AutoRelativeMedium => "modeAutoRelative",
         _ => "modeManual"
     };
+
+    /// <summary>
+    /// Reports on the thread that runs the pipeline; DialogService marshals the
+    /// actual UI update, which keeps the progress sequence deterministic.
+    /// </summary>
+    private sealed class DirectProgress<T> : IProgress<T>
+    {
+        private readonly Action<T> _report;
+
+        public DirectProgress(Action<T> report) => _report = report;
+
+        public void Report(T value) => _report(value);
+    }
 
     public void Dispose()
     {

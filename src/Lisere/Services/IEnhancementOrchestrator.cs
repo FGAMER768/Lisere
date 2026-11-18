@@ -12,7 +12,8 @@ public sealed record EnhancementRequest(
     double RecoverOriginalDetail,
     double AddNoise,
     ColorPreset Color = ColorPreset.None,
-    UltronCcSettings? ColorSettings = null);
+    UltronCcSettings? ColorSettings = null,
+    IProgress<EnhancementProgress>? Progress = null);
 
 public sealed record EnhancementResult(
     RgbImage Image,

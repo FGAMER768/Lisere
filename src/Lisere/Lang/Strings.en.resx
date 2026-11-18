@@ -638,6 +638,9 @@
   <data name="videoPlanCancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="videoPlanReassurance" xml:space="preserve">
+    <value>The render stays local and can be cancelled at any time. The estimate is only a guide and sharpens as the render advances.</value>
+  </data>
   <data name="imagePlanTitle" xml:space="preserve">
     <value>Prepare the enhancement</value>
   </data>
@@ -655,6 +658,48 @@
   </data>
   <data name="imageEstimateText" xml:space="preserve">
     <value>≈ {0} · {1:0.#} MP</value>
+  </data>
+  <data name="imagePlanReassurance" xml:space="preserve">
+    <value>The render runs entirely on this computer and can be cancelled at any time. The estimated time (≈ {0}) is only a guide.</value>
+  </data>
+  <data name="imageWaitPreparing" xml:space="preserve">
+    <value>Preparing the render (≈ {0}). Everything is going as planned.</value>
+  </data>
+  <data name="imageWaitStageHint" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="imageWaitCompression" xml:space="preserve">
+    <value>Fixing compression</value>
+  </data>
+  <data name="imageWaitNoise" xml:space="preserve">
+    <value>Reducing noise</value>
+  </data>
+  <data name="imageWaitAntialias" xml:space="preserve">
+    <value>Anti-aliasing</value>
+  </data>
+  <data name="imageWaitDeblur" xml:space="preserve">
+    <value>Recovering blur</value>
+  </data>
+  <data name="imageWaitSharpen" xml:space="preserve">
+    <value>Sharpening</value>
+  </data>
+  <data name="imageWaitDetail" xml:space="preserve">
+    <value>Rebuilding detail</value>
+  </data>
+  <data name="imageWaitHalo" xml:space="preserve">
+    <value>Reducing halos</value>
+  </data>
+  <data name="imageWaitFinish" xml:space="preserve">
+    <value>Finishing</value>
+  </data>
+  <data name="renderReassuranceStart" xml:space="preserve">
+    <value>Everything is going as planned.</value>
+  </data>
+  <data name="renderReassuranceMid" xml:space="preserve">
+    <value>The render is progressing normally.</value>
+  </data>
+  <data name="renderReassuranceEnd" xml:space="preserve">
+    <value>Home stretch, just a moment longer.</value>
   </data>
   <data name="videoPreviewRender" xml:space="preserve">
     <value>Render 1 second</value>

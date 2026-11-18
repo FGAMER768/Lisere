@@ -46,6 +46,9 @@ public static class ImageRenderPlanFactory
             strings["imagePlanDestination"],
             strings["imagePlanDestinationValue"],
             strings["imagePlanConfirm"],
-            strings["videoPlanCancel"]);
+            strings["videoPlanCancel"],
+            strings.Format(
+                "imagePlanReassurance",
+                VideoRenderPlanFactory.FormatDuration(estimate)));
     }
 }

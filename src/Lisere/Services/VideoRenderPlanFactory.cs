@@ -75,7 +75,8 @@ public static class VideoRenderPlanFactory
             strings["videoPlanDestination"],
             destination,
             strings["videoPlanConfirm"],
-            strings["videoPlanCancel"]);
+            strings["videoPlanCancel"],
+            strings["videoPlanReassurance"]);
     }
 
     public static string FormatEstimate(ILocalizationService strings, RenderEstimate estimate)

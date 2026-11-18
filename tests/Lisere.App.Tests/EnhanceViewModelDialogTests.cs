@@ -80,7 +80,51 @@ public class EnhanceViewModelDialogTests
         Assert.Contains(
             dialogs.LastPlan!.Lines,
             line => line.Value.Contains("Mpx", StringComparison.Ordinal));
+        Assert.Contains("annulé", dialogs.LastPlan.Reassurance!, StringComparison.Ordinal);
         Assert.Equal(1, orchestrator.Calls);
+    }
+
+    [Fact]
+    public async Task LongEnhancementShowsRealStagesAndReassuranceInTheWaitDialog()
+    {
+        var dialogs = new FakeDialogService();
+        var orchestrator = new FakeOrchestrator
+        {
+            Progress = [new EnhancementProgress(EnhancementStage.Detail, 60)]
+        };
+        var viewModel = CreateViewModel(
+            dialogs,
+            new FakeImageCodec { Width = 2000, Height = 1500 },
+            orchestrator);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+
+        Assert.Contains(
+            dialogs.Events,
+            entry => entry.StartsWith("wait:Préparation du rendu", StringComparison.Ordinal));
+        Assert.Contains(
+            dialogs.Events,
+            entry => entry.StartsWith("update:Reconstruction du détail", StringComparison.Ordinal) &&
+                entry.Contains("progresse", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ShortEnhancementKeepsTheSimpleWaitMessage()
+    {
+        var dialogs = new FakeDialogService();
+        var viewModel = CreateViewModel(
+            dialogs,
+            new FakeImageCodec(),
+            new FakeOrchestrator());
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+
+        Assert.Contains("wait:Traitement en cours...", dialogs.Events);
+        Assert.DoesNotContain(
+            dialogs.Events,
+            entry => entry.StartsWith("update:", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -404,6 +448,9 @@ public class EnhanceViewModelDialogTests
             return Task.CompletedTask;
         }
 
+        public void UpdateWait(string message, double? percent = null) =>
+            Events.Add($"update:{message}:{percent:0}");
+
         public Task HideWaitAsync()
         {
             Events.Add("hide");
@@ -505,11 +552,19 @@ public class EnhanceViewModelDialogTests
 
         public int Calls { get; private set; }
 
+        public IReadOnlyList<EnhancementProgress> Progress { get; init; } = [];
+
         public Task<EnhancementResult> EnhanceAsync(
             EnhancementRequest request,
             CancellationToken cancellationToken)
         {
             Calls++;
+
+            foreach (var progress in Progress)
+            {
+                request.Progress?.Report(progress);
+            }
+
             return EnhanceException is null
                 ? Task.FromResult(Result)
                 : Task.FromException<EnhancementResult>(EnhanceException);

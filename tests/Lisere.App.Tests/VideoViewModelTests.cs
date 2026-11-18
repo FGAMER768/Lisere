@@ -485,6 +485,7 @@ public class VideoViewModelTests
         Assert.Contains(plan.Lines, line => line.Value.Contains("images", StringComparison.Ordinal));
         Assert.Contains("clip.mp4", plan.SourceLine, StringComparison.Ordinal);
         Assert.Equal("export.mp4", Path.GetFileName(plan.DestinationLine));
+        Assert.Contains("annulé", plan.Reassurance!, StringComparison.Ordinal);
         Assert.NotNull(renderer.Request);
     }
 
@@ -795,6 +796,10 @@ public class VideoViewModelTests
         {
             Events.Add($"wait:{message}");
             return Task.CompletedTask;
+        }
+
+        public void UpdateWait(string message, double? percent = null)
+        {
         }
 
         public Task HideWaitAsync()

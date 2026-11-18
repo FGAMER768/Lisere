@@ -68,6 +68,30 @@
                                    Foreground="#FFB4B4B4"
                                    Text="Vérifiez la source et le résultat avant de lancer le rendu."
                                    TextWrapping="Wrap" />
+                        <Border x:Name="ReassurancePanel"
+                                Margin="0,10,0,0"
+                                Padding="10,8"
+                                Background="#1AFFFFFF"
+                                CornerRadius="4"
+                                Visibility="Collapsed">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:SymbolIcon Grid.Column="0"
+                                               VerticalAlignment="Top"
+                                               FontSize="14"
+                                               Foreground="#FFB4B4B4"
+                                               Symbol="Info24" />
+                                <TextBlock x:Name="ReassuranceText"
+                                           Grid.Column="2"
+                                           FontSize="12"
+                                           Foreground="#FFD0D0D0"
+                                           TextWrapping="Wrap" />
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Grid>
 

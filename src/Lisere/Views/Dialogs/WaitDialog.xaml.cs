@@ -1,3 +1,4 @@
+using System;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -38,14 +39,50 @@ public partial class WaitDialog : UserControl
         if (_isOpen)
         {
             MessageText.Text = message;
+            SetProgress(null);
             return;
         }
 
         _isOpen = true;
         MessageText.Text = message;
+        SetProgress(null);
         Visibility = Visibility.Visible;
         AnimateIn();
         await Task.Delay(250);
+    }
+
+    /// <summary>
+    /// Updates the open panel. Ignored once hidden: progress reports can arrive
+    /// after the operation completed and must not reopen or repaint it.
+    /// </summary>
+    public void Update(string message, double? percent = null)
+    {
+        if (!_isOpen)
+        {
+            return;
+        }
+
+        MessageText.Text = message;
+        SetProgress(percent);
+    }
+
+    private void SetProgress(double? percent)
+    {
+        if (percent is { } value)
+        {
+            var clamped = Math.Clamp(value, 0, 100);
+            ProgressBar.Value = clamped;
+            PercentText.Text = $"{clamped:0} %";
+            ProgressPanel.Visibility = Visibility.Visible;
+            ProgressRing.Visibility = Visibility.Collapsed;
+            AutomationProperties.SetName(ProgressBar, MessageText.Text);
+            return;
+        }
+
+        // Hidden rather than Collapsed reserves the bar row, so switching to a
+        // determined progress does not resize the dialog under the cursor.
+        ProgressPanel.Visibility = Visibility.Hidden;
+        ProgressRing.Visibility = Visibility.Visible;
     }
 
     private void OnCancelClick(object sender, RoutedEventArgs e)

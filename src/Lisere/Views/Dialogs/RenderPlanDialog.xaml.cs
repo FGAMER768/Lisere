@@ -35,6 +35,10 @@ public partial class RenderPlanDialog : UserControl
         {
             TitleText.Text = plan.Title;
             IntroText.Text = plan.Intro;
+            ReassuranceText.Text = plan.Reassurance ?? string.Empty;
+            ReassurancePanel.Visibility = string.IsNullOrWhiteSpace(plan.Reassurance)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
             SourceLabelText.Text = plan.SourceLabel;
             SourceText.Text = plan.SourceLine;
             DestinationLabelText.Text = plan.DestinationLabel;

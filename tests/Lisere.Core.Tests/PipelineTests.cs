@@ -62,6 +62,33 @@ public class PipelineTests
     }
 
     [Fact]
+    public void ProgressReportsOnlyThePassesThatRun()
+    {
+        var reports = new List<EnhancementProgress>();
+        var progress = new SynchronousProgress(reports);
+
+        EnhancementPipeline.Enhance(
+            TestImages.CreatePattern(),
+            new EnhancementParameters(60, 0, 0, 80, 0, 0),
+            0,
+            0,
+            progress);
+
+        Assert.Equal(
+            new[]
+            {
+                EnhancementStage.Compression,
+                EnhancementStage.Detail,
+                EnhancementStage.Finish
+            },
+            reports.Select(report => report.Stage).ToArray());
+        Assert.Equal(
+            reports.OrderBy(report => report.Percent).Select(report => report.Percent),
+            reports.Select(report => report.Percent));
+        Assert.All(reports, report => Assert.InRange(report.Percent, 0, 95));
+    }
+
+    [Fact]
     public void FullRecoverOriginalDetailReturnsTheSource()
     {
         var source = TestImages.CreatePattern();
@@ -114,4 +141,10 @@ public class PipelineTests
 
     private static string Hash(byte[] pixels) =>
         Convert.ToHexString(SHA256.HashData(pixels)).ToLowerInvariant();
+
+    private sealed class SynchronousProgress(List<EnhancementProgress> reports)
+        : IProgress<EnhancementProgress>
+    {
+        public void Report(EnhancementProgress value) => reports.Add(value);
+    }
 }

@@ -103,6 +103,23 @@ public sealed class DialogService : IDialogService
         }
     }
 
+    public void UpdateWait(string message, double? percent = null)
+    {
+        var dialog = _waitDialog;
+        if (dialog is null || !_isWaitOpen)
+        {
+            return;
+        }
+
+        if (dialog.Dispatcher.CheckAccess())
+        {
+            dialog.Update(message, percent);
+            return;
+        }
+
+        dialog.Dispatcher.BeginInvoke(new Action(() => dialog.Update(message, percent)));
+    }
+
     public async Task HideWaitAsync()
     {
         if (_waitDialog is null)

@@ -24,4 +24,5 @@ public sealed record RenderPlan(
     string DestinationLabel,
     string DestinationLine,
     string ConfirmText,
-    string CancelText);
+    string CancelText,
+    string? Reassurance = null);

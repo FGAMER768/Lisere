@@ -24,5 +24,11 @@ public interface IDialogService
     /// </summary>
     Task ShowWaitAsync(string message, Action? onCancel = null);
 
+    /// <summary>
+    /// Replaces the wait message during a long operation. A null percentage
+    /// keeps the indeterminate ring; otherwise the bar shows the real value.
+    /// </summary>
+    void UpdateWait(string message, double? percent = null);
+
     Task HideWaitAsync();
 }

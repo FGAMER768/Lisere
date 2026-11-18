@@ -95,6 +95,12 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private string _progressText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProgressHint))]
+    private string _progressHint = string.Empty;
+
+    public bool HasProgressHint => !string.IsNullOrEmpty(ProgressHint);
+
+    [ObservableProperty]
     private string _warningsText = string.Empty;
 
     [ObservableProperty]

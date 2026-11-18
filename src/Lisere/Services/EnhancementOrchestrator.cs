@@ -22,7 +22,8 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                 request.Source,
                 parameters,
                 skipsEnhancement ? 0 : request.RecoverOriginalDetail,
-                skipsEnhancement ? 0 : request.AddNoise);
+                skipsEnhancement ? 0 : request.AddNoise,
+                request.Progress);
 
             // L'étalonnage est un étage distinct : il s'applique après
             // l'amélioration, quel que soit le préréglage IA choisi.

@@ -133,6 +133,7 @@ public sealed partial class VideoViewModel
         IsBusy = true;
         ClearError();
         ProgressPercent = 0;
+        ProgressHint = string.Empty;
         ProgressText = Strings[purpose switch
         {
             RenderPurpose.Preview => "videoPreviewRendering",
@@ -195,6 +196,7 @@ public sealed partial class VideoViewModel
             cancellation.Dispose();
             IsRendering = false;
             IsBusy = false;
+            ProgressHint = string.Empty;
         }
 
         if (error is not null)
@@ -309,6 +311,7 @@ public sealed partial class VideoViewModel
 
         ProgressPercent = progress.OverallPercent;
         ProgressText = DescribeProgress(progress);
+        ProgressHint = RenderReassurance.Hint(Strings, progress.OverallPercent) ?? string.Empty;
     }
 
     /// <summary>Live frame of the running render, also kept after a cancel.</summary>

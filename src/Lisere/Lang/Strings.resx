@@ -638,6 +638,9 @@
   <data name="videoPlanCancel" xml:space="preserve">
     <value>Annuler</value>
   </data>
+  <data name="videoPlanReassurance" xml:space="preserve">
+    <value>Le rendu reste local et peut être annulé à tout moment. L'estimation est indicative et s'affine pendant le rendu.</value>
+  </data>
   <data name="imagePlanTitle" xml:space="preserve">
     <value>Préparer l'amélioration</value>
   </data>
@@ -655,6 +658,48 @@
   </data>
   <data name="imageEstimateText" xml:space="preserve">
     <value>≈ {0} · {1:0.#} Mpx</value>
+  </data>
+  <data name="imagePlanReassurance" xml:space="preserve">
+    <value>Le rendu se fait entièrement sur cet ordinateur et peut être annulé à tout moment. La durée estimée (≈ {0}) reste indicative.</value>
+  </data>
+  <data name="imageWaitPreparing" xml:space="preserve">
+    <value>Préparation du rendu (≈ {0}). Tout se passe comme prévu.</value>
+  </data>
+  <data name="imageWaitStageHint" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="imageWaitCompression" xml:space="preserve">
+    <value>Correction de la compression</value>
+  </data>
+  <data name="imageWaitNoise" xml:space="preserve">
+    <value>Réduction du bruit</value>
+  </data>
+  <data name="imageWaitAntialias" xml:space="preserve">
+    <value>Anticrénelage</value>
+  </data>
+  <data name="imageWaitDeblur" xml:space="preserve">
+    <value>Récupération du flou</value>
+  </data>
+  <data name="imageWaitSharpen" xml:space="preserve">
+    <value>Netteté</value>
+  </data>
+  <data name="imageWaitDetail" xml:space="preserve">
+    <value>Reconstruction du détail</value>
+  </data>
+  <data name="imageWaitHalo" xml:space="preserve">
+    <value>Réduction des halos</value>
+  </data>
+  <data name="imageWaitFinish" xml:space="preserve">
+    <value>Finition</value>
+  </data>
+  <data name="renderReassuranceStart" xml:space="preserve">
+    <value>Tout se passe comme prévu.</value>
+  </data>
+  <data name="renderReassuranceMid" xml:space="preserve">
+    <value>Le rendu progresse normalement.</value>
+  </data>
+  <data name="renderReassuranceEnd" xml:space="preserve">
+    <value>Dernière ligne droite, encore un instant.</value>
   </data>
   <data name="videoPreviewRender" xml:space="preserve">
     <value>Rendre 1 seconde</value>
