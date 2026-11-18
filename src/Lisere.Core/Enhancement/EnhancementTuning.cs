@@ -67,11 +67,11 @@ public static class EnhancementTuning
         public const double SharpenPercentScale = 130.0;
         public const int SharpenThreshold = 3;
 
-        public static IReadOnlyList<float> DetailRadii { get; } = [1.0f, 2.0f, 4.0f];
+        public static IReadOnlyList<float> DetailRadii { get; } = [1.0f, 2.5f, 5.0f];
 
-        public static IReadOnlyList<double> DetailGains { get; } = [4.4, 1.6, 0.3];
+        public static IReadOnlyList<double> DetailGains { get; } = [3.5, 2.8, 0.57];
 
-        public const int DetailOvershoot = 3;
+        public const int DetailOvershoot = 10;
 
         public const double DetailReferenceAcutance = 0.10;
 

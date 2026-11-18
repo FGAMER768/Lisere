@@ -28,6 +28,14 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
             // l'amélioration, quel que soit le préréglage IA choisi.
             output = ColorGrading.Apply(output, request.Color, request.ColorSettings);
 
+            // Le préréglage Chroma reprend aussi la courbe de tons du modèle
+            // Topaz, relevée sur la référence Base.png → UltronCCReel.png.
+            // Elle passe en dernier pour ne pas amplifier l'accentuation.
+            if (request.Mode is EnhancementMode.ChromaEnhanceMain)
+            {
+                output = ChromaTone.Apply(output);
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
 
             return new EnhancementResult(

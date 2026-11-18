@@ -8,9 +8,9 @@ public class ClipTests
 {
     private static readonly string[] ExpectedHashes =
     [
-        "b76d419e50964606740df43007b58d31a747ffc0838415aee21fb323dca05024",
-        "73b6201c94a35f12772ac31c448abb13c9645b76316e7a937711398c9051373a",
-        "fb5adf1b14aa7968f7a75ebbe70ec4e56666e1d61c8d569b5636789011c07ac1"
+        "3abac9c8782eb1b06725d6a8f3e1516177b615132d1f534892ded7236c43c512",
+        "b474df2c62203cf94dd3c099b2ad84d37e7fb9ad1e9ae6ad83d0e61908b431bb",
+        "851b3795f1f1f84d07da5a80508f64a9ec0820961f72c0c61bec2acd99486d14"
     ];
 
     [Fact]
