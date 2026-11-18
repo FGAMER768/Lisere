@@ -64,6 +64,60 @@ public class EnhanceViewModelDialogTests
     }
 
     [Fact]
+    public async Task LongEnhancementAsksForConfirmationWithAnEstimate()
+    {
+        var dialogs = new FakeDialogService();
+        var orchestrator = new FakeOrchestrator();
+        var viewModel = CreateViewModel(
+            dialogs,
+            new FakeImageCodec { Width = 2000, Height = 1500 },
+            orchestrator);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, dialogs.ConfirmCalls);
+        Assert.Contains(
+            dialogs.LastPlan!.Lines,
+            line => line.Value.Contains("Mpx", StringComparison.Ordinal));
+        Assert.Equal(1, orchestrator.Calls);
+    }
+
+    [Fact]
+    public async Task DecliningTheConfirmationSkipsTheEnhancement()
+    {
+        var dialogs = new FakeDialogService { ConfirmResult = false };
+        var orchestrator = new FakeOrchestrator();
+        var viewModel = CreateViewModel(
+            dialogs,
+            new FakeImageCodec { Width = 2000, Height = 1500 },
+            orchestrator);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        dialogs.Events.Clear();
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, dialogs.ConfirmCalls);
+        Assert.Equal(0, orchestrator.Calls);
+        Assert.False(viewModel.HasEnhanced);
+        Assert.DoesNotContain(
+            dialogs.Events,
+            entry => entry.StartsWith("wait:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SmallImageDoesNotAskForConfirmation()
+    {
+        var dialogs = new FakeDialogService();
+        var viewModel = CreateViewModel(dialogs, new FakeImageCodec(), new FakeOrchestrator());
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, dialogs.ConfirmCalls);
+    }
+
+    [Fact]
     public async Task LoadCanceledDoesNotOpenTheWaitDialog()
     {
         var dialogs = new FakeDialogService();
@@ -322,8 +376,18 @@ public class EnhanceViewModelDialogTests
             DialogOpenStateChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        public Task<bool> ConfirmRenderAsync(RenderPlan plan) =>
-            Task.FromResult(true);
+        public bool ConfirmResult { get; init; } = true;
+
+        public int ConfirmCalls { get; private set; }
+
+        public RenderPlan? LastPlan { get; private set; }
+
+        public Task<bool> ConfirmRenderAsync(RenderPlan plan)
+        {
+            ConfirmCalls++;
+            LastPlan = plan;
+            return Task.FromResult(ConfirmResult);
+        }
 
         public Task ShowMessageAsync(string message, DialogKind kind)
         {
@@ -375,11 +439,15 @@ public class EnhanceViewModelDialogTests
 
         public Exception? SaveException { get; init; }
 
+        public int Width { get; init; } = 4;
+
+        public int Height { get; init; } = 4;
+
         public int SaveCalls { get; private set; }
 
         public Task<RgbImage> LoadAsync(string path, CancellationToken cancellationToken) =>
             LoadException is null
-                ? Task.FromResult(new RgbImage(4, 4))
+                ? Task.FromResult(new RgbImage(Width, Height))
                 : Task.FromException<RgbImage>(LoadException);
 
         public Task SaveJpegAsync(RgbImage image, string path, CancellationToken cancellationToken)

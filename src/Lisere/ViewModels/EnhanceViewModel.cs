@@ -341,6 +341,22 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             SelectedColorPreset?.Preset ?? ColorPreset.None,
             SelectedColorPreset?.Preset is ColorPreset.UltronCc ? CurrentColorSettings : null);
 
+        // Le détail multi-échelles coûte ~2,4 s par mégapixel : sur une grande
+        // image, on annonce la durée avant de lancer plutôt que de la subir.
+        var estimate = ImageRenderEstimator.Estimate(_source, request.Mode);
+        if (estimate >= ImageRenderEstimator.ConfirmationThreshold &&
+            !await _dialogService.ConfirmRenderAsync(ImageRenderPlanFactory.Create(
+                _localization,
+                _source,
+                _sourceName,
+                SelectedPreset?.Label ?? string.Empty,
+                SelectedColorPreset?.Label ?? string.Empty,
+                estimate,
+                BeforeImage)))
+        {
+            return;
+        }
+
         _enhanceCancellation?.Cancel();
         _enhanceCancellation?.Dispose();
 

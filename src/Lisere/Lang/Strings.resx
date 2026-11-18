@@ -605,6 +605,24 @@
   <data name="videoPlanCancel" xml:space="preserve">
     <value>Annuler</value>
   </data>
+  <data name="imagePlanTitle" xml:space="preserve">
+    <value>Préparer l'amélioration</value>
+  </data>
+  <data name="imagePlanIntro" xml:space="preserve">
+    <value>Cette image dépasse quelques mégapixels : le détail multi-échelles peut prendre plusieurs dizaines de secondes. Vérifiez les réglages avant de lancer.</value>
+  </data>
+  <data name="imagePlanDestination" xml:space="preserve">
+    <value>Résultat</value>
+  </data>
+  <data name="imagePlanDestinationValue" xml:space="preserve">
+    <value>aperçu à l'écran, export JPEG ensuite</value>
+  </data>
+  <data name="imagePlanConfirm" xml:space="preserve">
+    <value>Lancer l'amélioration</value>
+  </data>
+  <data name="imageEstimateText" xml:space="preserve">
+    <value>≈ {0} · {1:0.#} Mpx</value>
+  </data>
   <data name="videoPreviewRender" xml:space="preserve">
     <value>Rendre 1 seconde</value>
   </data>

@@ -605,6 +605,24 @@
   <data name="videoPlanCancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="imagePlanTitle" xml:space="preserve">
+    <value>Prepare the enhancement</value>
+  </data>
+  <data name="imagePlanIntro" xml:space="preserve">
+    <value>This image is large: multi-scale detail can take tens of seconds. Check the settings before starting.</value>
+  </data>
+  <data name="imagePlanDestination" xml:space="preserve">
+    <value>Result</value>
+  </data>
+  <data name="imagePlanDestinationValue" xml:space="preserve">
+    <value>on-screen preview, JPEG export afterwards</value>
+  </data>
+  <data name="imagePlanConfirm" xml:space="preserve">
+    <value>Start enhancing</value>
+  </data>
+  <data name="imageEstimateText" xml:space="preserve">
+    <value>≈ {0} · {1:0.#} MP</value>
+  </data>
   <data name="videoPreviewRender" xml:space="preserve">
     <value>Render 1 second</value>
   </data>
