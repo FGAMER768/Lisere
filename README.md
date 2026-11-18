@@ -107,7 +107,7 @@ La stabilisation, le désentrelacement et l'interpolation FFmpeg sont des passes
 
 | Préréglage | Comportement |
 |---|---|
-| Chroma | Préréglage de référence, avec les valeurs de départ recommandées ; l'étage de détail reconstruit les échelles 1, 2,5 et 5 px, borné aux extrêmes locaux de l'image non accentuée, avec un gain adapté à l'acutance déjà présente. Les unsharp de netteté et d'antialias sont bornés de la même façon. Le préréglage applique en dernier la courbe de tons relevée sur la référence Topaz (Base.png → UltronCCReel.png), qui relève les tons moyens sans écraser les hautes lumières. |
+| Chroma | Préréglage de référence, avec les valeurs de départ recommandées ; l'étage de détail reconstruit les échelles 1, 2,5 et 5 px, borné aux extrêmes locaux de l'image non accentuée à ±6 niveaux, avec un gain adapté à l'acutance déjà présente. Les unsharp de netteté et d'antialias sont bornés de la même façon. Le préréglage applique en dernier la courbe de tons relevée sur la référence Topaz (Base.png → UltronCCReel.png), qui relève les tons moyens sans écraser les hautes lumières. La page Vidéo applique la même courbe après le moteur, sans l'étalonnage image : le préréglage Chroma garde ainsi le même rendu dans les deux espaces. |
 | Auto (estimation locale) | Analyse l'image ou plusieurs frames du clip et estime les paramètres automatiquement. |
 | Manuel (curseurs) | Applique directement les valeurs saisies. |
 | Auto + relatif moyen | Combine l'estimation automatique et un ajustement relatif moyen. |

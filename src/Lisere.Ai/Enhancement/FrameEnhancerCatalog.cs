@@ -10,7 +10,10 @@ public static class FrameEnhancerCatalog
 {
     public static IReadOnlyList<IFrameEnhancer> Create(ModelCatalog? catalog)
     {
-        var engines = new List<IFrameEnhancer> { new ClassicFrameEnhancer() };
+        var engines = new List<IFrameEnhancer>
+        {
+            new ChromaToneFrameEnhancer(new ClassicFrameEnhancer())
+        };
 
         if (catalog is not null)
         {
@@ -20,7 +23,8 @@ public static class FrameEnhancerCatalog
                     "super-resolution",
                     StringComparison.OrdinalIgnoreCase)))
             {
-                engines.Add(new OnnxSuperResolutionEnhancer(model));
+                engines.Add(new ChromaToneFrameEnhancer(
+                    new OnnxSuperResolutionEnhancer(model)));
             }
         }
 

@@ -414,13 +414,17 @@ public sealed partial class VideoViewModel
     private FrameEnhancementRequest BuildFrameRequest()
     {
         var (width, height) = ResolveTargetSize();
+        // Le préréglage Chroma emporte sa courbe de tons en vidéo comme en
+        // image ; un préréglage manuel ou Auto garde le rendu du moteur.
+        var chromaTone = SelectedPreset?.Mode is EnhancementMode.ChromaEnhanceMain;
         return new FrameEnhancementRequest(
             CurrentParameters,
             RecoverOriginalDetail,
             AddNoise,
             SelectedOutput?.Scale ?? 1,
             width,
-            height);
+            height,
+            ApplyChromaTone: chromaTone);
     }
 
     /// <summary>

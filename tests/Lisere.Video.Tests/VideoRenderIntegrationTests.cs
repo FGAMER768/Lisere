@@ -71,6 +71,68 @@ public class VideoRenderIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task TheChromaPresetCarriesItsToneCurveIntoTheRenderedClip()
+    {
+        if (!_toolchain.IsAvailable)
+        {
+            return;
+        }
+
+        var source = await CreateClipAsync();
+        var probe = new FfprobeVideoProbe(_toolchain);
+        var info = await probe.ProbeAsync(source, CancellationToken.None);
+        var service = new VideoRenderService(_toolchain);
+        var extractor = new VideoFrameExtractor(_toolchain);
+        var plainPath = Path.Combine(_directory, "plain.mp4");
+        var tonedPath = Path.Combine(_directory, "toned.mp4");
+
+        using var engine = FrameEnhancerCatalog.Create(null)[0];
+
+        await service.RenderAsync(
+            new VideoRenderRequest(
+                info,
+                engine,
+                new FrameEnhancementRequest(EnhancementParameters.Zero),
+                new VideoRenderSettings(
+                    plainPath,
+                    Quality: 30,
+                    EncodingPreset: "ultrafast",
+                    PreviewDurationSeconds: 1)),
+            progress: null,
+            CancellationToken.None);
+
+        await service.RenderAsync(
+            new VideoRenderRequest(
+                info,
+                engine,
+                new FrameEnhancementRequest(EnhancementParameters.Zero, ApplyChromaTone: true),
+                new VideoRenderSettings(
+                    tonedPath,
+                    Quality: 30,
+                    EncodingPreset: "ultrafast",
+                    PreviewDurationSeconds: 1)),
+            progress: null,
+            CancellationToken.None);
+
+        var plain = await extractor.ExtractAsync(
+            await probe.ProbeAsync(plainPath, CancellationToken.None),
+            0.4,
+            CancellationToken.None);
+        var toned = await extractor.ExtractAsync(
+            await probe.ProbeAsync(tonedPath, CancellationToken.None),
+            0.4,
+            CancellationToken.None);
+
+        // Le rendu tonifié doit retrouver, à la compression près, la courbe
+        // appliquée au rendu décodé sans courbe.
+        var expected = ChromaTone.Apply(plain);
+        Assert.InRange(MeanAbsoluteDifference(expected, toned), 0, 3);
+        Assert.True(
+            MeanLuma(toned) > MeanLuma(plain) + 2,
+            "la courbe doit relever la luminance moyenne du clip");
+    }
+
+    [Fact]
     public async Task PreviewRendersOneSecondWithoutAudio()
     {
         if (!_toolchain.IsAvailable)
@@ -330,6 +392,33 @@ public class VideoRenderIntegrationTests : IDisposable
             Assert.Null(_toolchain.Tools);
             Assert.False(string.IsNullOrWhiteSpace(_toolchain.UnavailableReason));
         }
+    }
+
+    private static double MeanAbsoluteDifference(RgbImage first, RgbImage second)
+    {
+        Assert.Equal(first.Pixels.Length, second.Pixels.Length);
+        double sum = 0;
+
+        for (var i = 0; i < first.Pixels.Length; i++)
+        {
+            sum += Math.Abs(first.Pixels[i] - second.Pixels[i]);
+        }
+
+        return sum / first.Pixels.Length;
+    }
+
+    private static double MeanLuma(RgbImage image)
+    {
+        double sum = 0;
+
+        for (var i = 0; i < image.Pixels.Length; i += 3)
+        {
+            sum += (image.Pixels[i] * 0.299) +
+                (image.Pixels[i + 1] * 0.587) +
+                (image.Pixels[i + 2] * 0.114);
+        }
+
+        return sum / (image.Pixels.Length / 3.0);
     }
 
     private async Task<string> CreateClipAsync()

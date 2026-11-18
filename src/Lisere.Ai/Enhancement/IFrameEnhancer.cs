@@ -12,7 +12,8 @@ public sealed record FrameEnhancementRequest(
     double AddNoise = 0.0,
     int OutputScale = 1,
     int? TargetWidth = null,
-    int? TargetHeight = null)
+    int? TargetHeight = null,
+    bool ApplyChromaTone = false)
 {
     public EnhancementParameters ClampedParameters => Parameters.Clamp();
 

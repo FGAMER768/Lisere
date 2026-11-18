@@ -71,7 +71,11 @@ public static class EnhancementTuning
 
         public static IReadOnlyList<double> DetailGains { get; } = [3.5, 2.8, 0.57];
 
-        public const int DetailOvershoot = 10;
+        // Mesuré sur Base.png et les trois photos Kodak : 6 retire 14 à 34 %
+        // des pixels de halo (12 à 37 % par signe) pour ~5 % d'énergie de bande
+        // en moins, alors que 10 laissait 13 à 17 % d'énergie de plus que Topaz
+        // aux échelles 3,2/6,4 px.
+        public const int DetailOvershoot = 6;
 
         public const double DetailReferenceAcutance = 0.10;
 

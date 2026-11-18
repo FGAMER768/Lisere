@@ -116,6 +116,21 @@ public class VideoViewModelTests
     }
 
     [Fact]
+    public async Task OnlyTheChromaPresetRequestsTheToneCurve()
+    {
+        var renderer = new FakeVideoRenderer();
+        var viewModel = CreateViewModel(renderer: renderer);
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.RenderPreviewCommand.ExecuteAsync(null);
+        Assert.True(renderer.Request!.Frame.ApplyChromaTone);
+
+        viewModel.FixCompression = 20;
+        await viewModel.RenderPreviewCommand.ExecuteAsync(null);
+        Assert.False(renderer.Request!.Frame.ApplyChromaTone);
+    }
+
+    [Fact]
     public async Task AManualSliderSwitchesThePresetToManual()
     {
         var viewModel = CreateViewModel();
