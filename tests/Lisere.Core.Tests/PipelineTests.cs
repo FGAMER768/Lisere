@@ -6,7 +6,7 @@ namespace Lisere.Core.Tests;
 
 public class PipelineTests
 {
-    private const string ChromaHash = "297f620df7a07389b283ca82879e74808a10bc09346e284fc5745a9b704bc817";
+    private const string ChromaHash = "0eb01fa4aaa491c62cb08690f3144964f68fab0485ffa47e996b94cfe2ecbfb2";
     private const string GrainHash = "26eaf6668bf48e5a0c3545f729e2dd24fdada86ade9cc6ed6d05e9d96036044f";
 
     [Fact]

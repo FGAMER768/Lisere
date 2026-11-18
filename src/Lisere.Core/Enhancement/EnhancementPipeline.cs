@@ -55,6 +55,9 @@ public static class EnhancementPipeline
                     model.Noise * EnhancementTuning.Pipeline.NoiseBlendScale));
         }
 
+        // Référence sans accentuation : les bornes du détail s'appuient dessus,
+        // pour ne pas prendre les halos de l'unsharp comme marge autorisée.
+        var detailReference = output;
         var preBlur = model.PreBlur;
         if (preBlur < -EnhancementTuning.Pipeline.ActiveThreshold)
         {
@@ -94,33 +97,27 @@ public static class EnhancementPipeline
 
         if (model.Details > EnhancementTuning.Pipeline.ActiveThreshold)
         {
-            var detailed = ImageFilters.Contrast(
-                ImageFilters.Detail(output),
-                1.0 + (model.Details * EnhancementTuning.Pipeline.DetailContrastScale));
-            var mask = ImageFilters.EdgeMask(
-                output,
-                EnhancementTuning.Pipeline.DetailEdgeGainBase +
-                (model.Details * EnhancementTuning.Pipeline.DetailEdgeGainScale));
-            var boosted = ImageFilters.BlendImages(
-                output,
-                detailed,
-                Math.Min(
-                    EnhancementTuning.Pipeline.DetailBlendMaximum,
-                    model.Details * EnhancementTuning.Pipeline.DetailBlendScale));
-
-            output = ImageFilters.Composite(boosted, output, mask);
             output = ImageFilters.Color(
                 output,
                 1.0 + (model.Details * EnhancementTuning.Pipeline.DetailColorScale));
 
-            // Les échelles 2 à 8 px : c'est ce qui redonne de la texture à une
-            // image molle, là où le noyau 3 × 3 ne voit rien.
+            // Le détail est reconstruit sur trois échelles, puis borné aux
+            // extrêmes locaux : c'est ce qui redonne de la texture à une image
+            // molle sans les halos d'un noyau 3 × 3 accentué. Une image déjà
+            // nette reçoit moins de gain, comme le fait un modèle adaptatif.
+            var detailScale = ImageFilters.DetailScale(
+                output,
+                EnhancementTuning.Pipeline.DetailReferenceAcutance,
+                EnhancementTuning.Pipeline.DetailMinimumScale);
             output = ImageFilters.MultiScaleSharpen(
                 output,
                 EnhancementTuning.Pipeline.DetailRadii,
                 EnhancementTuning.Pipeline.DetailGains,
-                model.Details,
-                EnhancementTuning.Pipeline.DetailClamp);
+                model.Details * detailScale,
+                EnhancementTuning.Pipeline.DetailOvershoot,
+                EnhancementTuning.Pipeline.DetailNoiseFloor,
+                EnhancementTuning.Pipeline.DetailEdgeRange,
+                detailReference);
         }
 
         if (model.Halo > EnhancementTuning.Pipeline.ActiveThreshold)

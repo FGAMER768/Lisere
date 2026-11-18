@@ -52,6 +52,72 @@ public class FilterTests
     }
 
     [Fact]
+    public void MultiScaleSharpenSharpensInsideTheLocalRangeWithoutOvershoot()
+    {
+        // Escalier adouci sur 24 px : le centre peut monter bien au-delà de
+        // 8 niveaux (donc un plafond global de ±8 l'écraserait), mais aucun
+        // pixel ne doit dépasser les extrêmes locaux de plus de 8 niveaux.
+        var source = new RgbImage(64, 64);
+        for (var y = 0; y < 64; y++)
+        {
+            for (var x = 0; x < 64; x++)
+            {
+                var t = Math.Clamp((x - 16) / 24.0, 0.0, 1.0);
+                var value = (byte)Math.Round(60 + (150 * t * t * (3.0 - (2.0 * t))));
+                var offset = ((y * 64) + x) * 3;
+                source.Pixels[offset] = value;
+                source.Pixels[offset + 1] = value;
+                source.Pixels[offset + 2] = value;
+            }
+        }
+
+        var result = ImageFilters.MultiScaleSharpen(source, [1.0f, 2.0f, 4.0f], [1.9, 0.95, 0.48], 2.0, 8);
+        var before = ImageFilters.ToGray(source);
+        var after = ImageFilters.ToGray(result);
+        var maxDelta = 0;
+
+        for (var y = 0; y < 64; y++)
+        {
+            for (var x = 0; x < 64; x++)
+            {
+                var index = (y * 64) + x;
+                var localMin = 255;
+                var localMax = 0;
+                for (var dy = -4; dy <= 4; dy++)
+                {
+                    for (var dx = -4; dx <= 4; dx++)
+                    {
+                        var ny = Math.Clamp(y + dy, 0, 63);
+                        var nx = Math.Clamp(x + dx, 0, 63);
+                        var value = before.Pixels[(ny * 64) + nx];
+                        localMin = Math.Min(localMin, value);
+                        localMax = Math.Max(localMax, value);
+                    }
+                }
+
+                Assert.InRange(after.Pixels[index], localMin - 8, localMax + 8);
+                maxDelta = Math.Max(maxDelta, Math.Abs(after.Pixels[index] - before.Pixels[index]));
+            }
+        }
+
+        Assert.True(maxDelta > 8, $"le détail doit dépasser le plafond global ({maxDelta})");
+    }
+
+    [Fact]
+    public void DetailScaleSharpensASoftImageMoreThanAnAlreadySharpOne()
+    {
+        var sharp = TestImages.CreatePattern();
+        var soft = ImageFilters.GaussianBlur(sharp, 3.0f);
+
+        var sharpScale = ImageFilters.DetailScale(sharp, 0.10, 0.35);
+        var softScale = ImageFilters.DetailScale(soft, 0.10, 0.35);
+
+        Assert.True(softScale > sharpScale, $"le flou doit être plus accentué ({softScale} vs {sharpScale})");
+        Assert.Equal(1.0, softScale, 2);
+        Assert.Equal(0.35, sharpScale, 2);
+    }
+
+    [Fact]
     public void MultiScaleSharpenRejectsMismatchedBands()
     {
         var source = new RgbImage(8, 8);

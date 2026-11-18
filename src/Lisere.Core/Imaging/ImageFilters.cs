@@ -68,17 +68,26 @@ public static class ImageFilters
 
     /// <summary>
     /// Accentuation multi-échelles sur la luminance : chaque bande est un
-    /// passe-haut (luminance − flou gaussien), sommé avec son poids, borné
-    /// puis ajouté aux trois canaux. Reconstruire les échelles 2 à 8 px que le
+    /// passe-haut (luminance − flou gaussien), sommé avec son poids, puis
+    /// ajouté aux trois canaux. Reconstruire les échelles 2 à 8 px que le
     /// noyau 3 × 3 ne voit pas est ce qui distingue un rendu de type Topaz
-    /// d'une simple accentuation fine. Le borne évite les halos blancs.
+    /// d'une simple accentuation fine.
+    /// <para>
+    /// Le résultat est borné aux extrêmes locaux de la luminance, élargis de
+    /// <paramref name="overshoot"/> niveaux : une arête garde tout son gain de
+    /// pente, mais le halo ne peut pas dépasser cette marge. Un plafond global
+    /// sur le delta écraserait au contraire les transitions fortes.
+    /// </para>
     /// </summary>
     public static RgbImage MultiScaleSharpen(
         RgbImage source,
         IReadOnlyList<float> radii,
         IReadOnlyList<double> gains,
         double strength,
-        int clamp)
+        int overshoot,
+        double noiseFloor = 0.0,
+        double edgeRange = 0.0,
+        RgbImage? clampReference = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(radii);
@@ -94,23 +103,53 @@ public static class ImageFilters
         }
 
         var luma = ToGray(source);
-        var detail = new double[luma.Pixels.Length];
+        var detail = new float[luma.Pixels.Length];
+        var radius = (int)Math.Ceiling(radii.Max());
+
+        // Les bornes viennent de l'image non accentuée quand elle est fournie :
+        // les halos d'un unsharp antérieur ne servent alors pas de marge.
+        var extremaSource = clampReference is null ? luma : ToGray(clampReference);
+        var (localMin, localMax) = LocalExtrema(extremaSource, radius);
 
         for (var band = 0; band < radii.Count; band++)
         {
             var blurred = GaussianBlur(luma, radii[band]);
-            var gain = gains[band] * strength;
+            var gain = (float)(gains[band] * strength);
+            var coarse = edgeRange > 0 && band == radii.Count - 1;
 
             for (var i = 0; i < detail.Length; i++)
             {
-                detail[i] += gain * (luma.Pixels[i] - blurred.Pixels[i]);
+                var value = gain * (luma.Pixels[i] - blurred.Pixels[i]);
+
+                if (coarse)
+                {
+                    // La base gaussienne large déborde de l'autre côté d'une arête
+                    // franche et y ajouterait un liseré épais. Cette bande est donc
+                    // réservée aux zones de faible amplitude locale ; les bandes
+                    // fines gardent toute leur force.
+                    var range = localMax[i] - localMin[i];
+                    var ratio = range / edgeRange;
+                    value *= (float)(1.0 / (1.0 + (ratio * ratio)));
+                }
+
+                detail[i] += value;
             }
         }
 
         var pixels = new byte[source.Pixels.Length];
+
         for (var i = 0; i < detail.Length; i++)
         {
-            var delta = (int)Math.Round(Math.Clamp(detail[i], -clamp, clamp));
+            // Seuil doux : un écart de 1–2 niveaux est du grain, pas du détail.
+            // Il est atténué sans être coupé, ce qui évite le ciel qui fourmille.
+            var band = detail[i];
+            var gated = noiseFloor > 0
+                ? band * band * band / ((band * band) + (noiseFloor * noiseFloor))
+                : band;
+            var low = Math.Max(0, localMin[i] - overshoot);
+            var high = Math.Min(255, localMax[i] + overshoot);
+            var target = Math.Clamp(luma.Pixels[i] + gated, low, high);
+            var delta = (int)Math.Round(target) - luma.Pixels[i];
             var offset = i * 3;
             pixels[offset] = PixelMath.Clip8(source.Pixels[offset] + delta);
             pixels[offset + 1] = PixelMath.Clip8(source.Pixels[offset + 1] + delta);
@@ -119,6 +158,157 @@ public static class ImageFilters
 
         return new RgbImage(source.Width, source.Height, pixels);
     }
+
+    /// <summary>
+    /// Force relative à donner au détail selon l'acutance déjà présente :
+    /// une image molle reçoit tout le gain (facteur 1), une image déjà nette
+    /// est ménagée (facteur minimal). Le rapport énergie de contour / écart-type
+    /// vaut ~0,04 sur une photo floue et ~0,3–0,6 sur une photo nette.
+    /// </summary>
+    public static double DetailScale(RgbImage source, double referenceAcutance, double minimum)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var luma = ToGray(source);
+        var width = source.Width;
+        double edge = 0;
+        double sum = 0;
+        double sumSquares = 0;
+        var count = 0;
+
+        for (var y = 1; y < source.Height - 1; y++)
+        {
+            for (var x = 1; x < width - 1; x++)
+            {
+                var index = (y * width) + x;
+                var value = luma.Pixels[index];
+                edge += Math.Abs((4 * value) -
+                    luma.Pixels[index - 1] - luma.Pixels[index + 1] -
+                    luma.Pixels[index - width] - luma.Pixels[index + width]);
+                sum += value;
+                sumSquares += value * value;
+                count++;
+            }
+        }
+
+        if (count == 0)
+        {
+            return 1.0;
+        }
+
+        var mean = sum / count;
+        var variance = Math.Max(0, (sumSquares / count) - (mean * mean));
+        var ratio = edge / count / Math.Max(1.0, Math.Sqrt(variance));
+
+        if (ratio <= 0)
+        {
+            return 1.0;
+        }
+
+        return Math.Clamp(referenceAcutance / ratio, minimum, 1.0);
+    }
+
+    /// <summary>
+    /// Minimum et maximum locaux d'un canal, en O(1) par pixel : un balayage
+    /// horizontal puis vertical avec une file monotone, au lieu des 81
+    /// comparaisons d'une fenêtre 9 × 9.
+    /// </summary>
+    private static (byte[] Min, byte[] Max) LocalExtrema(GrayImage source, int radius)
+    {
+        var length = source.Pixels.Length;
+        var horizontal = new byte[length];
+        var minimum = new byte[length];
+        var maximum = new byte[length];
+
+        SlidingExtreme(source.Pixels, source.Width, source.Height, radius, horizontal, minimum, takeMax: false);
+        SlidingExtreme(minimum, source.Width, source.Height, radius, horizontal, minimum, takeMax: false);
+        SlidingExtreme(source.Pixels, source.Width, source.Height, radius, horizontal, maximum, takeMax: true);
+        SlidingExtreme(maximum, source.Width, source.Height, radius, horizontal, maximum, takeMax: true);
+
+        return (minimum, maximum);
+    }
+
+    private static void SlidingExtreme(
+        byte[] source,
+        int width,
+        int height,
+        int radius,
+        byte[] horizontal,
+        byte[] result,
+        bool takeMax)
+    {
+        var deque = new int[Math.Max(width, height)];
+
+        for (var y = 0; y < height; y++)
+        {
+            var row = y * width;
+            var head = 0;
+            var tail = 0;
+
+            for (var i = 0; i < width + radius; i++)
+            {
+                if (i < width)
+                {
+                    var value = source[row + i];
+                    while (tail > head && Pops(source[row + deque[tail - 1]], value, takeMax))
+                    {
+                        tail--;
+                    }
+
+                    deque[tail++] = i;
+                }
+
+                var outIndex = i - radius;
+                if (outIndex < 0)
+                {
+                    continue;
+                }
+
+                while (deque[head] < outIndex - radius)
+                {
+                    head++;
+                }
+
+                horizontal[row + outIndex] = source[row + deque[head]];
+            }
+        }
+
+        for (var x = 0; x < width; x++)
+        {
+            var head = 0;
+            var tail = 0;
+
+            for (var i = 0; i < height + radius; i++)
+            {
+                if (i < height)
+                {
+                    var value = horizontal[x + (i * width)];
+                    while (tail > head && Pops(horizontal[x + (deque[tail - 1] * width)], value, takeMax))
+                    {
+                        tail--;
+                    }
+
+                    deque[tail++] = i;
+                }
+
+                var outIndex = i - radius;
+                if (outIndex < 0)
+                {
+                    continue;
+                }
+
+                while (deque[head] < outIndex - radius)
+                {
+                    head++;
+                }
+
+                result[x + (outIndex * width)] = horizontal[x + (deque[head] * width)];
+            }
+        }
+    }
+
+    private static bool Pops(byte existing, byte value, bool takeMax) =>
+        takeMax ? existing <= value : existing >= value;
 
     public static GrayImage Median3(GrayImage source)
     {

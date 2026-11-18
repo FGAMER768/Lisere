@@ -65,17 +65,20 @@ public static class EnhancementTuning
         public const int DeblurThreshold = 2;
         public const double SharpenPercentScale = 130.0;
         public const int SharpenThreshold = 3;
-        public const double DetailContrastScale = 0.2;
 
         public static IReadOnlyList<float> DetailRadii { get; } = [1.0f, 2.0f, 4.0f];
 
-        public static IReadOnlyList<double> DetailGains { get; } = [1.6, 0.8, 0.4];
+        public static IReadOnlyList<double> DetailGains { get; } = [3.6, 1.4, 0.3];
 
-        public const int DetailClamp = 32;
-        public const double DetailEdgeGainBase = 1.5;
-        public const double DetailEdgeGainScale = 2.5;
-        public const double DetailBlendScale = 0.95;
-        public const double DetailBlendMaximum = 0.9;
+        public const int DetailOvershoot = 3;
+
+        public const double DetailNoiseFloor = 2.5;
+
+        public const double DetailEdgeRange = 24.0;
+
+        public const double DetailReferenceAcutance = 0.10;
+
+        public const double DetailMinimumScale = 0.2;
         public const double DetailColorScale = 0.06;
         public const double DehaloSaturationScale = 0.45;
         public const double DehaloBlurBase = 1.0;
