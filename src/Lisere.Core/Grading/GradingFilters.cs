@@ -157,52 +157,6 @@ internal static class GradingFilters
     }
 
     /// <summary>
-    /// Vignette d'objectif de Magic Bullet Looks (outil <c>lenv</c>) :
-    /// l'éclairement chute du rayon <paramref name="sizePercent"/> jusqu'aux
-    /// coins, à hauteur de <paramref name="amountPercent"/>. Le centre est
-    /// décalable en pourcentage de la demi-largeur et de la demi-hauteur.
-    /// Le facteur s'applique en lumière linéaire, comme une chute de lentille.
-    /// </summary>
-    public static RgbImage LensVignette(
-        RgbImage source,
-        double amountPercent,
-        double sizePercent,
-        double centerXPercent,
-        double centerYPercent)
-    {
-        if (amountPercent == 0.0)
-        {
-            return source.Clone();
-        }
-
-        var strength = amountPercent / 100.0;
-        var size = Math.Clamp(sizePercent / 100.0, 0.0, Math.Sqrt(2.0));
-        var inner = Math.Max(Math.Sqrt(2.0) - size, 1e-6);
-        double centerPixelX = (source.Width / 2.0) + (centerXPercent / 100.0 * source.Width / 2.0);
-        double centerPixelY = (source.Height / 2.0) + (centerYPercent / 100.0 * source.Height / 2.0);
-        var pixels = new byte[source.Pixels.Length];
-
-        for (var y = 0; y < source.Height; y++)
-        {
-            for (var x = 0; x < source.Width; x++)
-            {
-                var dx = (x + 0.5 - centerPixelX) / (source.Width / 2.0);
-                var dy = (y + 0.5 - centerPixelY) / (source.Height / 2.0);
-                var distance = Math.Sqrt((dx * dx) + (dy * dy));
-                var t = Math.Clamp((distance - size) / inner, 0.0, 1.0);
-                var factor = 1.0 - (strength * SmoothStep(t));
-                var offset = ((y * source.Width) + x) * 3;
-
-                pixels[offset] = Clip(ToSrgb(ToLinear(source.Pixels[offset] / 255.0) * factor) * 255.0);
-                pixels[offset + 1] = Clip(ToSrgb(ToLinear(source.Pixels[offset + 1] / 255.0) * factor) * 255.0);
-                pixels[offset + 2] = Clip(ToSrgb(ToLinear(source.Pixels[offset + 2] / 255.0) * factor) * 255.0);
-            }
-        }
-
-        return new RgbImage(source.Width, source.Height, pixels);
-    }
-
-    /// <summary>
     /// Applique une table de 256 entrées à chaque canal, comme la courbe
     /// maître d'After Effects. Les courbes du fichier sont stockées sous cette
     /// forme : un octet de sortie par niveau d'entrée.
@@ -530,8 +484,6 @@ internal static class GradingFilters
         hue /= 6.0;
         return hue < 0.0 ? hue + 1.0 : hue;
     }
-
-    private static double SmoothStep(double value) => value * value * (3.0 - (2.0 * value));
 
     private static double ToLinear(double value) =>
         value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);

@@ -6,7 +6,7 @@ namespace Lisere.Core.Grading;
 /// Reproduit le look du preset After Effects <c>Ultron_CC.ffx</c>, dans l'ordre
 /// de sa pile d'effets :
 /// <list type="number">
-///   <item>Looks : vignette d'objectif puis saturation pondérée luma ;</item>
+///   <item>Looks : saturation pondérée luma ;</item>
 ///   <item>S_Sharpen : accentuation multi-échelles ;</item>
 ///   <item>Brightness &amp; Contrast légacy ;</item>
 ///   <item>Vibrance ;</item>
@@ -28,22 +28,13 @@ public static class UltronCcLook
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(settings);
 
-        var output = ApplyLensVignette(source);
-        output = ApplyLooksSaturation(output, settings);
+        var output = ApplyLooksSaturation(source, settings);
         output = ApplySapphireSharpen(output);
         output = ApplyBrightnessContrast(output, settings);
         output = ApplyVibrance(output, settings);
         output = ApplyUnsharpMask(output);
         return ApplyBccMagicSharp(output);
     }
-
-    private static RgbImage ApplyLensVignette(RgbImage source) =>
-        GradingFilters.LensVignette(
-            source,
-            UltronCcTuning.LensVignette.AmountPercent,
-            UltronCcTuning.LensVignette.SizePercent,
-            UltronCcTuning.LensVignette.CenterXPercent,
-            UltronCcTuning.LensVignette.CenterYPercent);
 
     private static RgbImage ApplyLooksSaturation(RgbImage source, UltronCcSettings settings) =>
         GradingFilters.WeightedSaturation(
