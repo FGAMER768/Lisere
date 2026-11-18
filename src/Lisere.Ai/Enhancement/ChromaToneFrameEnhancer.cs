@@ -5,7 +5,7 @@ namespace Lisere.Ai.Enhancement;
 
 /// <summary>
 /// Applies the Chroma preset's tone curve after any frame engine, so the video
-/// page and the image page share the same look. The curve is additive and lives
+/// page and the image page share the same look. The curve is an additional stage
 /// outside the engines: a neural model and the classical pipeline both receive it.
 /// The image path also applies the image-only ColorGrading stage before it; the
 /// video page has no grading, so only the curve is shared.
