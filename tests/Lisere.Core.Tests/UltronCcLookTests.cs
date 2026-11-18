@@ -78,14 +78,29 @@ public class UltronCcLookTests
     [Fact]
     public void ApplyMovesUniformMiddleGrayAlongTheLegacyContrastCurve()
     {
-        // Un aplat ne contient aucun détail : seuls la saturation (sans effet
-        // sur un gris), le contraste +5 / +7 et la vibrance (sans effet sur un
-        // gris) peuvent le déplacer. 128 -> 133.
+        // Un aplat ne contient aucun détail utile, mais la vignette y crée un
+        // dégradé : le centre suit le contraste +5 / +7 (128 -> 133), puis
+        // l'unsharp mask relève légèrement ce dégradé (133 -> 137).
         var source = Uniform(128, 16);
 
         var result = UltronCcLook.Apply(source);
 
-        Assert.All(result.Pixels, value => Assert.Equal(133, value));
+        Assert.Equal(137, result.Pixels[Offset(8, 8, 16)]);
+    }
+
+    [Fact]
+    public void ApplyKeepsTheCentreBrighterThanTheCorners()
+    {
+        // La vignette d'objectif assombrit les coins avant l'exposition : un
+        // aplat gris ne doit donc plus ressortir uniforme.
+        var source = Uniform(128, 32);
+
+        var result = UltronCcLook.Apply(source);
+
+        Assert.True(
+            result.Pixels[Offset(16, 16)] > result.Pixels[Offset(0, 0)],
+            $"le centre doit rester plus clair que le coin ({result.Pixels[Offset(16, 16)]} vs {result.Pixels[Offset(0, 0)]})");
+        Assert.True(result.Pixels[Offset(0, 0)] > 0, "la vignette ne doit pas écraser le coin au noir");
     }
 
     [Fact]
@@ -94,8 +109,11 @@ public class UltronCcLookTests
         var source = Uniform(140, 120, 120, 24);
 
         var result = UltronCcLook.Apply(source);
+        var centre = new RgbImage(1, 1, [result.Pixels[((12 * 24) + 12) * 3], result.Pixels[(((12 * 24) + 12) * 3) + 1], result.Pixels[(((12 * 24) + 12) * 3) + 2]]);
 
-        Assert.True(Spread(result) > Spread(source), $"l'écart entre canaux doit croître ({Spread(source)} -> {Spread(result)})");
+        Assert.True(
+            Spread(centre) > Spread(source),
+            $"l'écart entre canaux doit croître ({Spread(source)} -> {Spread(centre)})");
     }
 
     [Fact]

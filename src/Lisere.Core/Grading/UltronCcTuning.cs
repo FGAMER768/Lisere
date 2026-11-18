@@ -25,6 +25,27 @@ public static class UltronCcTuning
         public const double LumaBlue = 0.0722;
     }
 
+    /// <summary>
+    /// Premier outil du graphe Looks (avant la saturation) : vignette
+    /// d'objectif <c>lenv</c>. Valeurs du fichier : 72,3 ; 92,8571 ; 0 ; 0 ;
+    /// 0 ; 1 ; 0. L'ordre retenu suit les contrôles documentés de Lens
+    /// Vignette : force, taille, décalage du centre en X puis en Y (0 et 0),
+    /// hautes lumières (0), aspect (1). Seule la force et la taille sont lues
+    /// ici ; le reste est neutre dans ce preset.
+    /// </summary>
+    public static class LensVignette
+    {
+        /// <summary>Force lue dans le champ 1 : 72,3.</summary>
+        public const double AmountPercent = 72.3;
+
+        /// <summary>Taille lue dans le champ 2 : 92,8571, soit 13/14.</summary>
+        public const double SizePercent = 92.85714285714286;
+
+        public const double CenterXPercent = 0.0;
+
+        public const double CenterYPercent = 0.0;
+    }
+
     /// <summary>Effet 1 : Sapphire <c>S_Sharpen</c>.</summary>
     public static class SapphireSharpen
     {

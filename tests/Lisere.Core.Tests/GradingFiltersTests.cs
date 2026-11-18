@@ -90,6 +90,27 @@ public class GradingFiltersTests
     }
 
     [Fact]
+    public void LensVignetteKeepsTheCentreAndDarkensTheCorners()
+    {
+        var source = new RgbImage(64, 64);
+        Array.Fill(source.Pixels, (byte)180);
+
+        var result = GradingFilters.LensVignette(source, 50.0, 90.0, 0.0, 0.0);
+
+        Assert.Equal(180, result.Pixels[((32 * 64) + 32) * 3]);
+        Assert.True(result.Pixels[0] < result.Pixels[((32 * 64) + 32) * 3]);
+        Assert.True(result.Pixels[0] > 0);
+    }
+
+    [Fact]
+    public void LensVignetteWithoutAmountLeavesTheImageUntouched()
+    {
+        var source = TestImages.CreatePattern(size: 16);
+
+        Assert.Equal(source.Pixels, GradingFilters.LensVignette(source, 0.0, 92.857, 0.0, 0.0).Pixels);
+    }
+
+    [Fact]
     public void CurveTableAppliesTheLookupPerChannel()
     {
         var source = new RgbImage(2, 1, [0, 64, 128, 192, 255, 10]);

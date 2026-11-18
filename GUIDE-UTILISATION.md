@@ -205,7 +205,7 @@ Le menu **Préréglage de colorimétrie** propose :
 | Préréglage | Comportement | Quand l'utiliser |
 |---|---|---|
 | **Aucune** | Aucun étalonnage : l'image garde les couleurs de l'amélioration. | Par défaut. |
-| **Ultron CC** | Étalonnage du preset After Effects `Ultron_CC.ffx` : saturation 129,997 %, luminosité +5, contraste +7, vibrance +50, plus les accentuations. | Retrouver le rendu du preset sans After Effects ni plug-ins. |
+| **Ultron CC** | Étalonnage du preset After Effects `Ultron_CC.ffx` : vignette d'objectif 72,3 %, saturation 129,997 %, luminosité +5, contraste +7, vibrance +50, plus les accentuations. | Retrouver le rendu du preset sans After Effects ni plug-ins. |
 | **Matrix CC** | Étalonnage du preset After Effects `Matrix_CC.ffx` : luminosité +30, contraste +20 et trois accentuations (30 % / 15 px, 10 %, 15 % / 30 px). Valeurs fixes, sans curseurs. | Un rendu plus clair et plus contrasté, sans réglage à faire. |
 | **Infinity CC** | Étalonnage du preset After Effects `Infinity_CC.ffx` : accentuation multi-échelles, unsharp mask 16 % / rayon 9,8, halo doux, exposition −0,36. Valeurs fixes. | Un rendu net et légèrement assombri, avec un halo discret sur les hautes lumières. |
 | **Nebulus CC** | Étalonnage du preset After Effects `Nebulus_CC.ffx` : accentuation multi-échelles, unsharp mask 10 % / rayon 20, halo marqué. Valeurs fixes. | Un rendu net et lumineux, avec un halo prononcé autour des zones claires. |
