@@ -112,6 +112,15 @@ public static class EnhancementPipeline
             output = ImageFilters.Color(
                 output,
                 1.0 + (model.Details * EnhancementTuning.Pipeline.DetailColorScale));
+
+            // Les échelles 2 à 8 px : c'est ce qui redonne de la texture à une
+            // image molle, là où le noyau 3 × 3 ne voit rien.
+            output = ImageFilters.MultiScaleSharpen(
+                output,
+                EnhancementTuning.Pipeline.DetailRadii,
+                EnhancementTuning.Pipeline.DetailGains,
+                model.Details,
+                EnhancementTuning.Pipeline.DetailClamp);
         }
 
         if (model.Halo > EnhancementTuning.Pipeline.ActiveThreshold)

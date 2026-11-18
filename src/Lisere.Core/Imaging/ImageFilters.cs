@@ -66,6 +66,60 @@ public static class ImageFilters
         return FilterRgb3x3(source, kernel, 0.0f);
     }
 
+    /// <summary>
+    /// Accentuation multi-échelles sur la luminance : chaque bande est un
+    /// passe-haut (luminance − flou gaussien), sommé avec son poids, borné
+    /// puis ajouté aux trois canaux. Reconstruire les échelles 2 à 8 px que le
+    /// noyau 3 × 3 ne voit pas est ce qui distingue un rendu de type Topaz
+    /// d'une simple accentuation fine. Le borne évite les halos blancs.
+    /// </summary>
+    public static RgbImage MultiScaleSharpen(
+        RgbImage source,
+        IReadOnlyList<float> radii,
+        IReadOnlyList<double> gains,
+        double strength,
+        int clamp)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(radii);
+        ArgumentNullException.ThrowIfNull(gains);
+        if (radii.Count != gains.Count)
+        {
+            throw new ArgumentException("Each radius needs a gain.", nameof(gains));
+        }
+
+        if (radii.Count == 0 || strength <= 0.0)
+        {
+            return source.Clone();
+        }
+
+        var luma = ToGray(source);
+        var detail = new double[luma.Pixels.Length];
+
+        for (var band = 0; band < radii.Count; band++)
+        {
+            var blurred = GaussianBlur(luma, radii[band]);
+            var gain = gains[band] * strength;
+
+            for (var i = 0; i < detail.Length; i++)
+            {
+                detail[i] += gain * (luma.Pixels[i] - blurred.Pixels[i]);
+            }
+        }
+
+        var pixels = new byte[source.Pixels.Length];
+        for (var i = 0; i < detail.Length; i++)
+        {
+            var delta = (int)Math.Round(Math.Clamp(detail[i], -clamp, clamp));
+            var offset = i * 3;
+            pixels[offset] = PixelMath.Clip8(source.Pixels[offset] + delta);
+            pixels[offset + 1] = PixelMath.Clip8(source.Pixels[offset + 1] + delta);
+            pixels[offset + 2] = PixelMath.Clip8(source.Pixels[offset + 2] + delta);
+        }
+
+        return new RgbImage(source.Width, source.Height, pixels);
+    }
+
     public static GrayImage Median3(GrayImage source)
     {
         ArgumentNullException.ThrowIfNull(source);

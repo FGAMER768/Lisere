@@ -66,6 +66,12 @@ public static class EnhancementTuning
         public const double SharpenPercentScale = 130.0;
         public const int SharpenThreshold = 3;
         public const double DetailContrastScale = 0.2;
+
+        public static IReadOnlyList<float> DetailRadii { get; } = [1.0f, 2.0f, 4.0f];
+
+        public static IReadOnlyList<double> DetailGains { get; } = [1.6, 0.8, 0.4];
+
+        public const int DetailClamp = 32;
         public const double DetailEdgeGainBase = 1.5;
         public const double DetailEdgeGainScale = 2.5;
         public const double DetailBlendScale = 0.95;

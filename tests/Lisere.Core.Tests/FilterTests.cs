@@ -13,6 +13,53 @@ public class FilterTests
         10, 10, 10, 10, 10
     ];
 
+    [Fact]
+    public void MultiScaleSharpenLeavesAFlatImageUntouched()
+    {
+        var source = new RgbImage(32, 32);
+        Array.Fill(source.Pixels, (byte)120);
+
+        var result = ImageFilters.MultiScaleSharpen(source, [1.0f, 2.0f, 4.0f], [1.6, 0.8, 0.4], 0.85, 32);
+
+        Assert.Equal(source.Pixels, result.Pixels);
+    }
+
+    [Fact]
+    public void MultiScaleSharpenSharpensASoftEdge()
+    {
+        // Un escalier adouci : contrairement à une rampe linéaire, il présente
+        // une courbure que le passe-haut peut accentuer.
+        var source = new RgbImage(64, 64);
+        for (var y = 0; y < 64; y++)
+        {
+            for (var x = 0; x < 64; x++)
+            {
+                var t = Math.Clamp((x - 16) / 24.0, 0.0, 1.0);
+                var smooth = t * t * (3.0 - (2.0 * t));
+                var value = (byte)Math.Round(40 + (175 * smooth));
+                var offset = ((y * 64) + x) * 3;
+                source.Pixels[offset] = value;
+                source.Pixels[offset + 1] = value;
+                source.Pixels[offset + 2] = value;
+            }
+        }
+
+        var result = ImageFilters.MultiScaleSharpen(source, [1.0f, 2.0f, 4.0f], [1.6, 0.8, 0.4], 0.85, 32);
+        var before = source.Pixels[(32 * 64 * 3) + (28 * 3)] - source.Pixels[(32 * 64 * 3) + (24 * 3)];
+        var after = result.Pixels[(32 * 64 * 3) + (28 * 3)] - result.Pixels[(32 * 64 * 3) + (24 * 3)];
+
+        Assert.True(after > before, $"le gradient doit croître ({before} -> {after})");
+    }
+
+    [Fact]
+    public void MultiScaleSharpenRejectsMismatchedBands()
+    {
+        var source = new RgbImage(8, 8);
+
+        Assert.Throws<ArgumentException>(() =>
+            ImageFilters.MultiScaleSharpen(source, [1.0f], [1.0, 0.5], 1.0, 32));
+    }
+
     [Theory]
     [InlineData(ResampleMethod.Bicubic, new byte[] { 3, 4, 11, 12 })]
     [InlineData(ResampleMethod.Bilinear, new byte[] { 4, 5, 10, 11 })]
