@@ -174,6 +174,24 @@
   <data name="statusAppliedColor" xml:space="preserve">
     <value>{0} appliqué. Colorimétrie : {1}.</value>
   </data>
+  <data name="statusPresetImported" xml:space="preserve">
+    <value>Preset importé : {0}.</value>
+  </data>
+  <data name="statusPresetExported" xml:space="preserve">
+    <value>Preset exporté : {0}.</value>
+  </data>
+  <data name="sectionPresetFile" xml:space="preserve">
+    <value>Preset complet</value>
+  </data>
+  <data name="presetFileNote" xml:space="preserve">
+    <value>Un seul fichier JSON réunit l'amélioration IA et la colorimétrie.</value>
+  </data>
+  <data name="actionImportPreset" xml:space="preserve">
+    <value>Importer…</value>
+  </data>
+  <data name="actionExportPreset" xml:space="preserve">
+    <value>Exporter…</value>
+  </data>
   <data name="presetChromaNote" xml:space="preserve">
     <value>Préréglage de référence, à ajuster selon l'image.</value>
   </data>
@@ -241,6 +259,12 @@
   </data>
   <data name="errorExport" xml:space="preserve">
     <value>L'export a échoué.</value>
+  </data>
+  <data name="errorPresetImport" xml:space="preserve">
+    <value>Impossible d'importer le preset.</value>
+  </data>
+  <data name="errorPresetExport" xml:space="preserve">
+    <value>L'export du preset a échoué.</value>
   </data>
   <data name="errorEstimate" xml:space="preserve">
     <value>L'estimation automatique a échoué.</value>
@@ -568,6 +592,15 @@
   </data>
   <data name="fileOpenPresetTitle" xml:space="preserve">
     <value>Importer un preset vidéo</value>
+  </data>
+  <data name="fileFilterEnhancePresets" xml:space="preserve">
+    <value>Presets Liseré (*.json)</value>
+  </data>
+  <data name="fileOpenEnhancePresetTitle" xml:space="preserve">
+    <value>Importer un preset (IA + colorimétrie)</value>
+  </data>
+  <data name="fileSaveEnhancePresetTitle" xml:space="preserve">
+    <value>Exporter le preset (IA + colorimétrie)</value>
   </data>
   <data name="fileFilterMp4" xml:space="preserve">
     <value>Vidéo MP4</value>

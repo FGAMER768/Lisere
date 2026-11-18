@@ -422,6 +422,10 @@ public class EnhanceViewModelDialogTests
 
         public string? VideoTarget { get; init; }
 
+        public string? EnhancePresetPath { get; init; }
+
+        public string? EnhancePresetTarget { get; init; }
+
         public string? PickImage() => ImagePath;
 
         public string? PickJpegTarget(string suggestedFileName) => JpegTarget;
@@ -431,6 +435,10 @@ public class EnhanceViewModelDialogTests
         public string? PickVideoTarget(string suggestedFileName) => VideoTarget;
 
         public string? PickVideoPreset() => null;
+
+        public string? PickEnhancePreset() => EnhancePresetPath;
+
+        public string? PickEnhancePresetTarget(string suggestedFileName) => EnhancePresetTarget;
     }
 
     private sealed class FakeImageCodec : IImageCodec

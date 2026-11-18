@@ -128,6 +128,42 @@ Le menu **Colorimétrie** de la page Image est indépendant des préréglages d'
 
 Les paramètres principaux sont bornés de `0` à `100`, sauf le lissage des contours qui accepte une valeur négative pour anticiper un flou. La valeur `0` désactive l'effet correspondant en mode manuel. Le préréglage **Aucune amélioration** grise les curseurs : l'image traverse le pipeline sans correction, ce qui permet de n'appliquer que la colorimétrie.
 
+### Preset complet (IA + colorimétrie)
+
+La carte **Preset complet** de la page Image importe et exporte un seul fichier JSON qui réunit les deux configurations : les six curseurs d'amélioration avec Détails d'origine et Ajout de bruit, puis la colorimétrie avec ses quatre réglages. Le nom enregistré reprend celui du fichier choisi à l'export.
+
+```json
+{
+  "format": "lisere-preset",
+  "version": 1,
+  "name": "Portrait",
+  "enhancement": {
+    "mode": "Manual",
+    "parameters": {
+      "fixCompression": 60,
+      "reduceNoise": 40,
+      "sharpen": 10,
+      "recoverDetails": 85,
+      "dehalo": 10,
+      "antialiasDeblur": 95
+    },
+    "recoverOriginalDetail": 20,
+    "addNoise": 0
+  },
+  "color": {
+    "preset": "UltronCc",
+    "settings": {
+      "saturationPercent": 129.997,
+      "brightness": 5,
+      "contrast": 7,
+      "vibrance": 50
+    }
+  }
+}
+```
+
+L'import est normalisé : les valeurs hors bornes sont ramenées dans les plages des curseurs, et un mode dynamique (`Auto`, `AutoRelativeMedium`) devient **Manuel** avec les valeurs enregistrées, pour qu'un preset redonne toujours le même résultat. `Chroma` est conservé si les six valeurs correspondent à son préréglage. Les presets de colorimétrie autres qu'Ultron ignorent les quatre réglages. Les champs inconnus sont ignorés ; un format ou une version non reconnus sont refusés avec un message.
+
 ### Presets vidéo importés
 
 Le bouton **Importer un preset...** lit un fichier JSON de preset exporté par une application d'amélioration vidéo et applique ce que Liseré sait reproduire :

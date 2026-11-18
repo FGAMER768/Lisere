@@ -272,6 +272,10 @@ public class EnhanceViewModelLanguageTests
         public string? PickVideoTarget(string suggestedFileName) => null;
 
         public string? PickVideoPreset() => null;
+
+        public string? PickEnhancePreset() => null;
+
+        public string? PickEnhancePresetTarget(string suggestedFileName) => null;
     }
 
     private sealed class FakeImageCodec : IImageCodec

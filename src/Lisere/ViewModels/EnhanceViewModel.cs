@@ -29,6 +29,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _saveCancellation;
     private CancellationTokenSource? _presetCancellation;
     private bool _isApplyingPreset;
+    private bool _isImportingPreset;
     private bool _isPresetEstimationPending;
     private bool _switchingToManual;
     private string _statusKey = "statusStart";
@@ -502,6 +503,65 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanUsePresetFile), AllowConcurrentExecutions = false)]
+    private async Task ImportPresetAsync()
+    {
+        var path = _fileDialogService.PickEnhancePreset();
+        if (path is null)
+        {
+            return;
+        }
+
+        ClearError();
+
+        try
+        {
+            var preset = await Task.Run(() => LiserePresetSerializer.Load(path));
+            ApplyImportedPreset(preset);
+        }
+        catch (Exception exception)
+        {
+            await ShowErrorAsync("errorPresetImport", exception);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUsePresetFile), AllowConcurrentExecutions = false)]
+    private async Task ExportPresetAsync()
+    {
+        var suggested = string.IsNullOrWhiteSpace(_sourceName)
+            ? "lisere-preset"
+            : $"{Path.GetFileNameWithoutExtension(_sourceName)}-lisere";
+        var path = _fileDialogService.PickEnhancePresetTarget(suggested);
+        if (path is null)
+        {
+            return;
+        }
+
+        ClearError();
+
+        try
+        {
+            var preset = new LiserePreset(
+                Path.GetFileNameWithoutExtension(path),
+                SelectedPreset?.Mode ?? EnhancementMode.Manual,
+                CurrentParameters,
+                RecoverOriginalDetail,
+                AddNoise,
+                SelectedColorPreset?.Preset ?? ColorPreset.None,
+                CurrentColorSettings);
+
+            await Task.Run(() => LiserePresetSerializer.Save(path, preset));
+            SetStatus("statusPresetExported", Path.GetFileName(path));
+        }
+        catch (Exception exception)
+        {
+            await ShowErrorAsync("errorPresetExport", exception);
+        }
+    }
+
+    private bool CanUsePresetFile() =>
+        !IsBusy && !_isPresetEstimationPending && !_dialogService.IsAnyDialogOpen;
+
     private bool CanOpen() =>
         !IsBusy && !_isPresetEstimationPending && !_dialogService.IsAnyDialogOpen;
 
@@ -516,6 +576,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         OpenCommand.NotifyCanExecuteChanged();
         EnhanceCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
+        ImportPresetCommand.NotifyCanExecuteChanged();
+        ExportPresetCommand.NotifyCanExecuteChanged();
     }
 
     private void OnDialogOpenStateChanged(object? sender, EventArgs e)
@@ -523,6 +585,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         OpenCommand.NotifyCanExecuteChanged();
         EnhanceCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
+        ImportPresetCommand.NotifyCanExecuteChanged();
+        ExportPresetCommand.NotifyCanExecuteChanged();
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e)
@@ -555,6 +619,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         OpenCommand.NotifyCanExecuteChanged();
         EnhanceCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
+        ImportPresetCommand.NotifyCanExecuteChanged();
+        ExportPresetCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnHasImageChanged(bool value)
@@ -577,7 +643,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         UpdatePresetNote();
         OnPropertyChanged(nameof(IsEnhancementActive));
 
-        if (_switchingToManual)
+        if (_switchingToManual || _isImportingPreset)
         {
             return;
         }
@@ -707,6 +773,59 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             cancellation.Dispose();
         }
     }
+
+    /// <summary>
+    /// Imports concrete values rather than replaying a dynamic mode: Auto and
+    /// Auto-relative would re-estimate on the new image, so they become Manual.
+    /// Chroma keeps its identity only when the six values match its preset.
+    /// </summary>
+    private void ApplyImportedPreset(LiserePreset preset)
+    {
+        CancelPresetEstimation();
+        _isImportingPreset = true;
+        _isApplyingPreset = true;
+
+        try
+        {
+            SelectedPreset = Presets.First(option => option.Mode == ResolveImportedMode(preset));
+            AssignParameters(preset.Parameters);
+            RecoverOriginalDetail = preset.RecoverOriginalDetail;
+            AddNoise = preset.AddNoise;
+
+            SelectedColorPreset = ColorPresets.First(
+                option => option.Preset == preset.ColorPreset);
+
+            if (preset.ColorPreset is ColorPreset.UltronCc)
+            {
+                ColorSaturation = preset.ColorSettings.SaturationPercent;
+                ColorBrightness = preset.ColorSettings.Brightness;
+                ColorContrast = preset.ColorSettings.Contrast;
+                ColorVibrance = preset.ColorSettings.Vibrance;
+            }
+        }
+        finally
+        {
+            _isApplyingPreset = false;
+            _isImportingPreset = false;
+        }
+
+        UpdatePresetNote();
+        UpdateColorNote();
+        UpdateWarnings();
+        OnPropertyChanged(nameof(IsEnhancementActive));
+        OnPropertyChanged(nameof(IsColorGradingActive));
+        OnPropertyChanged(nameof(HasAdjustableColorSettings));
+        SetStatus("statusPresetImported", preset.Name);
+    }
+
+    private static EnhancementMode ResolveImportedMode(LiserePreset preset) => preset.Mode switch
+    {
+        EnhancementMode.None => EnhancementMode.None,
+        EnhancementMode.ChromaEnhanceMain when
+            preset.Parameters == EnhancementPresets.ChromaEnhanceMain.Parameters =>
+            EnhancementMode.ChromaEnhanceMain,
+        _ => EnhancementMode.Manual
+    };
 
     private void SetParametersAndRefresh(EnhancementParameters parameters)
     {

@@ -30,6 +30,9 @@ public sealed class FileDialogService : IFileDialogService
     internal string PresetFilter =>
         $"{_localization["fileFilterPresets"]}|*.json|{_localization["fileFilterAll"]}|*.*";
 
+    internal string EnhancePresetFilter =>
+        $"{_localization["fileFilterEnhancePresets"]}|*.json|{_localization["fileFilterAll"]}|*.*";
+
     public string? PickImage()
     {
         var dialog = new OpenFileDialog
@@ -94,6 +97,34 @@ public sealed class FileDialogService : IFileDialogService
             Filter = PresetFilter,
             CheckFileExists = true,
             Multiselect = false
+        };
+
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    public string? PickEnhancePreset()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = _localization["fileOpenEnhancePresetTitle"],
+            Filter = EnhancePresetFilter,
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    public string? PickEnhancePresetTarget(string suggestedFileName)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = _localization["fileSaveEnhancePresetTitle"],
+            Filter = EnhancePresetFilter,
+            DefaultExt = ".json",
+            FileName = suggestedFileName,
+            AddExtension = true,
+            OverwritePrompt = true
         };
 
         return dialog.ShowDialog() == true ? dialog.FileName : null;

@@ -834,5 +834,9 @@ public class VideoViewModelTests
         }
 
         public string? PickVideoPreset() => PresetPath;
+
+        public string? PickEnhancePreset() => null;
+
+        public string? PickEnhancePresetTarget(string suggestedFileName) => null;
     }
 }
