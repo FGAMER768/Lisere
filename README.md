@@ -107,7 +107,7 @@ La stabilisation, le désentrelacement et l'interpolation FFmpeg sont des passes
 
 | Préréglage | Comportement |
 |---|---|
-| Chroma | Préréglage de référence, avec les valeurs de départ recommandées ; l'étage de détail reconstruit les échelles 1, 2 et 4 px, bornées aux extrêmes locaux de l'image non accentuée, et son gain s'adapte à l'acutance déjà présente. |
+| Chroma | Préréglage de référence, avec les valeurs de départ recommandées ; l'étage de détail reconstruit les échelles 1, 2 et 4 px, borné aux extrêmes locaux de l'image non accentuée, avec un gain adapté à l'acutance déjà présente. Les unsharp de netteté et d'antialias sont bornés de la même façon. |
 | Auto (estimation locale) | Analyse l'image ou plusieurs frames du clip et estime les paramètres automatiquement. |
 | Manuel (curseurs) | Applique directement les valeurs saisies. |
 | Auto + relatif moyen | Combine l'estimation automatique et un ajustement relatif moyen. |
@@ -219,7 +219,7 @@ dotnet test Lisere.slnx
 
 La solution contient quatre projets de tests xUnit : `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` et `Lisere.App.Tests`.
 
-État actuel : **250 tests** (93 Core, 13 Ai, 35 Video, 109 App), 0 avertissement de build. Deux tests vidéo dépendants du temps peuvent échouer lors d'une exécution parallèle de la solution et réussissent isolément. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model.
+État actuel : **251 tests** (94 Core, 13 Ai, 35 Video, 109 App), 0 avertissement de build. Deux tests vidéo dépendants du temps peuvent échouer lors d'une exécution parallèle de la solution et réussissent isolément. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model.
 
 Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le rendu, la conservation de l'audio, le désentrelacement, la taille exacte, l'annulation et l'extraction d'aperçu. Ils sont ignorés silencieusement si FFmpeg est introuvable, afin que le reste de la suite reste exécutable sur une machine sans outillage vidéo.
 

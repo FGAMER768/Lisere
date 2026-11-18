@@ -85,8 +85,6 @@ public static class ImageFilters
         IReadOnlyList<double> gains,
         double strength,
         int overshoot,
-        double noiseFloor = 0.0,
-        double edgeRange = 0.0,
         RgbImage? clampReference = null)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -115,24 +113,10 @@ public static class ImageFilters
         {
             var blurred = GaussianBlur(luma, radii[band]);
             var gain = (float)(gains[band] * strength);
-            var coarse = edgeRange > 0 && band == radii.Count - 1;
 
             for (var i = 0; i < detail.Length; i++)
             {
-                var value = gain * (luma.Pixels[i] - blurred.Pixels[i]);
-
-                if (coarse)
-                {
-                    // La base gaussienne large déborde de l'autre côté d'une arête
-                    // franche et y ajouterait un liseré épais. Cette bande est donc
-                    // réservée aux zones de faible amplitude locale ; les bandes
-                    // fines gardent toute leur force.
-                    var range = localMax[i] - localMin[i];
-                    var ratio = range / edgeRange;
-                    value *= (float)(1.0 / (1.0 + (ratio * ratio)));
-                }
-
-                detail[i] += value;
+                detail[i] += gain * (luma.Pixels[i] - blurred.Pixels[i]);
             }
         }
 
@@ -140,15 +124,9 @@ public static class ImageFilters
 
         for (var i = 0; i < detail.Length; i++)
         {
-            // Seuil doux : un écart de 1–2 niveaux est du grain, pas du détail.
-            // Il est atténué sans être coupé, ce qui évite le ciel qui fourmille.
-            var band = detail[i];
-            var gated = noiseFloor > 0
-                ? band * band * band / ((band * band) + (noiseFloor * noiseFloor))
-                : band;
             var low = Math.Max(0, localMin[i] - overshoot);
             var high = Math.Min(255, localMax[i] + overshoot);
-            var target = Math.Clamp(luma.Pixels[i] + gated, low, high);
+            var target = Math.Clamp(luma.Pixels[i] + detail[i], low, high);
             var delta = (int)Math.Round(target) - luma.Pixels[i];
             var offset = i * 3;
             pixels[offset] = PixelMath.Clip8(source.Pixels[offset] + delta);
@@ -213,17 +191,24 @@ public static class ImageFilters
     /// horizontal puis vertical avec une file monotone, au lieu des 81
     /// comparaisons d'une fenêtre 9 × 9.
     /// </summary>
-    private static (byte[] Min, byte[] Max) LocalExtrema(GrayImage source, int radius)
+    private static (byte[] Min, byte[] Max) LocalExtrema(GrayImage source, int radius) =>
+        LocalExtrema(source.Pixels, source.Width, source.Height, radius);
+
+    private static (byte[] Min, byte[] Max) LocalExtrema(
+        byte[] pixels,
+        int width,
+        int height,
+        int radius)
     {
-        var length = source.Pixels.Length;
+        var length = pixels.Length;
         var horizontal = new byte[length];
         var minimum = new byte[length];
         var maximum = new byte[length];
 
-        SlidingExtreme(source.Pixels, source.Width, source.Height, radius, horizontal, minimum, takeMax: false);
-        SlidingExtreme(minimum, source.Width, source.Height, radius, horizontal, minimum, takeMax: false);
-        SlidingExtreme(source.Pixels, source.Width, source.Height, radius, horizontal, maximum, takeMax: true);
-        SlidingExtreme(maximum, source.Width, source.Height, radius, horizontal, maximum, takeMax: true);
+        SlidingExtreme(pixels, width, height, radius, horizontal, minimum, takeMax: false);
+        SlidingExtreme(minimum, width, height, radius, horizontal, minimum, takeMax: false);
+        SlidingExtreme(pixels, width, height, radius, horizontal, maximum, takeMax: true);
+        SlidingExtreme(maximum, width, height, radius, horizontal, maximum, takeMax: true);
 
         return (minimum, maximum);
     }
@@ -390,7 +375,17 @@ public static class ImageFilters
             GaussianBlur(new GrayImage(width, height, plane), radius).Pixels);
     }
 
-    public static RgbImage UnsharpMask(RgbImage source, float radius, int percent, int threshold)
+    /// <summary>
+    /// Accentuation par masque flou. Avec <paramref name="overshoot"/>, chaque
+    /// canal est ramené aux extrêmes locaux de la source, élargis de cette
+    /// marge : l'arête gagne en pente, le halo clair reste borné.
+    /// </summary>
+    public static RgbImage UnsharpMask(
+        RgbImage source,
+        float radius,
+        int percent,
+        int threshold,
+        int overshoot = -1)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentOutOfRangeException.ThrowIfNegative(percent);
@@ -413,7 +408,40 @@ public static class ImageFilters
             }
         }
 
+        if (overshoot >= 0)
+        {
+            ClampToLocalRange(source, pixels, (int)Math.Ceiling(radius), overshoot);
+        }
+
         return new RgbImage(source.Width, source.Height, pixels);
+    }
+
+    private static void ClampToLocalRange(
+        RgbImage source,
+        byte[] target,
+        int radius,
+        int overshoot)
+    {
+        var length = source.Width * source.Height;
+        var plane = new byte[length];
+
+        for (var channel = 0; channel < 3; channel++)
+        {
+            for (var i = 0; i < length; i++)
+            {
+                plane[i] = source.Pixels[(i * 3) + channel];
+            }
+
+            var (minimum, maximum) = LocalExtrema(plane, source.Width, source.Height, radius);
+
+            for (var i = 0; i < length; i++)
+            {
+                var low = Math.Max(0, minimum[i] - overshoot);
+                var high = Math.Min(255, maximum[i] + overshoot);
+                var offset = (i * 3) + channel;
+                target[offset] = (byte)Math.Clamp(target[offset], low, high);
+            }
+        }
     }
 
     public static RgbImage Contrast(RgbImage source, double factor)

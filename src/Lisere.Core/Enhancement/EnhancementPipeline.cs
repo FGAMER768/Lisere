@@ -83,7 +83,8 @@ public static class EnhancementPipeline
                 2.0f,
                 (int)(EnhancementTuning.Pipeline.DeblurPercentBase +
                     (preBlur * EnhancementTuning.Pipeline.DeblurPercentScale)),
-                EnhancementTuning.Pipeline.DeblurThreshold);
+                EnhancementTuning.Pipeline.DeblurThreshold,
+                EnhancementTuning.Pipeline.SharpenOvershoot);
         }
 
         if (model.Blur > EnhancementTuning.Pipeline.ActiveThreshold)
@@ -92,7 +93,8 @@ public static class EnhancementPipeline
                 output,
                 2.0f,
                 (int)(model.Blur * EnhancementTuning.Pipeline.SharpenPercentScale),
-                EnhancementTuning.Pipeline.SharpenThreshold);
+                EnhancementTuning.Pipeline.SharpenThreshold,
+                EnhancementTuning.Pipeline.SharpenOvershoot);
         }
 
         if (model.Details > EnhancementTuning.Pipeline.ActiveThreshold)
@@ -115,8 +117,6 @@ public static class EnhancementPipeline
                 EnhancementTuning.Pipeline.DetailGains,
                 model.Details * detailScale,
                 EnhancementTuning.Pipeline.DetailOvershoot,
-                EnhancementTuning.Pipeline.DetailNoiseFloor,
-                EnhancementTuning.Pipeline.DetailEdgeRange,
                 detailReference);
         }
 

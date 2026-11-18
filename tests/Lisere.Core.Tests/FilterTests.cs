@@ -118,6 +118,67 @@ public class FilterTests
     }
 
     [Fact]
+    public void UnsharpMaskOvershootKeepsHalosWithinTheLocalRange()
+    {
+        // Escalier adouci sur 6 px, accentué à 200 % : sans contrôle, le halo
+        // dépasse les extrêmes locaux ; avec ±3, il reste borné.
+        var source = new RgbImage(64, 64);
+        for (var y = 0; y < 64; y++)
+        {
+            for (var x = 0; x < 64; x++)
+            {
+                var t = Math.Clamp((x - 28) / 6.0, 0.0, 1.0);
+                var value = (byte)Math.Round(40 + (160 * t * t * (3.0 - (2.0 * t))));
+                var offset = ((y * 64) + x) * 3;
+                source.Pixels[offset] = value;
+                source.Pixels[offset + 1] = value;
+                source.Pixels[offset + 2] = value;
+            }
+        }
+
+        var plain = ImageFilters.UnsharpMask(source, 2.0f, 200, 0);
+        var bounded = ImageFilters.UnsharpMask(source, 2.0f, 200, 0, 3);
+
+        Assert.True(
+            MaxOvershoot(source, plain) > 3,
+            $"l'unsharp simple doit déborder ({MaxOvershoot(source, plain)})");
+        Assert.True(
+            MaxOvershoot(source, bounded) <= 3,
+            $"l'overshoot doit rester borné ({MaxOvershoot(source, bounded)})");
+    }
+
+    private static int MaxOvershoot(RgbImage source, RgbImage result)
+    {
+        var luma = ImageFilters.ToGray(source);
+        var output = ImageFilters.ToGray(result);
+        var maximum = 0;
+
+        for (var y = 4; y < source.Height - 4; y++)
+        {
+            for (var x = 4; x < source.Width - 4; x++)
+            {
+                var value = output.Pixels[(y * source.Width) + x];
+                var localMin = 255;
+                var localMax = 0;
+                for (var dy = -2; dy <= 2; dy++)
+                {
+                    for (var dx = -2; dx <= 2; dx++)
+                    {
+                        var neighbour = luma.Pixels[((y + dy) * source.Width) + x + dx];
+                        localMin = Math.Min(localMin, neighbour);
+                        localMax = Math.Max(localMax, neighbour);
+                    }
+                }
+
+                maximum = Math.Max(maximum, value - localMax);
+                maximum = Math.Max(maximum, localMin - value);
+            }
+        }
+
+        return maximum;
+    }
+
+    [Fact]
     public void MultiScaleSharpenRejectsMismatchedBands()
     {
         var source = new RgbImage(8, 8);
