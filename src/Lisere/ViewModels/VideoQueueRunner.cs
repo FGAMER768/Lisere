@@ -24,10 +24,12 @@ public sealed class VideoQueueRunner
     public async Task<VideoQueueRunResult> RunAsync(
         IReadOnlyList<VideoQueueItem> jobs,
         Func<VideoQueueState, string?, string> statusText,
+        Func<Exception, string> describeError,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(jobs);
         ArgumentNullException.ThrowIfNull(statusText);
+        ArgumentNullException.ThrowIfNull(describeError);
 
         var completed = 0;
 
@@ -72,9 +74,10 @@ public sealed class VideoQueueRunner
             catch (Exception exception)
             {
                 // One bad clip must not discard the rest of the queue.
-                job.ErrorMessage = exception.Message;
+                var message = describeError(exception);
+                job.ErrorMessage = message;
                 job.State = VideoQueueState.Failed;
-                job.StatusText = statusText(VideoQueueState.Failed, exception.Message);
+                job.StatusText = statusText(VideoQueueState.Failed, message);
             }
         }
 

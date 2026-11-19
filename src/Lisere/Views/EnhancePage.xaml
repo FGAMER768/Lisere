@@ -67,7 +67,27 @@
                         <views:BeforeAfterView AfterImage="{Binding AfterImage}"
                                                BeforeImage="{Binding BeforeImage}"
                                                ComparisonPosition="{Binding ComparisonPosition, Mode=TwoWay}"
+                                               Localization="{Binding Strings}"
                                                Visibility="{Binding HasImage, Converter={StaticResource BooleanToVisibility}}" />
+
+                        <Border Margin="12"
+                                Padding="10,6"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Top"
+                                Background="#E6A15C00"
+                                CornerRadius="6"
+                                Visibility="{Binding IsResultStale, Converter={StaticResource BooleanToVisibility}}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Margin="0,0,6,0"
+                                               FontSize="14"
+                                               Foreground="White"
+                                               Symbol="Warning24" />
+                                <TextBlock FontSize="12"
+                                           Foreground="White"
+                                           AutomationProperties.LiveSetting="Polite"
+                                           Text="{Binding Strings[stalePreviewNotice]}" />
+                            </StackPanel>
+                        </Border>
 
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <StackPanel.Style>
@@ -308,6 +328,16 @@
                                     Style="{StaticResource ParameterSlider}"
                                     TickFrequency="1"
                                     Value="{Binding RecoverDetails, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <ui:ToggleSwitch Margin="0,12,0,0"
+                                             AutomationProperties.Name="{Binding Strings[paramRefineFaces]}"
+                                             Content="{Binding Strings[paramRefineFaces]}"
+                                             IsChecked="{Binding RefineFaces, Mode=TwoWay}" />
+                            <TextBlock Margin="0,2,0,0"
+                                       FontSize="12"
+                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding Strings[paramRefineFacesNote]}"
+                                       TextWrapping="Wrap" />
 
                             <Grid Style="{StaticResource ParameterGroup}">
                                 <Grid.ColumnDefinitions>

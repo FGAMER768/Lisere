@@ -12,7 +12,7 @@ tags:
 
 # RIFE v4.9 (ONNX)
 
-`rife49.onnx` — an ONNX export of **RIFE v4.9** for video frame interpolation
+`rife49.onnx` : an ONNX export of **RIFE v4.9** for video frame interpolation
 (synthesising the in-between frames when raising a video's frame rate). Runs
 client-side with onnxruntime-web on the WASM or WebGPU execution providers.
 
@@ -20,19 +20,19 @@ client-side with onnxruntime-web on the WASM or WebGPU execution providers.
 
 - **Inputs:** `img0` float32 `[1, 3, H, W]`, `img1` float32 `[1, 3, H, W]`,
   `timestep` float32 `[1]`
-- **Output:** `output` float32 `[1, 3, H, W]` — the interpolated frame at
+- **Output:** `output` float32 `[1, 3, H, W]` : the interpolated frame at
   `timestep` (0..1) between `img0` and `img1`
 - Planar RGB (CHW), values in 0..1. `H` and `W` are padded to a multiple of 32
   for reference quality.
 
 ## Provenance & license
 
-- **Algorithm:** RIFE — *Real-Time Intermediate Flow Estimation for Video Frame
+- **Algorithm:** RIFE : *Real-Time Intermediate Flow Estimation for Video Frame
   Interpolation* (Megvii, ECCV 2022), original code MIT
   (`Copyright (c) Megvii Inc.`).
 - **Weights:** [hzwer/Practical-RIFE](https://github.com/hzwer/Practical-RIFE)
   (v4.9). Practical-RIFE releases both its code **and its model weights** under
-  the **MIT license** — its README states the model links are "under the same
+  the **MIT license** : its README states the model links are "under the same
   MIT license as this project."
 - **ONNX export:**
   [yuvraj108c/rife-onnx](https://huggingface.co/yuvraj108c/rife-onnx)

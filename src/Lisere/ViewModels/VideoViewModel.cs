@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Text.Json;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -624,11 +625,35 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     private async Task ShowErrorAsync(string key, Exception exception)
     {
-        ErrorMessage = $"{Strings[key]} {exception.Message}";
+        ErrorMessage = $"{Strings[key]} {UserErrorDescriber.Describe(Strings, exception)}";
         HasError = true;
         SetStatus("statusError");
         await _dialogService.ShowMessageAsync(ErrorMessage, DialogKind.Error);
     }
+
+    private Exception LocalizeOpenError(Exception exception) => exception switch
+    {
+        FileNotFoundException => new UserMessageException(Strings["videoErrorFileMissing"]),
+        VideoProbeException => new UserMessageException(Strings["videoErrorUnreadable"]),
+        _ => exception
+    };
+
+    private Exception LocalizePresetError(Exception exception) => exception switch
+    {
+        FormatException or JsonException =>
+            new UserMessageException(Strings["videoErrorPresetInvalid"]),
+        IOException or UnauthorizedAccessException =>
+            new UserMessageException(Strings["videoErrorPresetUnreadable"]),
+        _ => exception
+    };
+
+    private Exception LocalizeRenderError(Exception exception) =>
+        exception is VideoRenderException or IOException or UnauthorizedAccessException
+            ? new UserMessageException(Strings["videoErrorRenderDetail"])
+            : exception;
+
+    private string DescribeRenderError(Exception exception) =>
+        UserErrorDescriber.Describe(Strings, LocalizeRenderError(exception));
 
     private PresetOption CreatePreset(EnhancementMode mode) =>
         new(Strings[PresetLabelKey(mode)], mode);

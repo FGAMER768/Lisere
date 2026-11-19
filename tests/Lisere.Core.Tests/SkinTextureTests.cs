@@ -92,6 +92,73 @@ public class SkinTextureTests
     }
 
     [Fact]
+    public void FaceBoxesStrengthenTheGrainInsideTheFaceOnly()
+    {
+        var source = UniformSkin(96);
+        var faces = new[] { new FaceBox(28, 28, 40, 40, 1.0) };
+
+        var plain = SkinTexture.Apply(source, 0.6);
+        var boosted = SkinTexture.Apply(source, 0.6, null, faces);
+
+        var insidePlain = MeanAbsDelta(plain, source, 36, 60, 36, 60);
+        var insideBoosted = MeanAbsDelta(boosted, source, 36, 60, 36, 60);
+        var outsidePlain = MeanAbsDelta(plain, source, 2, 18, 2, 92);
+        var outsideBoosted = MeanAbsDelta(boosted, source, 2, 18, 2, 92);
+
+        Assert.True(
+            insideBoosted > insidePlain * 1.2,
+            $"le visage doit recevoir plus de grain ({insidePlain:0.00} -> {insideBoosted:0.00})");
+        Assert.Equal(outsidePlain, outsideBoosted, 3);
+    }
+
+    [Fact]
+    public void AnAlreadyTexturedFaceReceivesLittleExtraGrain()
+    {
+        var flat = UniformSkin(96);
+        var textured = UniformSkin(96);
+        for (var y = 0; y < textured.Height; y++)
+        {
+            for (var x = 0; x < textured.Width; x++)
+            {
+                var delta = x % 2 == 0 ? -8 : 8;
+                var offset = ((y * textured.Width) + x) * 3;
+                textured.Pixels[offset] = (byte)(200 + delta);
+                textured.Pixels[offset + 1] = (byte)(150 + delta);
+                textured.Pixels[offset + 2] = (byte)(125 + delta);
+            }
+        }
+
+        var faces = new[] { new FaceBox(28, 28, 40, 40, 1.0) };
+        var flatExtra = MeanAbsDelta(
+            SkinTexture.Apply(flat, 0.6, null, faces),
+            SkinTexture.Apply(flat, 0.6),
+            36, 60, 36, 60);
+        var texturedExtra = MeanAbsDelta(
+            SkinTexture.Apply(textured, 0.6, null, faces),
+            SkinTexture.Apply(textured, 0.6),
+            36, 60, 36, 60);
+
+        Assert.True(
+            texturedExtra < flatExtra * 0.3,
+            $"une peau déjà texturée doit recevoir peu de grain en plus ({texturedExtra:0.00} vs {flatExtra:0.00})");
+    }
+
+    [Fact]
+    public void AFaceOutsideTheFrameLeavesTheTextureUnchanged()
+    {
+        var source = UniformSkin(64);
+
+        var plain = SkinTexture.Apply(source, 0.7);
+        var withFace = SkinTexture.Apply(
+            source,
+            0.7,
+            null,
+            new[] { new FaceBox(-400, -400, 40, 40, 1.0) });
+
+        Assert.Equal(plain.Pixels, withFace.Pixels);
+    }
+
+    [Fact]
     public void TextureAvoidsStrongEdges()
     {
         // Bande noire de deux pixels : les pixels de peau qui la bordent ont un

@@ -1,4 +1,6 @@
+using System.Buffers.Binary;
 using System.IO;
+using System.Text;
 using System.Windows.Media.Imaging;
 using Lisere.Core.Imaging;
 using Lisere.Services;
@@ -60,10 +62,31 @@ public class ImageCodecTests
         {
             WriteLargeBmpHeader(path, 8001, 5000);
 
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            var exception = await Assert.ThrowsAsync<ImageCodecException>(
                 () => new ImageCodec().LoadAsync(path, CancellationToken.None));
 
+            Assert.Equal("errorImagePixelLimit", exception.MessageKey);
             Assert.Contains("pixels", exception.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task LoadAsyncReportsACorruptImageWithALocalizableKey()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"lisere-{Guid.NewGuid():N}.png");
+
+        try
+        {
+            File.WriteAllBytes(path, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+            var exception = await Assert.ThrowsAsync<ImageCodecException>(
+                () => new ImageCodec().LoadAsync(path, CancellationToken.None));
+
+            Assert.Equal("errorImageInvalid", exception.MessageKey);
         }
         finally
         {
@@ -76,10 +99,97 @@ public class ImageCodecTests
     {
         ImageCodec.EnsurePixelCountWithinLimit(8000, 5000);
 
-        var exception = Assert.Throws<InvalidOperationException>(
+        var exception = Assert.Throws<ImageCodecException>(
             () => ImageCodec.EnsurePixelCountWithinLimit(8001, 5000));
 
+        Assert.Equal("errorImagePixelLimit", exception.MessageKey);
         Assert.Contains("pixels", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PngOrientationIgnoresAnOversizedExifChunkWithoutAllocatingIt()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"lisere-{Guid.NewGuid():N}.png");
+
+        try
+        {
+            using (var stream = File.Create(path))
+            {
+                stream.Write(PngSignature);
+                WritePngChunkHeader(stream, 0x7FFF_FFFF, "eXIf");
+            }
+
+            Assert.Equal(1, ImageCodec.ReadPngOrientation(path));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void PngOrientationIgnoresATruncatedExifChunk()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"lisere-{Guid.NewGuid():N}.png");
+
+        try
+        {
+            using (var stream = File.Create(path))
+            {
+                stream.Write(PngSignature);
+                WritePngChunkHeader(stream, 1024, "eXIf");
+                stream.Write(new byte[8]);
+            }
+
+            Assert.Equal(1, ImageCodec.ReadPngOrientation(path));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void PngOrientationReadsTheTiffOrientationFromAValidExifChunk()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"lisere-{Guid.NewGuid():N}.png");
+
+        // Little-endian TIFF: one IFD entry, tag 0x0112, type SHORT, count 1, value 6.
+        byte[] exif =
+        [
+            0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
+            0x01, 0x00,
+            0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00
+        ];
+
+        try
+        {
+            using (var stream = File.Create(path))
+            {
+                stream.Write(PngSignature);
+                WritePngChunkHeader(stream, (uint)exif.Length, "eXIf");
+                stream.Write(exif);
+                stream.Write(new byte[4]);
+            }
+
+            Assert.Equal(6, ImageCodec.ReadPngOrientation(path));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    private static readonly byte[] PngSignature =
+        [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+    private static void WritePngChunkHeader(Stream stream, uint length, string type)
+    {
+        Span<byte> header = stackalloc byte[8];
+        BinaryPrimitives.WriteUInt32BigEndian(header[..4], length);
+        Encoding.ASCII.GetBytes(type).CopyTo(header[4..]);
+        stream.Write(header);
     }
 
     private static byte[] CreateBmp(int width, int height)

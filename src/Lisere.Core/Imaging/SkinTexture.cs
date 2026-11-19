@@ -15,6 +15,18 @@ public static class SkinTexture
     /// <summary>Part of the Recover Details slider turned into skin texture.</summary>
     public const double DetailStrength = 1.0;
 
+    /// <summary>
+    /// Gain de texture dans les visages détectés : le grain y est plus marqué
+    /// que sur le reste de la peau, sans changer la texture de celui-ci.
+    /// </summary>
+    public const double FaceDetailGain = 1.7;
+
+    // Détail local moyen d'un visage lisse, puis d'un visage déjà texturé : le
+    // gain s'efface entre les deux pour ne pas doubler une peau qui a déjà
+    // sa micro-texture.
+    private const double FaceFlatDetail = 2.0;
+    private const double FaceTexturedDetail = 8.0;
+
     private const double FineWeight = 0.6;
     private const double PoreWeight = 0.5;
     private const double FineNormalizer = 64.0;
@@ -46,7 +58,8 @@ public static class SkinTexture
     public static RgbImage Apply(
         RgbImage source,
         double strength,
-        ImagingWork? work = null)
+        ImagingWork? work = null,
+        IReadOnlyList<FaceBox>? faces = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -68,10 +81,18 @@ public static class SkinTexture
             out var redChroma,
             work?.Slice(0, 0.08));
         var seed = SeedFor(luma);
+        var faceMask = CreateFaceMask(source.Width, source.Height, faces);
         var smooth = ImageFilters.GaussianBlur(
             luma,
             1.2f,
             work?.Slice(0.08, 0.2));
+        var faceDetail = faceMask is null
+            ? 0.0
+            : MeanFaceDetail(luma, smooth, faceMask);
+        var faceGain = faceMask is null
+            ? 1.0
+            : 1.0 + ((FaceDetailGain - 1.0) *
+                (1.0 - SmoothStep(FaceFlatDetail, FaceTexturedDetail, faceDetail)));
 
         var fine = CreateFineNoise(
             source.Width,
@@ -112,12 +133,17 @@ public static class SkinTexture
                     continue;
                 }
 
+                // Hors visage, la texture reste celle de toute la peau ; dans
+                // le visage détecté, elle est renforcée sans toucher au reste.
+                var face = faceMask is null ? 0.0 : faceMask[index];
+                var gain = 1.0 + ((faceGain - 1.0) * face);
+
                 var texture = Math.Clamp(
                     (((fine.Pixels[index] - fineLow.Pixels[index]) / FineNormalizer) * FineWeight) +
                     (((pores.Pixels[index] - 128) / PoreNormalizer) * PoreWeight),
                     -1.0,
                     1.0);
-                var delta = (int)Math.Round(texture * amount * MaximumDelta * skin);
+                var delta = (int)Math.Round(texture * amount * MaximumDelta * skin * gain);
                 if (delta == 0)
                 {
                     continue;
@@ -132,6 +158,83 @@ public static class SkinTexture
 
         applyWork?.Complete();
         return new RgbImage(source.Width, source.Height, pixels);
+    }
+
+    private static double MeanFaceDetail(GrayImage luma, GrayImage smooth, float[] mask)
+    {
+        double sum = 0.0;
+        var count = 0;
+
+        for (var index = 0; index < mask.Length; index++)
+        {
+            if (mask[index] < 0.5f)
+            {
+                continue;
+            }
+
+            sum += Math.Abs(luma.Pixels[index] - smooth.Pixels[index]);
+            count++;
+        }
+
+        return count == 0 ? 0.0 : sum / count;
+    }
+
+    /// <summary>
+    /// Couverture douce des visages : une ellipse par boîte, fondue sur ses
+    /// bords pour que le gain ne s'arrête pas net sur la peau. Une liste vide
+    /// ou entièrement hors cadre laisse la texture uniforme.
+    /// </summary>
+    private static float[]? CreateFaceMask(
+        int width,
+        int height,
+        IReadOnlyList<FaceBox>? faces)
+    {
+        if (faces is null || faces.Count == 0)
+        {
+            return null;
+        }
+
+        var mask = new float[width * height];
+        var covered = false;
+
+        foreach (var face in faces)
+        {
+            if (!(face.Width > 0.0) || !(face.Height > 0.0))
+            {
+                continue;
+            }
+
+            var radiusX = face.Width * 0.58;
+            var radiusY = face.Height * 0.68;
+            var centerX = face.X + (face.Width / 2.0);
+            var centerY = face.Y + (face.Height / 2.0);
+            var left = Math.Max(0, (int)Math.Floor(centerX - radiusX));
+            var right = Math.Min(width - 1, (int)Math.Ceiling(centerX + radiusX));
+            var top = Math.Max(0, (int)Math.Floor(centerY - radiusY));
+            var bottom = Math.Min(height - 1, (int)Math.Ceiling(centerY + radiusY));
+
+            for (var y = top; y <= bottom; y++)
+            {
+                var dy = (y + 0.5 - centerY) / radiusY;
+
+                for (var x = left; x <= right; x++)
+                {
+                    var dx = (x + 0.5 - centerX) / radiusX;
+                    var distance = (dx * dx) + (dy * dy);
+                    var value = 1.0 - SmoothStep(0.72, 1.0, distance);
+                    if (value <= 0.0)
+                    {
+                        continue;
+                    }
+
+                    var index = (y * width) + x;
+                    mask[index] = Math.Max(mask[index], (float)value);
+                    covered = true;
+                }
+            }
+        }
+
+        return covered ? mask : null;
     }
 
     private static GrayImage CreateFineNoise(

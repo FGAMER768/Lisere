@@ -167,15 +167,129 @@ public class EnhanceViewModelPresetTests
         }
     }
 
+    [Fact]
+    public async Task ImportingAPresetMarksTheExistingRenderAsStaleAndBlocksExport()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"lisere-stale-{Guid.NewGuid():N}.json");
+        LiserePresetSerializer.Save(
+            path,
+            new LiserePreset(
+                "Portrait",
+                EnhancementMode.Manual,
+                new EnhancementParameters(61, 39, 12, 86, 11, 94),
+                17,
+                0.015,
+                ColorPreset.UltronCc,
+                new UltronCcSettings(150, 10, 12, 60)));
+        var viewModel = CreateViewModel(new FakeFileDialogService { PresetPath = path });
+
+        try
+        {
+            viewModel.HasEnhanced = true;
+            Assert.True(viewModel.SaveCommand.CanExecute(null));
+
+            await viewModel.ImportPresetCommand.ExecuteAsync(null);
+
+            Assert.True(viewModel.IsResultStale);
+            Assert.False(viewModel.SaveCommand.CanExecute(null));
+            Assert.Contains(
+                "Relancez l'amélioration",
+                viewModel.StatusMessage,
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ImportingAnInvalidPresetShowsALocalizedErrorInEnglish()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"lisere-broken-en-{Guid.NewGuid():N}.json");
+        await File.WriteAllTextAsync(path, "{ not json");
+        var localization = new LocalizationService();
+        localization.SetLanguage(AppLanguage.English);
+        var viewModel = CreateViewModel(
+            new FakeFileDialogService { PresetPath = path },
+            localization: localization);
+
+        try
+        {
+            await viewModel.ImportPresetCommand.ExecuteAsync(null);
+
+            Assert.True(viewModel.HasError);
+            Assert.Contains(
+                "Could not import the preset.",
+                viewModel.ErrorMessage,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "The preset is not a valid JSON file.",
+                viewModel.ErrorMessage,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain("Expected start", viewModel.ErrorMessage, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ImportingInEnglishExplainsThatThePreviewIsStale()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"lisere-stale-en-{Guid.NewGuid():N}.json");
+        LiserePresetSerializer.Save(
+            path,
+            new LiserePreset(
+                "Portrait",
+                EnhancementMode.Manual,
+                EnhancementParameters.Zero,
+                0,
+                0,
+                ColorPreset.None,
+                UltronCcSettings.FromPreset));
+        var localization = new LocalizationService();
+        localization.SetLanguage(AppLanguage.English);
+        var viewModel = CreateViewModel(
+            new FakeFileDialogService { PresetPath = path },
+            localization: localization);
+
+        try
+        {
+            viewModel.HasEnhanced = true;
+
+            await viewModel.ImportPresetCommand.ExecuteAsync(null);
+
+            Assert.True(viewModel.IsResultStale);
+            Assert.Contains(
+                "Run the enhancement to refresh the preview",
+                viewModel.StatusMessage,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain("Relancez", viewModel.StatusMessage, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     private static EnhanceViewModel CreateViewModel(
         FakeFileDialogService files,
-        FakeDialogService? dialogs = null) =>
+        FakeDialogService? dialogs = null,
+        ILocalizationService? localization = null) =>
         new(
             files,
             new FakeImageCodec(),
             new FakeOrchestrator(),
             dialogs ?? new FakeDialogService(),
-            new LocalizationService());
+            localization ?? new LocalizationService());
 
     private sealed class FakeDialogService : IDialogService
     {

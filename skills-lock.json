@@ -22,6 +22,13 @@
       "skillPath": ".agents/skills/impeccable/SKILL.md",
       "computedHash": "077889e9782761360c17acbc2522af320d0dd0f928b09cd90884fa304f443a34"
     },
+    "reverse-engineer-anything": {
+      "source": "morluto/rea",
+      "commit": "bb5278c7e2d5b0a423a63858c8b3c9682232e2d2",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/reverse-engineer-anything/SKILL.md",
+      "computedHash": "c1677ec2345fc53eff11a8934904634d6ac9d239cd7f5516bfef3e0580f0561b"
+    },
     "test-driven-development": {
       "source": "addyosmani/agent-skills",
       "commit": "39b723ceebf81474d0557c1fecd01eddab585563",

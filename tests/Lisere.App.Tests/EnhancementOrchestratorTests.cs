@@ -68,6 +68,40 @@ public class EnhancementOrchestratorTests
     }
 
     [Fact]
+    public async Task FaceRefinementCallsTheDetectorAndStrengthensTheFace()
+    {
+        var source = new RgbImage(96, 96);
+        for (var i = 0; i < source.Pixels.Length; i += 3)
+        {
+            source.Pixels[i] = 200;
+            source.Pixels[i + 1] = 150;
+            source.Pixels[i + 2] = 125;
+        }
+
+        var detector = new FakeFaceDetector(new FaceBox(18, 18, 60, 60, 0.9));
+        var orchestrator = new EnhancementOrchestrator(detector);
+        var request = new EnhancementRequest(
+            source,
+            EnhancementMode.Manual,
+            new EnhancementParameters(0, 0, 0, 85, 0, 0),
+            0,
+            0,
+            ColorPreset.None);
+
+        var plain = await orchestrator.EnhanceAsync(request, CancellationToken.None);
+        Assert.Equal(0, detector.Calls);
+
+        var refined = await orchestrator.EnhanceAsync(
+            request with { RefineFaces = true },
+            CancellationToken.None);
+
+        Assert.Equal(1, detector.Calls);
+        Assert.True(
+            LumaStandardDeviation(refined.Image) > LumaStandardDeviation(plain.Image) + 0.2,
+            $"le visage doit être plus texturé ({LumaStandardDeviation(plain.Image):0.00} -> {LumaStandardDeviation(refined.Image):0.00})");
+    }
+
+    [Fact]
     public async Task CancellationDuringGradingStopsTheOrchestrator()
     {
         using var cancellation = new CancellationTokenSource();
@@ -97,5 +131,22 @@ public class EnhancementOrchestratorTests
         var mean = luma.Average(value => (double)value);
         var variance = luma.Average(value => (value - mean) * (value - mean));
         return Math.Sqrt(variance);
+    }
+
+    private sealed class FakeFaceDetector : IFaceDetector
+    {
+        private readonly FaceBox _face;
+
+        public FakeFaceDetector(FaceBox face) => _face = face;
+
+        public int Calls { get; private set; }
+
+        public IReadOnlyList<FaceBox> Detect(
+            RgbImage image,
+            CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            return [_face];
+        }
     }
 }

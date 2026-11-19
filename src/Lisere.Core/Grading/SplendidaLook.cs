@@ -6,13 +6,13 @@ namespace Lisere.Core.Grading;
 /// Reproduit l'étalonnage du preset After Effects <c>Splendida_CC.ffx</c>, dans
 /// l'ordre de sa pile :
 /// <list type="number">
-///   <item>Plus net — SharpMask AE, intensité 50 ;</item>
-///   <item>BCC Unsharp Mask — rayon 25, 15 % ;</item>
-///   <item>CC Vignette — montant 25, angle de champ 40° ;</item>
-///   <item>Luminosité et contraste — +21 / +10, mode actuel ;</item>
-///   <item>Courbes — courbe maître lue dans le fichier (128 → 118), les quatre
+///   <item>Plus net : SharpMask AE, intensité 50 ;</item>
+///   <item>BCC Unsharp Mask : rayon 25, 15 % ;</item>
+///   <item>CC Vignette : montant 25, angle de champ 40° ;</item>
+///   <item>Luminosité et contraste : +21 / +10, mode actuel ;</item>
+///   <item>Courbes : courbe maître lue dans le fichier (128 → 118), les quatre
 ///     canaux étant l'identité ;</item>
-///   <item>Teinte/Saturation — teinte, saturation et luminosité nulles, donc
+///   <item>Teinte/Saturation : teinte, saturation et luminosité nulles, donc
 ///     sans effet.</item>
 /// </list>
 /// Seul le dernier étage est sauté, et parce que son contenu est neutre dans le

@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 
@@ -47,6 +48,9 @@ public partial class WaitDialog : UserControl
         MessageText.Text = message;
         SetProgress(null);
         Visibility = Visibility.Visible;
+        UpdateLayout();
+        AutomationProperties.SetName(this, title);
+        FocusInitialControl();
         AnimateIn();
         await Task.Delay(250);
     }
@@ -83,6 +87,29 @@ public partial class WaitDialog : UserControl
         // determined progress does not resize the dialog under the cursor.
         ProgressPanel.Visibility = Visibility.Hidden;
         ProgressRing.Visibility = Visibility.Visible;
+    }
+
+    private void FocusInitialControl()
+    {
+        // Keyboard users must land inside the dialog, even when the operation is
+        // not cancellable: focus would otherwise stay on the disabled page.
+        if (CancelButton.Visibility == Visibility.Visible && CancelButton.Focus())
+        {
+            return;
+        }
+
+        Focus();
+    }
+
+    private void OnDialogPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || _onCancel is null)
+        {
+            return;
+        }
+
+        OnCancelClick(this, new RoutedEventArgs());
+        e.Handled = true;
     }
 
     private void OnCancelClick(object sender, RoutedEventArgs e)

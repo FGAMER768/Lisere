@@ -6,10 +6,10 @@ namespace Lisere.Core.Grading;
 /// Reproduit l'étalonnage du preset After Effects <c>Infinity_CC.ffx</c>, dans
 /// l'ordre de sa pile :
 /// <list type="number">
-///   <item>S_Sharpen — accentuation multi-échelles (approximation) ;</item>
-///   <item>BCC Unsharp Mask — rayon 9,8, 16 % ;</item>
-///   <item>S_Glow — halo doux (approximation) ;</item>
-///   <item>Exposition — −0,36 stop en lumière linéaire.</item>
+///   <item>S_Sharpen : accentuation multi-échelles (approximation) ;</item>
+///   <item>BCC Unsharp Mask : rayon 9,8, 16 % ;</item>
+///   <item>S_Glow : halo doux (approximation) ;</item>
+///   <item>Exposition : −0,36 stop en lumière linéaire.</item>
 /// </list>
 /// </summary>
 public static class InfinityLook

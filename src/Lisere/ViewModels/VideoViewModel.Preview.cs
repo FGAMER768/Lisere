@@ -26,7 +26,7 @@ public sealed partial class VideoViewModel
     {
         if (!IsToolchainAvailable)
         {
-            await ShowErrorAsync("videoErrorToolchain", new InvalidOperationException(ToolchainNote));
+            await ShowErrorAsync("videoErrorToolchain", new UserMessageException(ToolchainNote));
             return;
         }
 
@@ -114,7 +114,7 @@ public sealed partial class VideoViewModel
 
         if (error is not null)
         {
-            await ShowErrorAsync("videoErrorProbe", error);
+            await ShowErrorAsync("videoErrorProbe", LocalizeOpenError(error));
         }
     }
 
@@ -190,7 +190,7 @@ public sealed partial class VideoViewModel
         }
         catch (Exception exception)
         {
-            await ShowErrorAsync("videoErrorPreset", exception);
+            await ShowErrorAsync("videoErrorPreset", LocalizePresetError(exception));
         }
     }
 
@@ -204,7 +204,7 @@ public sealed partial class VideoViewModel
             HasPreview = false;
             await ShowErrorAsync(
                 "videoErrorEngine",
-                new InvalidOperationException(EngineUnavailableReason));
+                new UserMessageException(EngineUnavailableReason));
             return;
         }
 
@@ -252,7 +252,7 @@ public sealed partial class VideoViewModel
 
         if (error is not null)
         {
-            await ShowErrorAsync("videoErrorPreview", error);
+            await ShowErrorAsync("videoErrorPreview", LocalizeRenderError(error));
         }
     }
 

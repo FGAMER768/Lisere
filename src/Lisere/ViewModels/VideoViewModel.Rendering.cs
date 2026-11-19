@@ -201,7 +201,7 @@ public sealed partial class VideoViewModel
 
         if (error is not null)
         {
-            await ShowErrorAsync("videoErrorRender", error);
+            await ShowErrorAsync("videoErrorRender", LocalizeRenderError(error));
             return;
         }
 

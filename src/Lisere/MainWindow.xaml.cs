@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Lisere.Services;
 using Lisere.Views;
 using Wpf.Ui.Controls;
@@ -12,7 +13,7 @@ public partial class MainWindow : FluentWindow
     private readonly DialogService _dialogService;
     private readonly EnhancePage _enhancePage;
     private readonly VideoPage _videoPage;
-    private IInputElement? _previousFocus;
+    private Control? _lastPageFocus;
     private bool _isPageDisabled;
 
     public MainWindow(EnhancePage enhancePage, VideoPage videoPage, DialogService dialogService)
@@ -25,6 +26,10 @@ public partial class MainWindow : FluentWindow
         ShowPage(enhancePage, ImageTabButton, VideoTabButton);
         dialogService.Attach(MessageDialog, WaitDialog, RenderPlanDialog);
         dialogService.DialogOpenStateChanged += OnDialogOpenStateChanged;
+        PageHost.AddHandler(
+            Keyboard.GotKeyboardFocusEvent,
+            new KeyboardFocusChangedEventHandler(OnPageFocusChanged),
+            true);
     }
 
     private void OnImageTabClick(object sender, RoutedEventArgs e) =>
@@ -56,19 +61,39 @@ public partial class MainWindow : FluentWindow
 
         if (shouldDisablePage)
         {
-            _previousFocus = Keyboard.FocusedElement;
             PageHost.IsEnabled = false;
             return;
         }
 
         PageHost.IsEnabled = true;
 
-        if (_previousFocus is UIElement { IsVisible: true, IsEnabled: true } element)
+        // Let the closing overlay finish collapsing before moving focus: doing
+        // it synchronously lets WPF hand focus back to the window chrome.
+        _ = Dispatcher.BeginInvoke(
+            new Action(RestorePageFocus),
+            DispatcherPriority.ContextIdle);
+    }
+
+    private void RestorePageFocus()
+    {
+        // The page is disabled while a dialog is open, which sends keyboard focus
+        // to the window chrome. Restore the last real page control so Enter and
+        // Escape keep working for the next dialog.
+        if (_lastPageFocus is { IsVisible: true, IsEnabled: true } element &&
+            element.Focus())
         {
-            element.Focus();
             return;
         }
 
         PageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+    }
+
+    private void OnPageFocusChanged(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (e.NewFocus is Control { IsTabStop: true } element &&
+            PageHost.IsAncestorOf(element))
+        {
+            _lastPageFocus = element;
+        }
     }
 }

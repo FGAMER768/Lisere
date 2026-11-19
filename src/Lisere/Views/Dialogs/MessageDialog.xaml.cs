@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using Lisere.Services;
 using Wpf.Ui.Controls;
 
@@ -34,7 +35,19 @@ public partial class MessageDialog : UserControl
             TitleText.Text = title;
             MessageText.Text = message;
             Visibility = Visibility.Visible;
+            UpdateLayout();
             OkButton.Focus();
+
+            // The overlay was hidden a moment ago; WPF can refuse focus until
+            // its layout pass has run. Retry once at input priority so keyboard
+            // users can dismiss the dialog with Enter or Escape.
+            if (!OkButton.IsKeyboardFocused)
+            {
+                _ = Dispatcher.BeginInvoke(
+                    new Action(() => OkButton.Focus()),
+                    DispatcherPriority.Input);
+            }
+
             AnimateIn();
             await _completion.Task;
         }

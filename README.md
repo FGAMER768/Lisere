@@ -1,5 +1,7 @@
 # Liseré
 
+[Français](README.md) | [English](README.en.md)
+
 Liseré est une application de bureau Windows pour améliorer **une image ou une vidéo**, comparer le résultat à l'original et exporter la version retouchée. Les traitements sont effectués localement : aucun service externe, aucun compte.
 
 L'interface propose deux espaces :
@@ -19,6 +21,8 @@ L'interface propose deux espaces :
 - Préréglages de colorimétrie **Ultron CC**, **Matrix CC**, **Infinity CC**, **Nebulus CC** et **Splendida CC**, reproductions de presets After Effects appliquées après l'amélioration (`docs/ULTRON-CC-ANALYSE.md` et `docs/PRESETS-ANALYSE.md`).
 - Réglages de correction de compression, réduction du bruit, netteté, récupération des détails, réduction du halo et lissage des contours.
 - Réglages complémentaires pour les détails d'origine et l'ajout de bruit.
+- **Renforcement des visages** : YuNet (MIT) localise les visages et concentre la micro-texture sur leur peau, sans ajouter de grain au fond ni aux cheveux. Si le modèle est absent, Liseré revient au masque de peau global sans bloquer le rendu.
+- **Aperçu obsolète** : après un changement de réglage ou l'import d'un preset, l'aperçu existant reste visible mais porte un bandeau et l'export est désactivé jusqu'au prochain rendu.
 - Estimation automatique des paramètres à partir du contenu de l'image.
 - Avertissements lorsque les réglages sortent des plages conseillées.
 - Export JPEG avec une qualité de 92.
@@ -52,7 +56,7 @@ L'interface propose deux espaces :
 ### Commun
 
 - Interface française et anglaise, bascule immédiate depuis la barre de titre et mémorisation du choix.
-- Traitement asynchrone, dialogues d'attente et messages d'erreur explicites.
+- Traitement asynchrone, dialogues d'attente et messages d'erreur localisés, sans détail technique brut.
 - Raccourcis clavier : `Ctrl+O` ouvrir, `Ctrl+Entrée` lancer l'aperçu ou l'amélioration, `Ctrl+S` exporter.
 - Annulation accessible pour les opérations image, l'analyse et l'aperçu vidéo, les rendus et la file d'attente.
 
@@ -63,7 +67,7 @@ L'interface propose deux espaces :
 - **FFmpeg** avec `ffmpeg.exe` et `ffprobe.exe` pour les fonctions vidéo. Liseré ne le redistribue pas. Il le cherche dans cet ordre : variable `LISERE_FFMPEG`, dossier de l'application, `C:\ffmpeg\bin`, `C:\ffmpeg`, `C:\Program Files\ffmpeg\bin`, puis `PATH`.
 - Aucune base de données, aucun compte et aucune connexion réseau ne sont nécessaires à l'exécution.
 
-Deux modèles ONNX sont inclus dans `models/` et copiés à côté de l'exécutable : SRCNN ×3 (240 Ko) et RIFE 4.9 (20,5 Mo). Voir [models/README.md](models/README.md). DirectML est utilisé automatiquement pour les moteurs ONNX quand l'iGPU le permet ; sinon, Liseré revient au CPU et le signale dans la note du moteur.
+Trois modèles ONNX sont inclus dans `models/` et copiés à côté de l'exécutable : SRCNN ×3 (240 Ko, Apache-2.0), RIFE 4.9 (20,5 Mo, MIT) et YuNet (227 Ko, MIT). Voir [models/README.md](models/README.md) et la section [Crédits, sources et licences](#crédits-sources-et-licences). DirectML est utilisé automatiquement pour les moteurs ONNX quand l'iGPU le permet ; sinon, Liseré revient au CPU et le signale dans la note du moteur.
 
 ## Démarrage
 
@@ -162,7 +166,7 @@ La carte **Preset complet** de la page Image importe et exporte un seul fichier 
 }
 ```
 
-L'import est normalisé : les valeurs hors bornes sont ramenées dans les plages des curseurs, et un mode dynamique (`Auto`, `AutoRelativeMedium`) devient **Manuel** avec les valeurs enregistrées, pour qu'un preset redonne toujours le même résultat. `Chroma` est conservé si les six valeurs correspondent à son préréglage. Les presets de colorimétrie autres qu'Ultron ignorent les quatre réglages. Les champs inconnus sont ignorés ; un format ou une version non reconnus sont refusés avec un message.
+L'import est normalisé : les valeurs hors bornes sont ramenées dans les plages des curseurs, et un mode dynamique (`Auto`, `AutoRelativeMedium`) devient **Manuel** avec les valeurs enregistrées, pour qu'un preset redonne toujours le même résultat. `Chroma` est conservé si les six valeurs correspondent à son préréglage. Les presets de colorimétrie autres qu'Ultron ignorent les quatre réglages. Les champs inconnus sont ignorés ; un format ou une version non reconnus sont refusés avec un message localisé. Si un résultat existe déjà, l'import le marque comme obsolète : le bandeau **Aperçu obsolète** apparaît et l'export reste désactivé jusqu'au prochain rendu.
 
 ### Presets vidéo importés
 
@@ -205,6 +209,7 @@ Les textes sont regroupés dans `src/Lisere/Lang/Strings.resx` (français) et `s
 - L'orientation EXIF est appliquée au chargement. La transparence est composée sur fond blanc.
 - Pour les images animées ou multipages, seule la première image est utilisée.
 - Taille maximale du fichier : 24 Mo. Limite de décodage : 40 millions de pixels.
+- Les métadonnées d'orientation eXIf d'un PNG sont lues dans une limite de 64 Ko ; un chunk surdimensionné ou tronqué est ignoré et l'image reste utilisable.
 - Format d'export : JPEG, qualité 92.
 
 ### Vidéo
@@ -230,22 +235,54 @@ Les textes sont regroupés dans `src/Lisere/Lang/Strings.resx` (français) et `s
 | Projet | Rôle |
 |---|---|
 | `src/Lisere` | Application WPF, navigation, pages Image et Vidéo, view models, services de dialogue, de fichiers et de localisation. |
-| `src/Lisere.Core` | Modèles d'image, filtres, estimation automatique, validation, pipeline d'amélioration, traitement de clip. |
-| `src/Lisere.Ai` | Abstraction des moteurs (`IFrameEnhancer`, `IFrameInterpolator`), moteur classique, super-résolution ONNX tuilée, interpolation RIFE, sessions DirectML/CPU, catalogue et vérification SHA-256. |
+| `src/Lisere.Core` | Modèles d'image, filtres, estimation automatique, validation, pipeline d'amélioration, détection de visages (`FaceBox`), traitement de clip. |
+| `src/Lisere.Ai` | Abstraction des moteurs (`IFrameEnhancer`, `IFrameInterpolator`), moteur classique, super-résolution ONNX tuilée, interpolation RIFE, détection de visages YuNet, sessions DirectML/CPU, catalogue et vérification SHA-256. |
 | `src/Lisere.Video` | Découverte FFmpeg, `ffprobe`, extraction de frames, rendu vidéo, désentrelacement, stabilisation, interpolation, import de presets vidéo, progression et annulation. |
 | `tests/Lisere.Core.Tests` | Pipeline, filtres, paramètres, estimation et parité avec l'implémentation Python de référence. |
 | `tests/Lisere.Ai.Tests` | Catalogue, planification des tuiles, inférence ONNX réelle, disponibilité des moteurs. |
 | `tests/Lisere.Video.Tests` | Parseur ffprobe, construction des commandes FFmpeg, rendu bout en bout avec clip généré. |
-| `tests/Lisere.App.Tests` | View models Image et Vidéo, dialogues, codec d'images, localisation. |
+| `tests/Lisere.App.Tests` | View models Image et Vidéo, dialogues, codec d'images, localisation, détection de visages et messages d'erreur. |
 
 La page Image reste organisée autour de `EnhanceViewModel` et `IEnhancementOrchestrator`. La page Vidéo utilise `VideoViewModel`, découpé en fichiers partiels par fonction (file d'attente, aperçu, rendu) ; il délègue l'analyse à `IVideoProbe`, les vignettes à `VideoPreviewRenderer`, la construction du plan de confirmation à `VideoRenderPlanFactory` et le rendu à `IVideoRenderService`. Le choix du moteur se fait par `IFrameEnhancer` : l'interface et le pipeline vidéo ignorent totalement quel modèle est utilisé. La file d'attente est portée par `VideoQueueItem`, qui fige une requête de rendu complète ; `VideoQueueRunner` appelle ensuite `VideoRenderService` séquentiellement, sans arrêter la file sur l'échec d'un clip.
 
 Le catalogue `models/catalog.json` décrit chaque modèle (fichier, échelle, entrée/sortie, licence, empreinte). Un modèle absent ou modifié est signalé comme indisponible, avec la raison, et ne peut pas être utilisé.
 
+## Crédits, sources et licences
+
+Liseré ne redistribue aucun poids, code ou média propriétaire. Les ressources tierces utilisées sont créditées ci-dessous ; les licences complètes des modèles sont fournies dans `models/`.
+
+### Modèles et moteurs
+
+- **YuNet**, détection de visages : modèle de Shiqi Yu, distribué par [OpenCV Zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet), licence MIT. Référence : Wu, W., Peng, H., Yu, S. (2023), *YuNet: A Tiny Millisecond-level Face Detector*, Machine Intelligence Research, 20(5), 656–665. Licence : `models/yunet/LICENSE`.
+- **RIFE 4.9** / Practical-RIFE : code et poids sous licence MIT (Copyright (c) Megvii Inc. et hzwer). Export ONNX utilisé : [edgetools/rife](https://huggingface.co/edgetools/rife). Licence : `models/rife/LICENSE`.
+- **SRCNN sous-pixel ×3** : modèle de Shi et al. (2016), distribué par le [ONNX Model Zoo](https://github.com/onnx/models/tree/main/validated/vision/super_resolution/sub_pixel_cnn_2016), licence Apache-2.0. Licence : `models/onnx/LICENSE`.
+- **ONNX Runtime et DirectML** : Microsoft, licence MIT. Utilisés pour l'inférence locale des modèles ONNX.
+- **FFmpeg** : [ffmpeg.org](https://ffmpeg.org), sous licence LGPL ou GPL selon la compilation. Liseré ne le redistribue pas ; il doit être installé séparément.
+
+### Bibliothèques et tests
+
+- **WPF-UI** (lepo.co), licence MIT, pour les contrôles et le thème de l'interface.
+- **CommunityToolkit.Mvvm** (.NET Foundation), licence MIT, pour les view models.
+- **Microsoft.Extensions.Hosting**, licence MIT.
+- **xUnit.net** et **Microsoft.NET.Test.Sdk**, licences Apache-2.0 et MIT, pour les tests.
+
+### Références d'analyse et marques
+
+- Les presets **Ultron CC**, **Matrix CC**, **Infinity CC**, **Nebulus CC** et **Splendida CC** font référence à des presets After Effects analysés ; Adobe After Effects et ces noms appartiennent à leurs détenteurs respectifs. Aucun fichier `.ffx` n'est distribué.
+- La courbe de tons du préréglage Chroma a été relevée sur une image de référence rendue avec Topaz ; Topaz est une marque de Topaz Labs. Aucun poids, code ou média Topaz n'est distribué.
+- Les captures et analyses de `docs/` sont des documents de travail locaux et ne font pas partie du paquet distribué.
+
+### Images de test
+
+- `tests/Lisere.App.Tests/TestData/face.jpg` : portrait officiel du président Barack Obama, photographié par Pete Souza pour la transition Obama-Biden (2009), licence [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), attribution Pete Souza. Source : [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Official_portrait_of_Barack_Obama.jpg), recadré et redimensionné pour les tests. Voir `tests/Lisere.App.Tests/TestData/README.md`.
+- `tests/Lisere.App.Tests/TestData/preset-photo.jpg` : photo de la Blue Lagoon par Jeff Sheldon, distribuée par Lorem Picsum (ID 512, licence Unsplash), utilisée pour la non-régression colorimétrique.
+
 ### Documentation
 
-- [GUIDE-UTILISATION.md](GUIDE-UTILISATION.md) : guide complet de l'application, des pages Image et Vidéo, de chaque réglage et de l'annulation.
+- [GUIDE-UTILISATION.md](GUIDE-UTILISATION.md) : guide complet en français.
+- [GUIDE-UTILISATION.en.md](GUIDE-UTILISATION.en.md) : complete English user guide.
 - [models/README.md](models/README.md) : provenance, licence et vérification des modèles.
+- `tests/Lisere.App.Tests/TestData/README.md` : provenance des images de test.
 
 ## Tests
 
@@ -255,7 +292,7 @@ dotnet test Lisere.slnx
 
 La solution contient quatre projets de tests xUnit : `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` et `Lisere.App.Tests`.
 
-État actuel : **251 tests** (94 Core, 13 Ai, 35 Video, 109 App), 0 avertissement de build. Deux tests vidéo dépendants du temps peuvent échouer lors d'une exécution parallèle de la solution et réussissent isolément. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model.
+État actuel : **340 tests** (120 Core, 15 Ai, 36 Video, 169 App), 0 avertissement de build. La suite complète passe en parallèle sur la machine de référence. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model.
 
 Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le rendu, la conservation de l'audio, le désentrelacement, la taille exacte, l'annulation et l'extraction d'aperçu. Ils sont ignorés silencieusement si FFmpeg est introuvable, afin que le reste de la suite reste exécutable sur une machine sans outillage vidéo.
 
@@ -284,4 +321,6 @@ tests/
 models/
   catalog.json
   onnx/
+  rife/
+  yunet/
 ```

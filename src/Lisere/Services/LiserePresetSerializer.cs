@@ -76,7 +76,9 @@ public static class LiserePresetSerializer
     {
         if (string.IsNullOrWhiteSpace(json))
         {
-            throw new FormatException("Le preset est vide.");
+            throw new PresetFormatException(
+                "errorPresetEmpty",
+                "Le preset est vide.");
         }
 
         PresetDocument? document;
@@ -86,14 +88,17 @@ public static class LiserePresetSerializer
         }
         catch (JsonException exception)
         {
-            throw new FormatException(
+            throw new PresetFormatException(
+                "errorPresetInvalidJson",
                 $"Le preset n'est pas un JSON valide : {exception.Message}",
                 exception);
         }
 
         if (document is null)
         {
-            throw new FormatException("Le preset n'est pas un objet JSON.");
+            throw new PresetFormatException(
+                "errorPresetNotObject",
+                "Le preset n'est pas un objet JSON.");
         }
 
         if (!string.Equals(
@@ -101,23 +106,36 @@ public static class LiserePresetSerializer
             LiserePreset.FormatName,
             StringComparison.OrdinalIgnoreCase))
         {
-            throw new FormatException(
+            throw new PresetFormatException(
+                "errorPresetUnknownFormat",
                 $"Format de preset inconnu : « {document.Format ?? "absent"} ».");
         }
 
         if (document.Version is not { } version || version != LiserePreset.FormatVersion)
         {
-            throw new FormatException(document.Version is null
-                ? "La version du preset est absente."
-                : $"Version de preset non prise en charge : {document.Version}.");
+            throw new PresetFormatException(
+                document.Version is null
+                    ? "errorPresetVersionMissing"
+                    : "errorPresetVersionUnsupported",
+                document.Version is null
+                    ? "La version du preset est absente."
+                    : $"Version de preset non prise en charge : {document.Version}.",
+                null,
+                document.Version);
         }
 
         var enhancement = document.Enhancement
-            ?? throw new FormatException("La section « enhancement » est absente.");
+            ?? throw new PresetFormatException(
+                "errorPresetIncomplete",
+                "La section « enhancement » est absente.");
         var parameters = enhancement.Parameters
-            ?? throw new FormatException("Les paramètres d'amélioration sont absents.");
+            ?? throw new PresetFormatException(
+                "errorPresetIncomplete",
+                "Les paramètres d'amélioration sont absents.");
         var color = document.Color
-            ?? throw new FormatException("La section « color » est absente.");
+            ?? throw new PresetFormatException(
+                "errorPresetIncomplete",
+                "La section « color » est absente.");
 
         var clamped = new EnhancementParameters(
             Required(parameters.FixCompression, "fixCompression"),
@@ -171,9 +189,28 @@ public static class LiserePresetSerializer
     public static LiserePreset Load(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return Parse(
-            File.ReadAllText(path),
-            Path.GetFileNameWithoutExtension(path));
+
+        string json;
+        try
+        {
+            json = File.ReadAllText(path);
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            throw new PresetFormatException(
+                "errorPresetAccess",
+                "Accès refusé au fichier de preset.",
+                exception);
+        }
+        catch (IOException exception)
+        {
+            throw new PresetFormatException(
+                "errorPresetRead",
+                "Impossible de lire le fichier de preset.",
+                exception);
+        }
+
+        return Parse(json, Path.GetFileNameWithoutExtension(path));
     }
 
     public static void Save(string path, LiserePreset preset)
@@ -181,11 +218,32 @@ public static class LiserePresetSerializer
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(preset);
 
-        File.WriteAllText(path, Serialize(preset), new UTF8Encoding(false));
+        try
+        {
+            File.WriteAllText(path, Serialize(preset), new UTF8Encoding(false));
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            throw new PresetFormatException(
+                "errorPresetAccess",
+                "Accès refusé au fichier de preset.",
+                exception);
+        }
+        catch (IOException exception)
+        {
+            throw new PresetFormatException(
+                "errorPresetWrite",
+                "Impossible d'enregistrer le preset.",
+                exception);
+        }
     }
 
     private static double Required(double? value, string field) =>
-        value ?? throw new FormatException($"Le champ « {field} » est absent.");
+        value ?? throw new PresetFormatException(
+            "errorPresetMissingField",
+            $"Le champ « {field} » est absent.",
+            null,
+            field);
 
     private static double Clamp(double value, double minimum, double maximum) =>
         double.IsFinite(value) ? Math.Clamp(value, minimum, maximum) : minimum;
@@ -203,14 +261,18 @@ public static class LiserePresetSerializer
             return mode;
         }
 
-        throw new FormatException($"Mode d'amélioration inconnu : « {text} ».");
+        throw new PresetFormatException(
+            "errorPresetUnknownMode",
+            $"Mode d'amélioration inconnu : « {text} ».");
     }
 
     private static ColorPreset ParseColorPreset(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
-            throw new FormatException("Le preset de colorimétrie est absent.");
+            throw new PresetFormatException(
+                "errorPresetColorMissing",
+                "Le preset de colorimétrie est absent.");
         }
 
         if (Enum.TryParse<ColorPreset>(text, ignoreCase: true, out var preset) &&
@@ -219,7 +281,9 @@ public static class LiserePresetSerializer
             return preset;
         }
 
-        throw new FormatException($"Preset de colorimétrie inconnu : « {text} ».");
+        throw new PresetFormatException(
+            "errorPresetUnknownColor",
+            $"Preset de colorimétrie inconnu : « {text} ».");
     }
 
     internal sealed class PresetDocument

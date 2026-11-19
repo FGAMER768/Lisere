@@ -13,7 +13,8 @@ public sealed record EnhancementRequest(
     double AddNoise,
     ColorPreset Color = ColorPreset.None,
     UltronCcSettings? ColorSettings = null,
-    IProgress<EnhancementProgress>? Progress = null);
+    IProgress<EnhancementProgress>? Progress = null,
+    bool RefineFaces = false);
 
 public sealed record EnhancementResult(
     RgbImage Image,

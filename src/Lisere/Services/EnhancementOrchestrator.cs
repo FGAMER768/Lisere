@@ -13,6 +13,13 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
     private const double GradingEndPercent = 95.0;
     private const double ColorGradingShare = 25.0; // Mesuré sur UltronCC en 5K.
 
+    private readonly IFaceDetector? _faceDetector;
+
+    public EnhancementOrchestrator(IFaceDetector? faceDetector = null)
+    {
+        _faceDetector = faceDetector;
+    }
+
     public Task<EnhancementResult> EnhanceAsync(
         EnhancementRequest request,
         CancellationToken cancellationToken)
@@ -35,6 +42,7 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                         value.Stage,
                         value.Percent * pipelineShare / 100.0)));
 
+            var faces = DetectFaces(request, cancellationToken);
             var output = EnhancementPipeline.Enhance(
                 request.Source,
                 parameters,
@@ -44,7 +52,8 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                 cancellationToken,
                 // Un motif de pores fixe scintillerait sur une vidéo : la
                 // synthèse est réservée au rendu photo.
-                synthesizeSkinTexture: true);
+                synthesizeSkinTexture: true,
+                faces: faces);
 
             // L'étalonnage est un étage distinct : il s'applique après
             // l'amélioration, quel que soit le préréglage IA choisi.
@@ -90,6 +99,32 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                 request.Mode,
                 ParameterValidator.Validate(parameters));
         }, cancellationToken);
+    }
+
+    private IReadOnlyList<FaceBox>? DetectFaces(
+        EnhancementRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!request.RefineFaces || _faceDetector is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var faces = _faceDetector.Detect(request.Source, cancellationToken);
+            return faces.Count == 0 ? null : faces;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // Un détecteur en panne ne doit pas empêcher le rendu : la texture
+            // revient simplement à toute la peau, comme avant la détection.
+            return null;
+        }
     }
 
     private static EnhancementParameters ResolveParameters(EnhancementRequest request) =>

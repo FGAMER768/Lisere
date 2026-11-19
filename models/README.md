@@ -14,8 +14,10 @@ découvert automatiquement (dossier de l'application, variable
 | `onnx/LICENSE` | Apache License 2.0 du modèle SRCNN. |
 | `onnx/rife49.onnx` | RIFE 4.9 (Practical-RIFE), interpolation d'images, export ONNX communautaire. |
 | `rife/LICENSE` | Licence MIT de RIFE / Practical-RIFE. |
+| `onnx/face_detection_yunet_2023mar.onnx` | YuNet, détection de visages (Shiqi Yu). |
+| `yunet/LICENSE` | Licence MIT de YuNet. |
 
-## Modèle livré
+## Modèle de super-résolution SRCNN
 
 - **Source** : <https://github.com/onnx/models/tree/main/validated/vision/super_resolution/sub_pixel_cnn_2016>
 - **Licence** : Apache-2.0.
@@ -43,6 +45,24 @@ RIFE exige des dimensions multiples de 32 : Liseré complète les bords, exécut
 l'inférence, puis recadre à la taille d'origine. Le moteur est volontairement
 limité au **×2** (une image intermédiaire à `timestep = 0.5` par paire).
 
+## Modèle de détection de visage YuNet
+
+- **Source** : <https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet>
+  (`face_detection_yunet_2023mar.onnx`).
+- **Auteur / licence** : YuNet, Shiqi Yu : MIT (`yunet/LICENSE`).
+- **Entrée** : `input`, tenseur BGR `1×3×640×640`, valeurs 0–255.
+- **Sorties** : `cls_{8,16,32}`, `obj_{8,16,32}`, `bbox_{8,16,32}`, `kps_{8,16,32}`.
+- **SHA-256** : `8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4`
+- **Taille** : 227 Ko environ.
+
+Liseré s'en sert uniquement pour localiser les visages sur les photos : la
+texture de peau est alors concentrée sur les visages détectés et renforcée,
+sans grain ajouté au cuir, aux cheveux ou au fond. Si le modèle manque, la
+texture revient au masque de peau global.
+
+Citation : Wu, W., Peng, H., Yu, S. (2023). *YuNet: A Tiny Millisecond-level
+Face Detector.* Machine Intelligence Research, 20(5), 656–665.
+
 ## DirectML et repli CPU
 
 Le paquet NuGet `Microsoft.ML.OnnxRuntime.DirectML` fournit à la fois l'API
@@ -65,6 +85,7 @@ Pour revérifier manuellement :
 ```powershell
 Get-FileHash models\onnx\super-resolution-10.onnx -Algorithm SHA256
 Get-FileHash models\onnx\rife49.onnx -Algorithm SHA256
+Get-FileHash models\onnx\face_detection_yunet_2023mar.onnx -Algorithm SHA256
 ```
 
 ## Ajouter un modèle

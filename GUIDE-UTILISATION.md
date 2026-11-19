@@ -1,5 +1,7 @@
 # Guide d'utilisation de Liseré
 
+[Français](GUIDE-UTILISATION.md) | [English](GUIDE-UTILISATION.en.md)
+
 Ce guide couvre deux niveaux :
 
 1. **Le guide de l'application** : lancer Liseré, comprendre la fenêtre, naviguer et mener un projet de bout en bout.
@@ -22,7 +24,7 @@ Les deux espaces partagent les mêmes six paramètres principaux et les mêmes p
 
 ---
 
-# Partie I — Guide de l'application
+# Partie I : Guide de l'application
 
 ## 2. Prérequis et lancement
 
@@ -41,7 +43,7 @@ Liseré cherche FFmpeg dans cet ordre :
 5. `C:\Program Files\ffmpeg\bin` ;
 6. le `PATH` Windows.
 
-Deux modèles ONNX sont fournis dans `models/` et copiés à côté de l'exécutable : **Super-Resolution CNN ×3** et **RIFE 4.9**. Le moteur classique, lui, ne dépend d'aucun modèle.
+Trois modèles ONNX sont fournis dans `models/` et copiés à côté de l'exécutable : **Super-Resolution CNN ×3**, **RIFE 4.9** et **YuNet** (détection des visages pour le renforcement de la page Image). Le moteur classique, lui, ne dépend d'aucun modèle. Les licences et les sources sont détaillées dans la section **12** et dans [models/README.md](models/README.md).
 
 ### 2.2 Lancer depuis les sources
 
@@ -162,7 +164,7 @@ Une annulation est **coopérative** : le traitement s'arrête au prochain point 
 
 ---
 
-# Partie II — Guide des fonctionnalités
+# Partie II : Guide des fonctionnalités
 
 ## 5. Page Image
 
@@ -239,7 +241,10 @@ Les curseurs et les champs numériques sont synchronisés. La valeur `0` désact
 | Réglage | Ce qu'il fait | Conseil |
 |---|---|---|
 | **Détails d'origine** | Réinjecte une part des détails de la source dans le résultat. | Évite un rendu trop lisse ; trop haut, le bruit d'origine revient. |
+| **Renforcer les visages** | Détecte les visages avec YuNet et y renforce la micro-texture ; le reste de l'image garde la sienne. | Activé par défaut. Sans modèle YuNet, Liseré revient au masque de peau global sans bloquer le rendu. |
 | **Ajouter du bruit** | Ajoute un grain fin pour éviter l'aspect plastique. | De très petites valeurs suffisent. `0` désactive. |
+
+Le renforcement des visages s'applique pendant la passe de récupération des détails. Il localise jusqu'à seize visages, y concentre la texture et évite d'en ajouter au fond ou aux cheveux. Le réglage ne s'exécute que si la récupération des détails est active ; il ne remplace ni la réduction du bruit ni la netteté.
 
 ### 5.5 Avertissements
 
@@ -262,9 +267,11 @@ Le bouton **Améliorer l'image** (`Ctrl+Entrée`) lance le pipeline sur l'image 
 
 Le résultat reste en mémoire jusqu'au prochain chargement ou à la prochaine amélioration.
 
+Dès qu'un réglage, un préréglage ou un preset change après un rendu, le résultat devient **obsolète** : il reste affiché pour la comparaison, un bandeau **Aperçu obsolète : relancez l'amélioration.** apparaît, et l'export est désactivé. Relancez **Améliorer l'image** pour retrouver un résultat exportable.
+
 ### 5.7 Exporter en JPEG
 
-Le bouton **Exporter en JPEG** (`Ctrl+S`) n'est actif qu'après une amélioration réussie. Il ouvre le sélecteur de fichier, puis écrit un JPEG de **qualité 92**. L'export peut être annulé pendant l'écriture ; un fichier partiel nouvellement créé est alors supprimé.
+Le bouton **Exporter en JPEG** (`Ctrl+S`) n'est actif qu'après une amélioration réussie et tant que le résultat n'est pas obsolète. Il ouvre le sélecteur de fichier, puis écrit un JPEG de **qualité 92**. L'export peut être annulé pendant l'écriture ; un fichier partiel nouvellement créé est alors supprimé.
 
 ---
 
@@ -314,7 +321,7 @@ Le bouton **Importer un preset...** lit un fichier JSON et applique ce que Liser
 | `deinterlace.active` | Désentrelacement. |
 | `grain.active` + `grainStrength` | Approximation prudente de l'ajout de bruit. |
 
-Le modèle mentionné dans le preset est affiché à titre informatif. **Aucun poids propriétaire n'est chargé** : le rendu utilise le moteur sélectionné dans Liseré. Le preset transpose les réglages et la géométrie de sortie, pas le réseau d'origine.
+Le modèle mentionné dans le preset est affiché à titre informatif. **Aucun poids propriétaire n'est chargé** : le rendu utilise le moteur sélectionné dans Liseré. Le preset transpose les réglages et la géométrie de sortie, pas le réseau d'origine. Après l'import, l'aperçu vidéo existant est marqué comme à actualiser : relancez **Rafraîchir l'aperçu** avant de juger le résultat.
 
 ### 6.4 La résolution de sortie
 
@@ -425,7 +432,7 @@ Raccourcis de l'aperçu, lorsque celui-ci a le focus :
 
 ### 7.3 Barre d'état et messages
 
-La barre d'état indique le dernier événement : image chargée, traitement en cours, export réussi, opération annulée, erreur. Les erreurs détaillées apparaissent aussi dans un dialogue avec le message de l'exception.
+La barre d'état indique le dernier événement : image chargée, traitement en cours, export réussi, opération annulée, erreur. Les erreurs détaillées apparaissent aussi dans un dialogue avec un message localisé et explicite ; les messages techniques bruts et les chemins internes ne sont pas affichés.
 
 Les messages sont traduits dans les deux langues. Les textes sources se trouvent dans `src/Lisere/Lang/Strings.resx` (français) et `Strings.en.resx` (anglais).
 
@@ -445,6 +452,7 @@ Les messages sont traduits dans les deux langues. Les textes sources se trouvent
 - Entrée : formats WIC listés en **5.1**, selon les codecs installés.
 - Taille maximale du fichier : **24 Mo**.
 - Limite de décodage : **40 millions de pixels**.
+- Les métadonnées d'orientation eXIf d'un PNG sont lues dans une limite de **64 Ko** ; un chunk surdimensionné ou tronqué est ignoré et l'image reste utilisable.
 - Sortie : **JPEG qualité 92**.
 - Une image animée ou multipage ne traite que sa première image.
 - La transparence est aplatie sur blanc.
@@ -483,6 +491,10 @@ Le fichier ONNX est absent, modifié ou invalide. Restaurez le modèle depuis `m
 
 Le codec WIC n'est peut-être pas installé, le fichier dépasse 24 Mo, ou l'image dépasse 40 millions de pixels. Convertissez-la en PNG/JPEG ou réduisez sa taille.
 
+### Le renforcement des visages ne change rien
+
+Vérifiez que **Renforcer les visages** est activé et que la récupération des détails n'est pas à `0`. Le modèle `face_detection_yunet_2023mar.onnx` doit être présent à côté de l'exécutable ; s'il manque ou est invalide, Liseré revient silencieusement au masque de peau global. Le renforcement reste volontairement discret : il ne remplace pas un agrandissement de visage.
+
 ### Le rendu vidéo est très lent
 
 Facteurs principaux : moteur neuronal, sortie 4K, RIFE, stabilisation, désentrelacement et cadence recréée. Pour itérer, utilisez **Rendre 1 seconde**, une résolution plus basse et le moteur **Classic**. Le repli CPU des moteurs ONNX est beaucoup plus lent que DirectML.
@@ -515,7 +527,7 @@ Dans `%APPDATA%\Lisere\settings.json`. Le choix de langue y est enregistré.
 ## 10. Bonnes pratiques
 
 - **Image ancienne ou compressée** : commencez par **Chroma**, montez doucement la correction de compression et la réduction du bruit, puis la netteté. Surveillez les avertissements.
-- **Photo de portrait** : restez prudent sur la réduction du bruit et la netteté ; ajoutez une très petite quantité de bruit pour éviter l'aspect plastique.
+- **Photo de portrait** : restez prudent sur la réduction du bruit et la netteté ; laissez **Renforcer les visages** activé et ajoutez une très petite quantité de bruit pour éviter l'aspect plastique.
 - **Scan ou document** : privilégiez la netteté et le lissage des contours, avec une réduction du bruit modérée.
 - **Vidéo HD** : faites d'abord un **aperçu d'une seconde** avec la résolution et le moteur définitifs. C'est le meilleur moyen d'estimer le rendu et le temps avant un export complet.
 - **Plusieurs clips** : préparez chaque job dans la file, puis lancez la file et laissez-la tourner. Chaque job est indépendant.
@@ -531,5 +543,19 @@ Dans `%APPDATA%\Lisere\settings.json`. Le choix de langue y est enregistré.
 | `dotnet build Lisere.slnx` | Compile la solution. |
 | `dotnet run --project src/Lisere` | Lance l'application. |
 | `dotnet test Lisere.slnx` | Lance les tests. |
+
+---
+
+## 12. Crédits et licences
+
+- **YuNet** (détection de visages) : Shiqi Yu / OpenCV Zoo, licence MIT. Référence : Wu, Peng et Yu, 2023.
+- **RIFE 4.9** : Practical-RIFE, licence MIT (Megvii et hzwer) ; export ONNX edgetools/rife.
+- **SRCNN sous-pixel ×3** : ONNX Model Zoo, licence Apache-2.0 ; Shi et al., 2016.
+- **ONNX Runtime / DirectML** : Microsoft, licence MIT.
+- **WPF-UI**, **CommunityToolkit.Mvvm** et **Microsoft.Extensions.Hosting** : licences MIT.
+- **xUnit.net** et **Microsoft.NET.Test.Sdk** : Apache-2.0 et MIT.
+- **FFmpeg** : LGPL ou GPL selon la compilation ; installé séparément, non redistribué.
+- Les presets After Effects cités appartiennent à leurs détenteurs ; aucun fichier `.ffx` n'est distribué. Les références Topaz et Adobe sont des marques de leurs propriétaires ; aucun poids, code ou média propriétaire n'est inclus.
+- Les images de test et leurs sources sont documentées dans `tests/Lisere.App.Tests/TestData/README.md`. La liste complète figure dans la section **Crédits, sources et licences** du [README](README.md#crédits-sources-et-licences).
 
 Pour toute question sur l'architecture ou les modèles, consultez le [README](README.md) et [models/README.md](models/README.md).

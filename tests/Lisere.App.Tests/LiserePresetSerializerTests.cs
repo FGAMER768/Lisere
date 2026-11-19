@@ -119,7 +119,7 @@ public class LiserePresetSerializerTests
     [InlineData("{\"format\":\"lisere-preset\",\"version\":1,\"enhancement\":{\"parameters\":{\"fixCompression\":1,\"reduceNoise\":1,\"sharpen\":1,\"recoverDetails\":1,\"dehalo\":1,\"antialiasDeblur\":1}},\"color\":{}}")]
     public void ParseRejectsMalformedOrIncompleteDocuments(string json)
     {
-        Assert.Throws<FormatException>(() => LiserePresetSerializer.Parse(json));
+        Assert.Throws<PresetFormatException>(() => LiserePresetSerializer.Parse(json));
     }
 
     [Fact]
@@ -128,8 +128,8 @@ public class LiserePresetSerializerTests
         var noFormat = CompleteJson.Replace("\"format\": \"lisere-preset\",", string.Empty);
         var noVersion = CompleteJson.Replace("\"version\": 1,", string.Empty);
 
-        Assert.Throws<FormatException>(() => LiserePresetSerializer.Parse(noFormat));
-        Assert.Throws<FormatException>(() => LiserePresetSerializer.Parse(noVersion));
+        Assert.Throws<PresetFormatException>(() => LiserePresetSerializer.Parse(noFormat));
+        Assert.Throws<PresetFormatException>(() => LiserePresetSerializer.Parse(noVersion));
     }
 
     [Fact]
@@ -138,8 +138,8 @@ public class LiserePresetSerializerTests
         var unknownMode = CompleteJson.Replace("\"chromaEnhanceMain\"", "\"turbo\"");
         var unknownColor = CompleteJson.Replace("\"ultronCc\"", "\"sepia\"");
 
-        Assert.Throws<FormatException>(() => LiserePresetSerializer.Parse(unknownMode));
-        Assert.Throws<FormatException>(() => LiserePresetSerializer.Parse(unknownColor));
+        Assert.Throws<PresetFormatException>(() => LiserePresetSerializer.Parse(unknownMode));
+        Assert.Throws<PresetFormatException>(() => LiserePresetSerializer.Parse(unknownColor));
     }
 
     [Fact]
@@ -169,5 +169,40 @@ public class LiserePresetSerializerTests
         {
             File.Delete(path);
         }
+    }
+
+    [Fact]
+    public void LoadWrapsAMissingFileInALocalizedError()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"lisere-missing-{Guid.NewGuid():N}.json");
+
+        var error = Assert.Throws<PresetFormatException>(
+            () => LiserePresetSerializer.Load(path));
+
+        Assert.Equal("errorPresetRead", error.MessageKey);
+    }
+
+    [Fact]
+    public void SaveWrapsAnUnwritablePathInALocalizedError()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"lisere-missing-dir-{Guid.NewGuid():N}",
+            "preset.json");
+        var preset = new LiserePreset(
+            "Test",
+            EnhancementMode.Manual,
+            EnhancementParameters.Zero,
+            0,
+            0,
+            ColorPreset.None,
+            UltronCcSettings.FromPreset);
+
+        var error = Assert.Throws<PresetFormatException>(
+            () => LiserePresetSerializer.Save(path, preset));
+
+        Assert.Equal("errorPresetWrite", error.MessageKey);
     }
 }

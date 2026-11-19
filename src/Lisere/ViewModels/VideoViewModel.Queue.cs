@@ -43,7 +43,7 @@ public sealed partial class VideoViewModel
         {
             _ = ShowErrorAsync(
                 "videoErrorQueueDuplicate",
-                new InvalidOperationException(Path.GetFileName(target)));
+                new UserMessageException(Path.GetFileName(target)));
             return;
         }
 
@@ -84,7 +84,11 @@ public sealed partial class VideoViewModel
 
         try
         {
-            result = await _queueRunner.RunAsync(jobs, QueueStateText, cancellation.Token);
+            result = await _queueRunner.RunAsync(
+                jobs,
+                QueueStateText,
+                DescribeRenderError,
+                cancellation.Token);
         }
         finally
         {

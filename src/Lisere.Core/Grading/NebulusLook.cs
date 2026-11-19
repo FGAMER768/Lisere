@@ -6,9 +6,9 @@ namespace Lisere.Core.Grading;
 /// Reproduit l'étalonnage du preset After Effects <c>Nebulus_CC.ffx</c>, dans
 /// l'ordre de sa pile :
 /// <list type="number">
-///   <item>S_Sharpen — accentuation multi-échelles (approximation) ;</item>
-///   <item>BCC Unsharp Mask — rayon 20, 10 % ;</item>
-///   <item>S_Glow — halo marqué (approximation).</item>
+///   <item>S_Sharpen : accentuation multi-échelles (approximation) ;</item>
+///   <item>BCC Unsharp Mask : rayon 20, 10 % ;</item>
+///   <item>S_Glow : halo marqué (approximation).</item>
 /// </list>
 /// </summary>
 public static class NebulusLook

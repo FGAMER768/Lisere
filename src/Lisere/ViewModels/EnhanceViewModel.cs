@@ -54,6 +54,13 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _hasEnhanced;
 
+    /// <summary>
+    /// The rendered result no longer matches the current settings. The preview
+    /// stays visible for comparison, but it must not be exported as if it did.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isResultStale;
+
     [ObservableProperty]
     private bool _isBusy;
 
@@ -125,6 +132,10 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private double _addNoise = EnhancementPresets.ChromaEnhanceMain.AddNoise;
+
+    /// <summary>Concentre la texture sur les visages détectés et la renforce.</summary>
+    [ObservableProperty]
+    private bool _refineFaces = true;
 
     public EnhanceViewModel(
         IFileDialogService fileDialogService,
@@ -264,6 +275,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             _sourceName = Path.GetFileName(path);
             _enhanced = null;
             HasEnhanced = false;
+            IsResultStale = false;
             ComparisonPosition = 50.0;
             AfterImage = null;
             BeforeImage = await _imageCodec.CreatePreviewAsync(
@@ -340,7 +352,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             RecoverOriginalDetail,
             AddNoise,
             SelectedColorPreset?.Preset ?? ColorPreset.None,
-            SelectedColorPreset?.Preset is ColorPreset.UltronCc ? CurrentColorSettings : null);
+            SelectedColorPreset?.Preset is ColorPreset.UltronCc ? CurrentColorSettings : null,
+            RefineFaces: RefineFaces);
 
         // Le détail multi-échelles coûte ~2,4 s par mégapixel : sur une grande
         // image, on annonce la durée avant de lancer plutôt que de la subir.
@@ -415,6 +428,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
                 ReportPreview(99.0);
             }
             HasEnhanced = true;
+            IsResultStale = false;
             ApplyWarnings(result.Warnings);
             SetStatus("statusApplied", result.Mode);
             completed = true;
@@ -594,7 +608,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         HasImage && !IsBusy && !_isPresetEstimationPending && !_dialogService.IsAnyDialogOpen;
 
     private bool CanSave() =>
-        HasEnhanced && !IsBusy && !_dialogService.IsAnyDialogOpen;
+        HasEnhanced && !IsResultStale && !IsBusy && !_dialogService.IsAnyDialogOpen;
 
     partial void OnIsBusyChanged(bool value)
     {
@@ -658,6 +672,11 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         SaveCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnIsResultStaleChanged(bool value)
+    {
+        SaveCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnSelectedPresetChanged(PresetOption? value)
     {
         if (value is null)
@@ -682,6 +701,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         ApplyColorDefaults(value?.Preset ?? ColorPreset.None);
         OnPropertyChanged(nameof(IsColorGradingActive));
         OnPropertyChanged(nameof(HasAdjustableColorSettings));
+        MarkResultStale();
         UpdatePendingStatus();
     }
 
@@ -721,9 +741,19 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     partial void OnAntialiasDeblurChanged(double value) => OnParameterChanged();
 
-    partial void OnRecoverOriginalDetailChanged(double value) => UpdatePendingStatus();
+    partial void OnRecoverOriginalDetailChanged(double value)
+    {
+        MarkResultStale();
+        UpdatePendingStatus();
+    }
 
-    partial void OnAddNoiseChanged(double value) => UpdatePendingStatus();
+    partial void OnAddNoiseChanged(double value)
+    {
+        MarkResultStale();
+        UpdatePendingStatus();
+    }
+
+    partial void OnRefineFacesChanged(bool value) => OnParameterChanged();
 
     private async Task ApplyPresetInBackgroundAsync(EnhancementMode mode)
     {
@@ -786,6 +816,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
             UpdateWarnings();
             UpdatePendingStatus();
+            MarkResultStale();
         }
         finally
         {
@@ -840,7 +871,16 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsEnhancementActive));
         OnPropertyChanged(nameof(IsColorGradingActive));
         OnPropertyChanged(nameof(HasAdjustableColorSettings));
-        SetStatus("statusPresetImported", preset.Name);
+
+        if (HasEnhanced)
+        {
+            IsResultStale = true;
+            SetStatus("statusPresetImportedStale", preset.Name);
+        }
+        else
+        {
+            SetStatus("statusPresetImported", preset.Name);
+        }
     }
 
     private static EnhancementMode ResolveImportedMode(LiserePreset preset) => preset.Mode switch
@@ -882,6 +922,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     {
         // Un réglage de colorimétrie ne touche pas au préréglage IA : les deux
         // menus restent indépendants.
+        MarkResultStale();
         UpdatePendingStatus();
     }
 
@@ -895,6 +936,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         CancelPresetEstimation();
         UpdateWarnings();
         UpdatePendingStatus();
+        MarkResultStale();
 
         if (SelectedPreset is { Mode: not EnhancementMode.Manual })
         {
@@ -909,6 +951,14 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         if (HasImage && !IsBusy)
         {
             SetStatus("statusDirty");
+        }
+    }
+
+    private void MarkResultStale()
+    {
+        if (HasEnhanced && !IsResultStale)
+        {
+            IsResultStale = true;
         }
     }
 
@@ -999,7 +1049,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     private async Task ShowErrorAsync(string key, Exception exception)
     {
-        ErrorMessage = $"{Strings[key]} {exception.Message}";
+        ErrorMessage = $"{Strings[key]} {UserErrorDescriber.Describe(Strings, exception)}";
         HasError = true;
         SetStatus("statusError");
         await _dialogService.ShowMessageAsync(ErrorMessage, DialogKind.Error);

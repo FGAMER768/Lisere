@@ -5,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Lisere.Services;
 
 namespace Lisere.Views;
 
@@ -44,6 +45,12 @@ public partial class BeforeAfterView : UserControl
             FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
             OnComparisonPositionChanged,
             CoerceComparisonPosition));
+
+    public static readonly DependencyProperty LocalizationProperty = DependencyProperty.Register(
+        nameof(Localization),
+        typeof(ILocalizationService),
+        typeof(BeforeAfterView),
+        new PropertyMetadata(null));
 
     public static readonly DependencyProperty ZoomProperty = DependencyProperty.Register(
         nameof(Zoom),
@@ -85,6 +92,15 @@ public partial class BeforeAfterView : UserControl
     {
         get => (double)GetValue(ComparisonPositionProperty);
         set => SetValue(ComparisonPositionProperty, value);
+    }
+
+    /// <summary>
+    /// The labels and accessibility names follow the selected interface language.
+    /// </summary>
+    public ILocalizationService? Localization
+    {
+        get => (ILocalizationService?)GetValue(LocalizationProperty);
+        set => SetValue(LocalizationProperty, value);
     }
 
     /// <summary>1 means fitted to the stage; both layers share this value.</summary>

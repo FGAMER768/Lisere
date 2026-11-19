@@ -30,6 +30,21 @@
       "license": "MIT",
       "source": "https://huggingface.co/edgetools/rife",
       "description": "Export ONNX de RIFE 4.9 (Practical-RIFE, licence MIT), conditionné par un timestep. Deux images RGB en entrée, une image intermédiaire en sortie. Exécuté via ONNX Runtime, DirectML sur iGPU Intel ou CPU en repli."
+    },
+    {
+      "id": "yunet-face-2023mar",
+      "displayName": "YuNet (détection de visage)",
+      "family": "face-detection",
+      "file": "onnx/face_detection_yunet_2023mar.onnx",
+      "sha256": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4",
+      "scale": 1,
+      "inputName": "input",
+      "outputName": "cls_8",
+      "tileSize": 0,
+      "plane": "bgr",
+      "license": "MIT",
+      "source": "https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet",
+      "description": "Détecteur de visages YuNet (Wu, Peng et Yu, 2023), entrée BGR 640×640, licence MIT. Sert à concentrer la micro-texture sur les visages détectés."
     }
   ]
 }

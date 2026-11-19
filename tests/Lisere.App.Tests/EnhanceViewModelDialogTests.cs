@@ -357,6 +357,32 @@ public class EnhanceViewModelDialogTests
     }
 
     [Fact]
+    public async Task ChangingASettingAfterARenderBlocksExportUntilTheNextRender()
+    {
+        var viewModel = CreateViewModel(
+            new FakeDialogService(),
+            new FakeImageCodec(),
+            new FakeOrchestrator());
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.HasEnhanced);
+        Assert.False(viewModel.IsResultStale);
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
+
+        viewModel.FixCompression += 1;
+
+        Assert.True(viewModel.IsResultStale);
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
+
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsResultStale);
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task OpeningANewImageResetsTheComparisonPosition()
     {
         var viewModel = CreateViewModel(

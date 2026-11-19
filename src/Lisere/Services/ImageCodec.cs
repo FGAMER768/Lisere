@@ -16,47 +16,90 @@ public sealed class ImageCodec : IImageCodec
     private const int JpegQuality = 92;
     private const long MaximumFileBytes = 24L * 1024L * 1024L;
 
+    // EXIF orientation only needs the first IFD. A malformed PNG can declare a
+    // chunk far larger than the file; cap it instead of allocating the announced
+    // size (and require the bytes and CRC to actually exist).
+    internal const int MaximumPngOrientationChunkBytes = 64 * 1024;
+
     public Task<RgbImage> LoadAsync(string path, CancellationToken cancellationToken)
     {
         return Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (new FileInfo(path).Length > MaximumFileBytes)
+            try
             {
-                throw new InvalidOperationException("Le fichier image dépasse la limite de 24 Mo.");
+                if (new FileInfo(path).Length > MaximumFileBytes)
+                {
+                    throw new ImageCodecException(
+                        "errorImageFileTooLarge",
+                        "Le fichier image dépasse la limite de 24 Mo.");
+                }
+
+                using var stream = File.OpenRead(path);
+                var decoder = BitmapDecoder.Create(
+                    stream,
+                    BitmapCreateOptions.DelayCreation | BitmapCreateOptions.PreservePixelFormat,
+                    BitmapCacheOption.None);
+
+                if (decoder.Frames.Count == 0)
+                {
+                    throw new ImageCodecException(
+                        "errorImageNoFrames",
+                        "Le fichier ne contient aucune image.");
+                }
+
+                var frame = decoder.Frames[0];
+                EnsurePixelCountWithinLimit(frame.PixelWidth, frame.PixelHeight);
+
+                var orientation = ReadOrientation(frame);
+                if (orientation == 1 && IsPng(path))
+                {
+                    orientation = ReadPngOrientation(path);
+                }
+
+                var converted = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
+                var stride = checked(converted.PixelWidth * 4);
+                var buffer = new byte[checked(stride * converted.PixelHeight)];
+                converted.CopyPixels(buffer, stride, 0);
+
+                return ConvertToRgb(
+                    buffer,
+                    converted.PixelWidth,
+                    converted.PixelHeight,
+                    orientation);
             }
-
-            using var stream = File.OpenRead(path);
-            var decoder = BitmapDecoder.Create(
-                stream,
-                BitmapCreateOptions.DelayCreation | BitmapCreateOptions.PreservePixelFormat,
-                BitmapCacheOption.None);
-
-            if (decoder.Frames.Count == 0)
+            catch (OperationCanceledException)
             {
-                throw new InvalidOperationException("Le fichier ne contient aucune image.");
+                throw;
             }
-
-            var frame = decoder.Frames[0];
-            EnsurePixelCountWithinLimit(frame.PixelWidth, frame.PixelHeight);
-
-            var orientation = ReadOrientation(frame);
-            if (orientation == 1 && IsPng(path))
+            catch (ImageCodecException)
             {
-                orientation = ReadPngOrientation(path);
+                throw;
             }
-
-            var converted = new FormatConvertedBitmap(frame, PixelFormats.Bgra32, null, 0);
-            var stride = checked(converted.PixelWidth * 4);
-            var buffer = new byte[checked(stride * converted.PixelHeight)];
-            converted.CopyPixels(buffer, stride, 0);
-
-            return ConvertToRgb(
-                buffer,
-                converted.PixelWidth,
-                converted.PixelHeight,
-                orientation);
+            catch (UnauthorizedAccessException exception)
+            {
+                throw new ImageCodecException(
+                    "errorImageAccessDenied",
+                    "Accès refusé au fichier image.",
+                    exception);
+            }
+            catch (IOException exception)
+            {
+                throw new ImageCodecException(
+                    "errorImageUnreadable",
+                    "Impossible de lire le fichier. Vérifiez qu'il n'est pas verrouillé.",
+                    exception);
+            }
+            catch (Exception exception) when (
+                exception is FileFormatException or NotSupportedException or COMException or
+                    ArgumentException or InvalidOperationException or OverflowException)
+            {
+                throw new ImageCodecException(
+                    "errorImageInvalid",
+                    "Le fichier n'est pas une image valide ou il est corrompu.",
+                    exception);
+            }
         }, cancellationToken);
     }
 
@@ -66,29 +109,48 @@ public sealed class ImageCodec : IImageCodec
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var bitmap = BitmapSource.Create(
-                image.Width,
-                image.Height,
-                96,
-                96,
-                PixelFormats.Rgb24,
-                null,
-                image.Pixels,
-                image.Width * 3);
-            bitmap.Freeze();
-
-            var encoder = new JpegBitmapEncoder { QualityLevel = JpegQuality };
-            encoder.Frames.Add(BitmapFrame.Create(bitmap));
-
-            using var memory = new MemoryStream();
-            encoder.Save(memory);
-
-            if (memory.Length > MaximumFileBytes)
+            try
             {
-                throw new InvalidOperationException("Le fichier JPEG dépasse la limite de 24 Mo.");
-            }
+                var bitmap = BitmapSource.Create(
+                    image.Width,
+                    image.Height,
+                    96,
+                    96,
+                    PixelFormats.Rgb24,
+                    null,
+                    image.Pixels,
+                    image.Width * 3);
+                bitmap.Freeze();
 
-            File.WriteAllBytes(path, memory.ToArray());
+                var encoder = new JpegBitmapEncoder { QualityLevel = JpegQuality };
+                encoder.Frames.Add(BitmapFrame.Create(bitmap));
+
+                using var memory = new MemoryStream();
+                encoder.Save(memory);
+
+                if (memory.Length > MaximumFileBytes)
+                {
+                    throw new ImageCodecException(
+                        "errorJpegFileTooLarge",
+                        "Le fichier JPEG dépasse la limite de 24 Mo.");
+                }
+
+                File.WriteAllBytes(path, memory.ToArray());
+            }
+            catch (UnauthorizedAccessException exception)
+            {
+                throw new ImageCodecException(
+                    "errorExportAccessDenied",
+                    "Accès refusé au fichier d'export.",
+                    exception);
+            }
+            catch (IOException exception)
+            {
+                throw new ImageCodecException(
+                    "errorExportWrite",
+                    "Impossible d'écrire le fichier exporté.",
+                    exception);
+            }
         }, cancellationToken);
     }
 
@@ -111,7 +173,8 @@ public sealed class ImageCodec : IImageCodec
     {
         if ((long)width * height > MaximumPixelCount)
         {
-            throw new InvalidOperationException(
+            throw new ImageCodecException(
+                "errorImagePixelLimit",
                 $"L'image dépasse la limite de {MaximumPixelCount / 1_000_000} millions de pixels.");
         }
     }
@@ -170,7 +233,7 @@ public sealed class ImageCodec : IImageCodec
     private static bool IsPng(string path) =>
         Path.GetExtension(path).Equals(".png", StringComparison.OrdinalIgnoreCase);
 
-    private static int ReadPngOrientation(string path)
+    internal static int ReadPngOrientation(string path)
     {
         try
         {
@@ -195,6 +258,13 @@ public sealed class ImageCodec : IImageCodec
 
                 if (chunkType == "eXIf")
                 {
+                    var remaining = stream.Length - stream.Position;
+                    if (length > MaximumPngOrientationChunkBytes ||
+                        remaining < (long)length + 4)
+                    {
+                        return 1;
+                    }
+
                     var data = new byte[(int)length];
                     return TryReadExactly(stream, data)
                         ? ReadTiffOrientation(data)

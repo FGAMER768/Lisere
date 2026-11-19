@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              x:Name="Root"
-             Focusable="True">
+             Focusable="True"
+             PreviewKeyDown="OnDialogPreviewKeyDown">
 
     <Grid x:Name="RootGrid" Background="#99000000">
         <Border x:Name="DialogCard"

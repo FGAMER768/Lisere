@@ -178,6 +178,8 @@ public class EnhanceViewModelLanguageTests
         Assert.Equal("Chroma appliqué. Colorimétrie : Ultron CC.", viewModel.StatusMessage);
         Assert.Equal(ColorPreset.UltronCc, orchestrator.LastRequest?.Color);
         Assert.NotNull(orchestrator.LastRequest?.ColorSettings);
+        Assert.True(viewModel.RefineFaces);
+        Assert.True(orchestrator.LastRequest?.RefineFaces);
     }
 
     [Theory]

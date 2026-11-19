@@ -109,7 +109,8 @@
                             BorderThickness="1"
                             CornerRadius="6"
                             ClipToBounds="True">
-                        <views:BeforeAfterView x:Name="Comparison" />
+                        <views:BeforeAfterView x:Name="Comparison"
+                                               Localization="{Binding Strings}" />
                     </Border>
 
                     <ScrollViewer Grid.Column="2"

@@ -323,7 +323,8 @@ public class VideoViewModelTests
         await viewModel.RunQueueCommand.ExecuteAsync(null);
 
         Assert.Equal(VideoQueueState.Failed, viewModel.Queue[0].State);
-        Assert.Contains("clip illisible", viewModel.Queue[0].StatusText, StringComparison.Ordinal);
+        Assert.DoesNotContain("clip illisible", viewModel.Queue[0].StatusText, StringComparison.Ordinal);
+        Assert.Contains("rendu", viewModel.Queue[0].StatusText, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(VideoQueueState.Completed, viewModel.Queue[1].State);
         Assert.Equal(2, renderer.Requests.Count);
         Assert.Contains("1", viewModel.StatusMessage, StringComparison.Ordinal);

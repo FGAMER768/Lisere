@@ -6,11 +6,11 @@ namespace Lisere.Core.Grading;
 /// Reproduit l'étalonnage du preset After Effects <c>Matrix_CC.ffx</c>, dans
 /// l'ordre de sa pile :
 /// <list type="number">
-///   <item>Hue/Saturation — valeurs neutres, identité, non appliqué ;</item>
+///   <item>Hue/Saturation : valeurs neutres, identité, non appliqué ;</item>
 ///   <item>Brightness &amp; Contrast (mode actuel, non legacy) ;</item>
-///   <item>Unsharp Mask — 30 %, rayon 15 ;</item>
-///   <item>Sharpen — 10 % ;</item>
-///   <item>BCC Unsharp Mask — rayon 30, 15 %.</item>
+///   <item>Unsharp Mask : 30 %, rayon 15 ;</item>
+///   <item>Sharpen : 10 % ;</item>
+///   <item>BCC Unsharp Mask : rayon 30, 15 %.</item>
 /// </list>
 /// Le mode « non legacy » d'After Effects utilise une courbe qui adoucit les
 /// extrêmes ; sa formule n'est pas publiée et les reproductions mesurées s'en

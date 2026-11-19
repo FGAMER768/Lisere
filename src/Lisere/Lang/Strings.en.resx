@@ -218,6 +218,127 @@
     <value>Auto + relative medium</value>
   </data>
 
+  <data name="beforeAfterBefore" xml:space="preserve">
+    <value>Before</value>
+  </data>
+  <data name="beforeAfterAfter" xml:space="preserve">
+    <value>After</value>
+  </data>
+  <data name="beforeAfterBeforePreview" xml:space="preserve">
+    <value>Before preview</value>
+  </data>
+  <data name="beforeAfterAfterPreview" xml:space="preserve">
+    <value>After preview</value>
+  </data>
+  <data name="beforeAfterComparison" xml:space="preserve">
+    <value>Before and after comparison</value>
+  </data>
+  <data name="beforeAfterComparisonHelp" xml:space="preserve">
+    <value>Mouse wheel or + and − keys to zoom, drag to pan, 0 to fit.</value>
+  </data>
+  <data name="beforeAfterComparisonPosition" xml:space="preserve">
+    <value>Comparison position</value>
+  </data>
+  <data name="beforeAfterComparisonArrowsHelp" xml:space="preserve">
+    <value>Use the left and right arrow keys.</value>
+  </data>
+  <data name="beforeAfterZoomOut" xml:space="preserve">
+    <value>Zoom out</value>
+  </data>
+  <data name="beforeAfterZoomOutTip" xml:space="preserve">
+    <value>Zoom out (wheel, −)</value>
+  </data>
+  <data name="beforeAfterFit" xml:space="preserve">
+    <value>Fit to window</value>
+  </data>
+  <data name="beforeAfterFitTip" xml:space="preserve">
+    <value>Fit to window (0)</value>
+  </data>
+  <data name="beforeAfterZoomIn" xml:space="preserve">
+    <value>Zoom in</value>
+  </data>
+  <data name="beforeAfterZoomInTip" xml:space="preserve">
+    <value>Zoom in (wheel, +)</value>
+  </data>
+  <data name="stalePreviewNotice" xml:space="preserve">
+    <value>Outdated preview: run the enhancement again.</value>
+  </data>
+  <data name="statusPresetImportedStale" xml:space="preserve">
+    <value>Preset imported: {0}. Run the enhancement to refresh the preview.</value>
+  </data>
+  <data name="videoProcessing" xml:space="preserve">
+    <value>Processing</value>
+  </data>
+  <data name="errorImageFileTooLarge" xml:space="preserve">
+    <value>The image file exceeds the 24 MB limit.</value>
+  </data>
+  <data name="errorImagePixelLimit" xml:space="preserve">
+    <value>The image exceeds the 40-megapixel limit.</value>
+  </data>
+  <data name="errorImageNoFrames" xml:space="preserve">
+    <value>The file contains no image.</value>
+  </data>
+  <data name="errorImageInvalid" xml:space="preserve">
+    <value>The file is not a valid image or it is corrupted.</value>
+  </data>
+  <data name="errorImageUnreadable" xml:space="preserve">
+    <value>Could not read the file. Check that it is not locked.</value>
+  </data>
+  <data name="errorImageAccessDenied" xml:space="preserve">
+    <value>Access to the image file was denied.</value>
+  </data>
+  <data name="errorJpegFileTooLarge" xml:space="preserve">
+    <value>The JPEG file exceeds the 24 MB limit.</value>
+  </data>
+  <data name="errorExportWrite" xml:space="preserve">
+    <value>Could not write the exported file.</value>
+  </data>
+  <data name="errorExportAccessDenied" xml:space="preserve">
+    <value>Access to the export file was denied.</value>
+  </data>
+  <data name="errorPresetEmpty" xml:space="preserve">
+    <value>The preset file is empty.</value>
+  </data>
+  <data name="errorPresetInvalidJson" xml:space="preserve">
+    <value>The preset is not a valid JSON file.</value>
+  </data>
+  <data name="errorPresetNotObject" xml:space="preserve">
+    <value>The preset is not a JSON object.</value>
+  </data>
+  <data name="errorPresetUnknownFormat" xml:space="preserve">
+    <value>This file is not a Liseré preset.</value>
+  </data>
+  <data name="errorPresetVersionMissing" xml:space="preserve">
+    <value>The preset version is missing.</value>
+  </data>
+  <data name="errorPresetVersionUnsupported" xml:space="preserve">
+    <value>Unsupported preset version: {0}.</value>
+  </data>
+  <data name="errorPresetIncomplete" xml:space="preserve">
+    <value>The preset is incomplete: a required section is missing.</value>
+  </data>
+  <data name="errorPresetMissingField" xml:space="preserve">
+    <value>The preset is missing the “{0}” field.</value>
+  </data>
+  <data name="errorPresetUnknownMode" xml:space="preserve">
+    <value>The preset's enhancement mode is unknown.</value>
+  </data>
+  <data name="errorPresetColorMissing" xml:space="preserve">
+    <value>The preset has no color grading.</value>
+  </data>
+  <data name="errorPresetUnknownColor" xml:space="preserve">
+    <value>The preset's color grading is unknown.</value>
+  </data>
+  <data name="errorPresetRead" xml:space="preserve">
+    <value>Could not read the preset file.</value>
+  </data>
+  <data name="errorPresetWrite" xml:space="preserve">
+    <value>Could not save the preset.</value>
+  </data>
+  <data name="errorPresetAccess" xml:space="preserve">
+    <value>Access to the preset file was denied.</value>
+  </data>
+
   <data name="statusStart" xml:space="preserve">
     <value>Open an image to start.</value>
   </data>
@@ -250,6 +371,9 @@
   </data>
   <data name="statusError" xml:space="preserve">
     <value>Error.</value>
+  </data>
+  <data name="errorUnexpected" xml:space="preserve">
+    <value>An unexpected error occurred. Please try again.</value>
   </data>
   <data name="errorLoad" xml:space="preserve">
     <value>Could not load the image.</value>
@@ -524,6 +648,21 @@
   <data name="videoErrorPreset" xml:space="preserve">
     <value>Could not import the preset.</value>
   </data>
+  <data name="videoErrorFileMissing" xml:space="preserve">
+    <value>The video file could not be found.</value>
+  </data>
+  <data name="videoErrorUnreadable" xml:space="preserve">
+    <value>The video is unreadable or its format is not supported.</value>
+  </data>
+  <data name="videoErrorPresetInvalid" xml:space="preserve">
+    <value>The video preset is not a valid JSON file.</value>
+  </data>
+  <data name="videoErrorPresetUnreadable" xml:space="preserve">
+    <value>Could not read the video preset file.</value>
+  </data>
+  <data name="videoErrorRenderDetail" xml:space="preserve">
+    <value>The render could not be completed. Check the source file and available disk space.</value>
+  </data>
   <data name="videoStatusPresetImported" xml:space="preserve">
     <value>Preset imported: {0}. No proprietary weights are used: the selected engine processes the frames.</value>
   </data>
@@ -724,5 +863,11 @@
   </data>
   <data name="videoPreviewExported" xml:space="preserve">
     <value>Preview exported: {0}.</value>
+  </data>
+  <data name="paramRefineFaces" xml:space="preserve">
+    <value>Enhance faces</value>
+  </data>
+  <data name="paramRefineFacesNote" xml:space="preserve">
+    <value>Detects faces and strengthens their micro-texture; the rest of the image keeps its own.</value>
   </data>
 </root>

@@ -32,7 +32,8 @@ public static class EnhancementPipeline
         double addNoise = 0.0,
         IProgress<EnhancementProgress>? progress = null,
         CancellationToken cancellationToken = default,
-        bool synthesizeSkinTexture = false)
+        bool synthesizeSkinTexture = false,
+        IReadOnlyList<FaceBox>? faces = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         cancellationToken.ThrowIfCancellationRequested();
@@ -240,7 +241,8 @@ public static class EnhancementPipeline
                 output = SkinTexture.Apply(
                     output,
                     model.Details * SkinTexture.DetailStrength,
-                    work?.Slice(0.82, 1.0));
+                    work?.Slice(0.82, 1.0),
+                    faces);
             }
 
             work?.Complete();
