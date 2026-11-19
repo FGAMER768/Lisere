@@ -15,7 +15,6 @@ public static class SkinTexture
     /// <summary>Part of the Recover Details slider turned into skin texture.</summary>
     public const double DetailStrength = 1.0;
 
-    private const int Seed = 0x5EED;
     private const double FineWeight = 0.6;
     private const double PoreWeight = 0.5;
     private const double FineNormalizer = 64.0;
@@ -68,6 +67,7 @@ public static class SkinTexture
             out var blueChroma,
             out var redChroma,
             work?.Slice(0, 0.08));
+        var seed = SeedFor(luma);
         var smooth = ImageFilters.GaussianBlur(
             luma,
             1.2f,
@@ -76,6 +76,7 @@ public static class SkinTexture
         var fine = CreateFineNoise(
             source.Width,
             source.Height,
+            seed,
             work?.Slice(0.2, 0.38));
         var fineLow = ImageFilters.GaussianBlur(
             fine,
@@ -84,6 +85,7 @@ public static class SkinTexture
         var pores = CreatePoreField(
             source.Width,
             source.Height,
+            unchecked(seed + 1),
             work?.Slice(0.58, 0.78));
 
         var pixels = (byte[])source.Pixels.Clone();
@@ -132,10 +134,14 @@ public static class SkinTexture
         return new RgbImage(source.Width, source.Height, pixels);
     }
 
-    private static GrayImage CreateFineNoise(int width, int height, ImagingWork? work)
+    private static GrayImage CreateFineNoise(
+        int width,
+        int height,
+        int seed,
+        ImagingWork? work)
     {
         var pixels = new byte[width * height];
-        var random = new PythonRandom(Seed);
+        var random = new PythonRandom(seed);
 
         for (var y = 0; y < height; y++)
         {
@@ -151,12 +157,16 @@ public static class SkinTexture
         return new GrayImage(width, height, pixels);
     }
 
-    private static GrayImage CreatePoreField(int width, int height, ImagingWork? work)
+    private static GrayImage CreatePoreField(
+        int width,
+        int height,
+        int seed,
+        ImagingWork? work)
     {
         var smallWidth = Math.Max(1, width / PoreDivisor);
         var smallHeight = Math.Max(1, height / PoreDivisor);
         var pixels = new byte[smallWidth * smallHeight];
-        var random = new PythonRandom(Seed + 1);
+        var random = new PythonRandom(seed);
 
         for (var y = 0; y < smallHeight; y++)
         {
@@ -184,6 +194,24 @@ public static class SkinTexture
             field,
             PoreBlurRadius,
             work?.Slice(0.8, 1.0));
+    }
+
+    /// <summary>
+    /// Le motif est tiré de l'image elle-même : deux photos reçoivent deux
+    /// réseaux de pores, tandis qu'un même rendu reste reproductible.
+    /// </summary>
+    private static int SeedFor(GrayImage luma)
+    {
+        var hash = 2166136261u;
+        hash = (hash ^ (uint)luma.Width) * 16777619u;
+        hash = (hash ^ (uint)luma.Height) * 16777619u;
+
+        foreach (var value in luma.Pixels)
+        {
+            hash = (hash ^ value) * 16777619u;
+        }
+
+        return (int)hash;
     }
 
     private static int Edge(byte[] luma, int width, int height, int x, int y, int index)

@@ -66,6 +66,32 @@ public class SkinTextureTests
     }
 
     [Fact]
+    public void DifferentImagesDoNotShareThePorePattern()
+    {
+        var first = UniformSkin(96);
+        var second = UniformSkin(96);
+        second.Pixels[0] = 201;
+        second.Pixels[1] = 151;
+        second.Pixels[2] = 126;
+
+        var firstGrain = Grain(first, SkinTexture.Apply(first, 1.0));
+        var secondGrain = Grain(second, SkinTexture.Apply(second, 1.0));
+
+        var differing = 0;
+        for (var i = 0; i < firstGrain.Length; i++)
+        {
+            if (firstGrain[i] != secondGrain[i])
+            {
+                differing++;
+            }
+        }
+
+        Assert.True(
+            differing > firstGrain.Length / 4,
+            $"deux images doivent recevoir deux motifs distincts ({differing} octets sur {firstGrain.Length})");
+    }
+
+    [Fact]
     public void TextureAvoidsStrongEdges()
     {
         // Bande noire de deux pixels : les pixels de peau qui la bordent ont un
@@ -164,6 +190,17 @@ public class SkinTextureTests
 
     private static double LumaMean(RgbImage image) =>
         ImageFilters.ToGray(image).Pixels.Average(value => (double)value);
+
+    private static byte[] Grain(RgbImage before, RgbImage after)
+    {
+        var grain = new byte[before.Pixels.Length];
+        for (var i = 0; i < grain.Length; i++)
+        {
+            grain[i] = (byte)Math.Abs(after.Pixels[i] - before.Pixels[i]);
+        }
+
+        return grain;
+    }
 
     private static double MaxDelta(RgbImage first, RgbImage second)
     {
