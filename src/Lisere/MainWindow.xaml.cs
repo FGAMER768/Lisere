@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Lisere.Services;
+using Lisere.ViewModels;
 using Lisere.Views;
 using Wpf.Ui.Controls;
 
@@ -13,14 +14,20 @@ public partial class MainWindow : FluentWindow
     private readonly DialogService _dialogService;
     private readonly EnhancePage _enhancePage;
     private readonly VideoPage _videoPage;
+    private readonly UpdateViewModel _updateViewModel;
     private Control? _lastPageFocus;
     private bool _isPageDisabled;
 
-    public MainWindow(EnhancePage enhancePage, VideoPage videoPage, DialogService dialogService)
+    public MainWindow(
+        EnhancePage enhancePage,
+        VideoPage videoPage,
+        DialogService dialogService,
+        UpdateViewModel updateViewModel)
     {
         _dialogService = dialogService;
         _enhancePage = enhancePage;
         _videoPage = videoPage;
+        _updateViewModel = updateViewModel;
 
         InitializeComponent();
         ShowPage(enhancePage, ImageTabButton, VideoTabButton);
@@ -37,6 +44,15 @@ public partial class MainWindow : FluentWindow
 
     private void OnVideoTabClick(object sender, RoutedEventArgs e) =>
         ShowPage(_videoPage, VideoTabButton, ImageTabButton);
+
+    private void OnUpdateClick(object sender, RoutedEventArgs e)
+    {
+        var window = new UpdateWindow(_updateViewModel)
+        {
+            Owner = this
+        };
+        window.ShowDialog();
+    }
 
     private void ShowPage(
         FrameworkElement page,

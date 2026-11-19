@@ -1,13 +1,35 @@
 # Liseré
 
+<img src="assets/LisereIcon.svg" width="88" alt="Liseré icon">
+
 [Français](README.md) | [English](README.en.md)
 
-Liseré is a Windows desktop application for enhancing **an image or a video**, comparing the result with the original and exporting the retouched version. All processing is local: no external service and no account.
+Liseré is a Windows desktop application for enhancing **an image or a video**, comparing the result with the original and exporting the retouched version. All processing is local: no external service and no account. Only the optional update check, started on your request, contacts GitHub.
+
+## Installation
+
+The installable build is in the latest [GitHub release](https://github.com/FGAMER768/Lisere/releases/latest). Download [Lisere-Setup.exe](https://github.com/FGAMER768/Lisere/releases/latest/download/Lisere-Setup.exe) and run it: the installer installs Liseré for the current Windows account without administrator rights and without asking to install the application or its dependencies. The package contains the self-contained application and FFmpeg.
+
+By default, Liseré is installed in `%LOCALAPPDATA%\Programs\Lisere`. The installer offers a Start menu shortcut and an optional Desktop shortcut. To uninstall, use **Settings → Apps → Liseré** or `Lisere.exe --uninstall`; images, presets and settings in `%APPDATA%\Lisere` are kept.
+
+The chosen folder must be empty or contain an existing Liseré installation: the installer refuses to overwrite a non-empty folder, because uninstall removes the installation folder as a whole. The package is self-contained and needs no network access to install.
+
+For an unattended deployment, for example in a script or on a workstation image:
+
+```powershell
+.\Lisere-Setup.exe --silent --install-dir="D:\Apps\Lisere" --no-shortcuts
+```
+
+`--silent` installs without UI, `--install-dir=...` selects the folder, `--no-shortcuts` creates no shortcut and `--desktop-shortcut` adds the Desktop shortcut. The exit code is `0` on success and `1` otherwise. The installer also recognises an existing installation through `Lisere.exe` or the `.lisere` marker, so it can update it in place.
+
+> The installer is not code-signed yet: Windows may show a SmartScreen warning. The SHA-256 digest published with the release lets you verify the file.
 
 The interface has two workspaces:
 
 - **Image**: deterministic six-parameter pipeline, presets, automatic estimation, a separate colour-grading menu and JPEG export.
 - **Video**: FFmpeg analysis, before/after preview, frame-by-frame rendering, interchangeable engines (local pipeline or ONNX models), FHD/4K resolutions, 30/60/120 fps, RIFE x2 neural interpolation, deinterlacing, stabilisation, a queue and MP4 export with audio.
+
+FFmpeg ships with the application and is verified by SHA-256 at startup. An **Updates** button in the title bar checks published GitHub versions, downloads the package, verifies its digest, then installs it on restart.
 
 ## Features
 
@@ -31,6 +53,7 @@ The interface has two workspaces:
 
 ### Video
 
+- **Bundled FFmpeg**: Windows build delivered in `ffmpeg/`, with `ffmpeg.exe`, `ffprobe.exe`, the DLLs and a manifest of digests. The package is verified at startup; a missing or modified file disables video features with an explicit reason.
 - File analysis with `ffprobe`: resolution, frame rate, duration, codec, audio presence and codec.
 - Before/after preview on a frame extracted at the chosen position; opening does not compute the preview, it must be requested explicitly (`Ctrl+Enter`).
 - Applies the same six parameters to each frame, with Auto estimation sampled across the clip.
@@ -59,17 +82,33 @@ The interface has two workspaces:
 - Asynchronous processing, waiting dialogs and localised error messages, without raw technical details.
 - Keyboard shortcuts: `Ctrl+O` open, `Ctrl+Enter` start the preview or enhancement, `Ctrl+S` export.
 - Cancellation available for image operations, video analysis and preview, renders and the queue.
+- Updates from GitHub with progress, SHA-256 verification, safe extraction and automatic restart.
+
+## Comparison with the reference
+
+The **Chroma** preset and its tone curve were tuned and then compared with a reference render produced with Topaz. The three images below share the same framing and resolution (1608 x 1608):
+
+| Base (source image) | Topaz (reference) | Liseré (local render) |
+|---|---|---|
+| <img src="assets/comparisons/01-base.jpg" width="260" alt="Base image"> | <img src="assets/comparisons/02-topaz.jpg" width="260" alt="Topaz render"> | <img src="assets/comparisons/03-lisere.jpg" width="260" alt="Liseré render"> |
+
+**Base** is the source image. **Topaz** is the reference render produced with the Ultron CC preset. **Liseré** is the local render, using the Chroma preset and Ultron CC grading.
+
+The comparison covers sharpness, skin and hair micro-texture, leather rendering and midtones. The displayed images are JPEG versions reduced to 900 px for documentation; the working files are not included in the distributed package.
 
 ## Prerequisites
 
 - Windows 10 or Windows 11.
-- [.NET SDK 10.0](https://dotnet.microsoft.com/download) or a later version compatible with `net10.0-windows`.
-- **FFmpeg** with `ffmpeg.exe` and `ffprobe.exe` for video features. Liseré does not redistribute it. It looks in this order: the `LISERE_FFMPEG` variable, the application folder, `C:\ffmpeg\bin`, `C:\ffmpeg`, `C:\Program Files\ffmpeg\bin`, then `PATH`.
-- No database, no account and no network connection are required at runtime.
+- **With the installer**: no .NET runtime to download. The application is self-contained; the installer only uses .NET Framework 4.8, included with Windows 10 and Windows 11.
+- **To build from source**: [.NET SDK 10.0](https://dotnet.microsoft.com/download) or a later version compatible with `net10.0-windows`.
+- **FFmpeg** ships with published builds in `ffmpeg/`; the Video page verifies its digests at startup. For a fresh checkout, run `scripts/fetch-ffmpeg.ps1`. During development, `LISERE_FFMPEG` and an external installation still take precedence.
+- No database or account is required. The optional update check is the only network action.
 
 Three ONNX models are included in `models/` and copied next to the executable: SRCNN x3 (240 KB, Apache-2.0), RIFE 4.9 (20.5 MB, MIT) and YuNet (227 KB, MIT). See [models/README.md](models/README.md) and [Credits, sources and licences](#credits-sources-and-licences). DirectML is used automatically for ONNX engines when the iGPU supports it; otherwise Liseré falls back to the CPU and reports it in the engine note.
 
-## Getting started
+## Running from source
+
+The installer from the release is enough to use Liseré. The following commands are for development:
 
 From the repository root:
 
@@ -83,6 +122,17 @@ To build without running:
 ```powershell
 dotnet build Lisere.slnx
 ```
+
+## Developing with Visual Studio
+
+1. Install **Visual Studio 2026** (recommended) or a recent Visual Studio 2022 with the **.NET Desktop Development** workload, then the [.NET 10 SDK](https://dotnet.microsoft.com/download). `dotnet --version` must return `10.x`.
+2. Open `Lisere.slnx` at the repository root. The solution uses the `.slnx` format, supported by recent Visual Studio versions.
+3. Set `src/Lisere` as the startup project, then press `F5`. During development, `LISERE_FFMPEG` takes precedence over the bundled package; without it, Liseré uses `tools/ffmpeg` or the published bundle.
+4. Tests appear in **Test Explorer** (`Ctrl+E, T`) and also run with `dotnet test Lisere.slnx`. On a fresh checkout, run `scripts/fetch-ffmpeg.ps1` for the video integration tests.
+5. `src/Lisere.Setup` is intentionally outside the solution: it targets `net48` and embeds the published ZIP. Open `src/Lisere.Setup/Lisere.Setup.csproj` separately if needed, but always build the installer with `scripts/build-setup.ps1` so it contains the right package.
+6. Visual Studio's **Build → Publish** is fine for a local test, but produces neither the FFmpeg bundle nor the installer. For a release, use the scripts in [Publishing a release](#publishing-a-release).
+
+> The application targets `net10.0-windows` and publishes as `win-x64` self-contained; the installer targets `net48` so it runs without an extra runtime.
 
 ## Usage
 
@@ -106,6 +156,14 @@ dotnet build Lisere.slnx
 8. To double the frame rate with AI, enable **RIFE x2 interpolation**. The frame-rate list is disabled: RIFE produces exactly two frames per source frame.
 
 Stabilisation, deinterlacing and FFmpeg interpolation are additional passes; RIFE runs inside the render loop. All of them noticeably lengthen the render, especially in HD.
+
+### Updates
+
+1. Click **Updates** in the title bar, then **Check**.
+2. If a newer version is published, click **Install**.
+3. Liseré downloads the package, verifies its SHA-256 digest, inspects the archive, then waits for its own process to exit before replacing its files and restarting.
+
+The update is published as an asset of the latest GitHub release (`Lisere.zip` and `Lisere.zip.sha256`); `Update/version.txt`, read from `master`, advertises the available version. The official installer places Liseré in a writable per-user folder, so files can be replaced without UAC; a copy placed in `C:\Program Files` cannot update itself. Before replacing anything, Liseré verifies the SHA-256, inspects the archive and waits for its own process to exit; a failure leaves the installation untouched. Your images, presets and settings are untouched. The publishing procedure is described in [Publishing a release](#publishing-a-release) and in [`Update/README.md`](Update/README.md).
 
 ### Presets
 
@@ -234,14 +292,15 @@ Texts are grouped in `src/Lisere/Lang/Strings.resx` (French) and `src/Lisere/Lan
 
 | Project | Role |
 |---|---|
-| `src/Lisere` | WPF application, navigation, Image and Video pages, view models, dialog, file and localisation services. |
+| `src/Lisere` | WPF application, navigation, Image and Video pages, view models, dialog, file, localisation, update and uninstall services. |
+| `src/Lisere.Setup` | WPF installer: extracts the embedded package, copies it per user, creates shortcuts and registers uninstall. |
 | `src/Lisere.Core` | Image models, filters, automatic estimation, validation, enhancement pipeline, face detection (`FaceBox`), clip processing. |
 | `src/Lisere.Ai` | Engine abstraction (`IFrameEnhancer`, `IFrameInterpolator`), classic engine, tiled ONNX super-resolution, RIFE interpolation, YuNet face detection, DirectML/CPU sessions, catalogue and SHA-256 verification. |
-| `src/Lisere.Video` | FFmpeg discovery, `ffprobe`, frame extraction, video rendering, deinterlacing, stabilisation, interpolation, video preset import, progress and cancellation. |
+| `src/Lisere.Video` | FFmpeg discovery and verification, `ffprobe`, frame extraction, video rendering, deinterlacing, stabilisation, interpolation, video preset import, progress and cancellation. |
 | `tests/Lisere.Core.Tests` | Pipeline, filters, parameters, estimation and parity with the reference Python implementation. |
 | `tests/Lisere.Ai.Tests` | Catalogue, tile planning, real ONNX inference, engine availability. |
-| `tests/Lisere.Video.Tests` | ffprobe parser, FFmpeg command construction, end-to-end render with a generated clip. |
-| `tests/Lisere.App.Tests` | Image and Video view models, dialogs, image codec, localisation, face detection and error messages. |
+| `tests/Lisere.Video.Tests` | ffprobe parser, FFmpeg command construction, FFmpeg bundle verification, end-to-end render with a generated clip. |
+| `tests/Lisere.App.Tests` | Image, Video and Update view models, dialogs, image codec, localisation, face detection, uninstall and error messages. |
 
 The Image page remains organised around `EnhanceViewModel` and `IEnhancementOrchestrator`. The Video page uses `VideoViewModel`, split into partial files by function (queue, preview, render); it delegates analysis to `IVideoProbe`, thumbnails to `VideoPreviewRenderer`, confirmation-plan construction to `VideoRenderPlanFactory` and rendering to `IVideoRenderService`. Engine selection goes through `IFrameEnhancer`: the interface and the video pipeline are completely unaware of which model is used. The queue is carried by `VideoQueueItem`, which freezes a complete render request; `VideoQueueRunner` then calls `VideoRenderService` sequentially, without stopping the queue when one clip fails.
 
@@ -257,14 +316,19 @@ Liseré does not redistribute any proprietary weights, code or media. The third-
 - **RIFE 4.9** / Practical-RIFE: code and weights under the MIT licence (Copyright (c) Megvii Inc. and hzwer). ONNX export used: [edgetools/rife](https://huggingface.co/edgetools/rife). Licence: `models/rife/LICENSE`.
 - **Sub-pixel SRCNN x3**: model by Shi et al. (2016), distributed by the [ONNX Model Zoo](https://github.com/onnx/models/tree/main/validated/vision/super_resolution/sub_pixel_cnn_2016), Apache-2.0 licence. Licence: `models/onnx/LICENSE`.
 - **ONNX Runtime and DirectML**: Microsoft, MIT licence. Used for local inference of the ONNX models.
-- **FFmpeg**: [ffmpeg.org](https://ffmpeg.org), under the LGPL or GPL depending on the build. Liseré does not redistribute it; it must be installed separately.
+- **FFmpeg**: [ffmpeg.org](https://ffmpeg.org), BtbN build `autobuild-2026-11-18-12-39` (`N-129046-g3a78197c4c`), under GNU GPL v3. The bundled package, provenance and digests are described in `ffmpeg/README.md`; the licence text is in `ffmpeg/LICENSE.txt`. Source code is available from [ffmpeg.org](https://ffmpeg.org/download.html) and the build recipe from [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds).
 
 ### Libraries and tests
 
 - **WPF-UI** (lepo.co), MIT licence, for the interface controls and theme.
+- **Fluent System Icons** (Microsoft), MIT licence, for the installer icons.
 - **CommunityToolkit.Mvvm** (.NET Foundation), MIT licence, for the view models.
 - **Microsoft.Extensions.Hosting**, MIT licence.
 - **xUnit.net** and **Microsoft.NET.Test.Sdk**, Apache-2.0 and MIT licences, for the tests.
+
+### Visual identity
+
+- The Liseré icon (`assets/LisereIcon.svg`, rendered as `assets/Lisere.ico` at 16 to 256 px) was created for the project.
 
 ### Analysis references and trademarks
 
@@ -276,6 +340,7 @@ Liseré does not redistribute any proprietary weights, code or media. The third-
 
 - `tests/Lisere.App.Tests/TestData/face.jpg`: official portrait of President Barack Obama, photographed by Pete Souza for the Obama-Biden transition (2009), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), attribution Pete Souza. Source: [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Official_portrait_of_Barack_Obama.jpg), cropped and resized for the tests. See `tests/Lisere.App.Tests/TestData/README.md`.
 - `tests/Lisere.App.Tests/TestData/preset-photo.jpg`: Blue Lagoon photo by Jeff Sheldon, distributed by Lorem Picsum (ID 512, Unsplash licence), used for colour regression testing.
+- `assets/comparisons/`: Base / Topaz / Liseré comparison images supplied by the author, reduced to 900 px for documentation. They are not included in the distributed package.
 
 ### Documentation
 
@@ -293,7 +358,7 @@ dotnet test Lisere.slnx
 
 The solution contains four xUnit test projects: `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` and `Lisere.App.Tests`.
 
-Current state: **340 tests** (120 Core, 15 Ai, 36 Video, 169 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test.
+Current state: **383 tests** (120 Core, 15 Ai, 40 Video, 208 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
 
 Video integration tests generate a clip with FFmpeg and verify rendering, audio preservation, deinterlacing, exact size, cancellation and preview extraction. They are silently skipped when FFmpeg cannot be found, so the rest of the suite remains runnable on a machine without video tooling.
 
@@ -305,15 +370,50 @@ Preset import is tested on synthetic JSON and, when `LISERE_PRESET_SAMPLE_DIR` p
 
 RIFE is tested at three levels: real inference on two images, video rendering with a fake interpolator, then a real render with the shipped model (10 to 20 fps, audio preserved).
 
+## Publishing a release
+
+Publishing is scripted so the application, update package and installer stay consistent.
+
+1. Change `<Version>` in `src/Lisere/Lisere.csproj`, for example `1.0.1`.
+2. Generate the update package:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts/publish-update.ps1
+   ```
+
+   The script publishes `Release`/`win-x64` self-contained, checks `Lisere.exe` and the `ffmpeg/` folder, then writes `Update/Lisere.zip`, `Update/Lisere.zip.sha256` and `Update/version.txt`.
+
+3. Rebuild the installer, which embeds that ZIP:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts/build-setup.ps1
+   ```
+
+   Outputs: `artifacts/installer/Lisere-Setup.exe` (stable name), `Lisere-Setup-<version>.exe` and `Lisere-Setup.exe.sha256`. The installer must always be rebuilt after `publish-update.ps1`.
+
+4. Create a GitHub release tagged `v<version>` and attach the four assets: `Lisere-Setup.exe`, `Lisere-Setup.exe.sha256`, `Lisere.zip` and `Lisere.zip.sha256`. The release must remain the latest one: the application uses `releases/latest`.
+
+5. Commit and push `Update/version.txt` **after** uploading the assets. The application reads this file from `master` to advertise a version; the ZIP and installer remain release assets and are never committed.
+
+6. Verify from a previous installation: **Updates → Check → Install**, then the restart. The SHA-256 is checked before any replacement; on failure, no file is changed.
+
+`Update/*.zip`, `Update/*.sha256` and `artifacts/` are ignored by Git. The package format and extraction safeguards are detailed in [`Update/README.md`](Update/README.md).
+
 ## Repository layout
 
 ```text
 Lisere.slnx
+assets/
+  Lisere.ico
+  LisereIcon.svg
+  FluentSystemIcons-Regular.ttf
+  comparisons/
 src/
   Lisere/
   Lisere.Core/
   Lisere.Ai/
   Lisere.Video/
+  Lisere.Setup/
 tests/
   Lisere.App.Tests/
   Lisere.Core.Tests/
@@ -324,4 +424,14 @@ models/
   onnx/
   rife/
   yunet/
+ffmpeg/
+  manifest.json
+  LICENSE.txt
+Update/
+  version.txt
+  README.md
+scripts/
+  fetch-ffmpeg.ps1
+  publish-update.ps1
+  build-setup.ps1
 ```

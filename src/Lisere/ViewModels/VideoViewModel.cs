@@ -13,6 +13,7 @@ using Lisere.Core.Enhancement;
 using Lisere.Core.Imaging;
 using Lisere.Models;
 using Lisere.Services;
+using Lisere.Video.Ffmpeg;
 using Lisere.Video.Preview;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
@@ -32,6 +33,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private readonly VideoQueueRunner _queueRunner;
     private readonly IDialogService _dialogService;
     private readonly ILocalizationService _localization;
+    private readonly VideoToolchain? _toolchain;
     private readonly IFrameInterpolator? _rife;
     private readonly Stopwatch _renderWatch = new();
     private int _frameVersion;
@@ -182,7 +184,8 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         IDialogService dialogService,
         ILocalizationService localization,
         IReadOnlyList<IFrameEnhancer> engines,
-        IReadOnlyList<IFrameInterpolator> interpolators)
+        IReadOnlyList<IFrameInterpolator> interpolators,
+        VideoToolchain? toolchain = null)
     {
         _fileDialogService = fileDialogService;
         _probe = probe;
@@ -191,6 +194,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         _queueRunner = new VideoQueueRunner(renderService);
         _dialogService = dialogService;
         _localization = localization;
+        _toolchain = toolchain;
         _rife = interpolators.FirstOrDefault(interpolator => interpolator.IsAvailable)
             ?? interpolators.FirstOrDefault();
 
@@ -279,6 +283,15 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     public string ToolchainNote =>
         _probe.UnavailableReason ?? _renderService.UnavailableReason ?? string.Empty;
+
+    public string ToolchainStatusText => _toolchain switch
+    {
+        { IsAvailable: true, IsBundled: true } =>
+            Strings.Format("videoFfmpegBundled", _toolchain.BundleVersion ?? string.Empty),
+        { IsAvailable: true } => Strings["videoFfmpegExternal"],
+        null when _probe.IsAvailable => Strings["videoFfmpegExternal"],
+        _ => Strings["videoFfmpegMissing"]
+    };
 
     public EnhancementParameters CurrentParameters => new EnhancementParameters(
         FixCompression,
@@ -468,6 +481,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         RebuildFrameRates();
         UpdateEngineNote();
         OnPropertyChanged(nameof(RifeNote));
+        OnPropertyChanged(nameof(ToolchainStatusText));
         RefreshQueueStatuses();
         RenderWarnings();
         UpdateVideoInfo();

@@ -8,6 +8,8 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>Lisere</AssemblyName>
     <RootNamespace>Lisere</RootNamespace>
+    <ApplicationIcon>..\..\assets\Lisere.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,5 +28,29 @@
     <Content Include="..\..\models\catalog.json" Link="models\catalog.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\models\onnx\*.onnx" Link="models\onnx\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <ItemGroup Condition="Exists('..\..\tools\ffmpeg\ffmpeg.exe')">
+    <Content Include="..\..\tools\ffmpeg\*.*"
+             Link="ffmpeg\%(Filename)%(Extension)"
+             ExcludeFromSingleFile="true"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\ffmpeg\manifest.json"
+             Link="ffmpeg\manifest.json"
+             ExcludeFromSingleFile="true"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\ffmpeg\LICENSE.txt"
+             Link="ffmpeg\LICENSE.txt"
+             ExcludeFromSingleFile="true"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="RequireBundledFfmpeg"
+          BeforeTargets="Publish"
+          Condition="!Exists('..\..\tools\ffmpeg\ffmpeg.exe')">
+    <Error Text="Le paquet FFmpeg intégré est absent. Lancez scripts/fetch-ffmpeg.ps1 avant de publier Lisere." />
+  </Target>
 
 </Project>

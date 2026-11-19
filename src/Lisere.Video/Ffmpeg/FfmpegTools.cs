@@ -3,17 +3,24 @@ namespace Lisere.Video.Ffmpeg;
 public sealed record FfmpegTools(string FfmpegPath, string FfprobePath);
 
 /// <summary>
-/// Locates a usable ffmpeg/ffprobe pair. Lisere never bundles them: the user
-/// installs FFmpeg, or points LISERE_FFMPEG at the folder containing both tools.
+/// Locates a usable ffmpeg/ffprobe pair. A published build ships a verified
+/// bundle in its ffmpeg folder; the external locations remain as a development
+/// fallback for a fresh checkout without the bundled binaries.
 /// </summary>
 public sealed class VideoToolchain
 {
     public const string EnvironmentVariable = "LISERE_FFMPEG";
 
-    private VideoToolchain(FfmpegTools? tools, string? unavailableReason)
+    private VideoToolchain(
+        FfmpegTools? tools,
+        string? unavailableReason,
+        bool isBundled,
+        string? bundleVersion)
     {
         Tools = tools;
         UnavailableReason = unavailableReason;
+        IsBundled = isBundled;
+        BundleVersion = bundleVersion;
     }
 
     public FfmpegTools? Tools { get; }
@@ -22,14 +29,57 @@ public sealed class VideoToolchain
 
     public string? UnavailableReason { get; }
 
-    public static VideoToolchain Locate(string? explicitDirectory = null)
+    /// <summary>True when the tools came from the verified application bundle.</summary>
+    public bool IsBundled { get; }
+
+    public string? BundleVersion { get; }
+
+    public static VideoToolchain Locate(
+        string? explicitDirectory = null,
+        string? bundledDirectory = null)
     {
-        foreach (var directory in CandidateDirectories(explicitDirectory))
+        foreach (var directory in ExplicitDirectories(explicitDirectory))
         {
             var tools = TryDirectory(directory);
             if (tools is not null)
             {
-                return new VideoToolchain(tools, null);
+                return new VideoToolchain(tools, null, isBundled: false, bundleVersion: null);
+            }
+        }
+
+        var bundleDirectory = bundledDirectory ??
+            Path.Combine(AppContext.BaseDirectory, FfmpegBundle.DirectoryName);
+        if (Directory.Exists(bundleDirectory))
+        {
+            if (!File.Exists(Path.Combine(bundleDirectory, FfmpegBundle.ManifestFileName)))
+            {
+                return new VideoToolchain(
+                    null,
+                    "Le paquet FFmpeg intégré est incomplet : son manifeste est absent.",
+                    isBundled: false,
+                    bundleVersion: null);
+            }
+
+            var verification = FfmpegBundle.Verify(bundleDirectory);
+            return verification.IsValid
+                ? new VideoToolchain(
+                    verification.Tools,
+                    null,
+                    isBundled: true,
+                    verification.Version)
+                : new VideoToolchain(
+                    null,
+                    verification.Error,
+                    isBundled: false,
+                    verification.Version);
+        }
+
+        foreach (var directory in CandidateDirectories())
+        {
+            var tools = TryDirectory(directory);
+            if (tools is not null)
+            {
+                return new VideoToolchain(tools, null, isBundled: false, bundleVersion: null);
             }
         }
 
@@ -38,20 +88,21 @@ public sealed class VideoToolchain
             var tools = TryDirectory(directory);
             if (tools is not null)
             {
-                return new VideoToolchain(tools, null);
+                return new VideoToolchain(tools, null, isBundled: false, bundleVersion: null);
             }
         }
 
         return new VideoToolchain(
             null,
-            "FFmpeg est introuvable. Installez-le et ajoutez-le au PATH, ou définissez " +
-            $"{EnvironmentVariable} vers le dossier contenant ffmpeg.exe et ffprobe.exe.");
+            "FFmpeg est introuvable. Réinstallez Liseré pour restaurer le paquet intégré.",
+            isBundled: false,
+            bundleVersion: null);
     }
 
     public FfmpegTools RequireTools() =>
         Tools ?? throw new VideoToolchainException(UnavailableReason!);
 
-    private static IEnumerable<string> CandidateDirectories(string? explicitDirectory)
+    private static IEnumerable<string> ExplicitDirectories(string? explicitDirectory)
     {
         if (!string.IsNullOrWhiteSpace(explicitDirectory))
         {
@@ -63,9 +114,11 @@ public sealed class VideoToolchain
         {
             yield return environment;
         }
+    }
 
+    private static IEnumerable<string> CandidateDirectories()
+    {
         yield return AppContext.BaseDirectory;
-        yield return Path.Combine(AppContext.BaseDirectory, "ffmpeg");
         yield return Path.Combine(AppContext.BaseDirectory, "tools", "ffmpeg");
         yield return @"C:\ffmpeg\bin";
         yield return @"C:\ffmpeg";

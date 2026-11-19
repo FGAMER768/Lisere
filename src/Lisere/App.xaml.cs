@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Windows;
 using Lisere.Ai.Enhancement;
 using Lisere.Ai.Interpolation;
@@ -56,6 +57,8 @@ public partial class App : Application
                 services.AddSingleton<VideoViewModel>();
                 services.AddSingleton<VideoPage>();
 
+                services.AddSingleton<IUpdateService, UpdateService>();
+                services.AddSingleton<UpdateViewModel>();
                 services.AddSingleton<MainWindow>();
             })
             .Build();
@@ -64,6 +67,15 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        if (e.Args.Any(argument => string.Equals(
+                argument,
+                "--uninstall",
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            RunUninstall();
+            return;
+        }
 
         _host.Start();
         var window = _host.Services.GetRequiredService<MainWindow>();
@@ -76,6 +88,36 @@ public partial class App : Application
         _host.StopAsync(TimeSpan.FromSeconds(2)).GetAwaiter().GetResult();
         _host.Dispose();
         base.OnExit(e);
+    }
+
+    private void RunUninstall()
+    {
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        var localization = new LocalizationService(new JsonLanguageStore());
+        var window = new UninstallWindow(localization);
+        if (window.ShowDialog() != true)
+        {
+            Shutdown();
+            return;
+        }
+
+        try
+        {
+            UninstallService.Launch(AppContext.BaseDirectory);
+        }
+        catch (UninstallException exception)
+        {
+            var message = exception.Error == UninstallError.CloseRunningApplication
+                ? localization["uninstallRunning"]
+                : localization["uninstallError"];
+            MessageBox.Show(
+                message,
+                localization["uninstallWindowTitle"],
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+
+        Shutdown();
     }
 
     private static ModelCatalog? LoadModelCatalog()

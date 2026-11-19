@@ -35,6 +35,23 @@
                 <StackPanel Margin="0,0,6,0"
                             VerticalAlignment="Center"
                             Orientation="Horizontal">
+                    <ui:Button MinHeight="26"
+                               Margin="0,0,8,0"
+                               Padding="8,1"
+                               AutomationProperties.HelpText="{Binding Strings[updateButton]}"
+                               AutomationProperties.Name="{Binding Strings[updateButton]}"
+                               Click="OnUpdateClick"
+                               Content="{Binding Strings[updateButton]}"
+                               FontSize="12"
+                               Icon="{ui:SymbolIcon ArrowSync24}"
+                               ToolTip="{Binding Strings[updateButton]}">
+                        <ui:Button.Style>
+                            <Style TargetType="{x:Type ui:Button}"
+                                   BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Appearance" Value="Transparent" />
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
                     <ui:Button MinWidth="36"
                                MinHeight="26"
                                Margin="0,0,4,0"

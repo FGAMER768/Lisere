@@ -54,7 +54,7 @@ public class VideoRenderIntegrationTests : IDisposable
                 engine,
                 new FrameEnhancementRequest(EnhancementParameters.Zero, OutputScale: 2),
                 new VideoRenderSettings(output, Quality: 30, EncodingPreset: "ultrafast")),
-            new Progress<VideoRenderProgress>(progress.Add),
+            new SynchronousProgress<VideoRenderProgress>(progress.Add),
             CancellationToken.None);
 
         Assert.True(File.Exists(output));
@@ -68,6 +68,11 @@ public class VideoRenderIntegrationTests : IDisposable
         Assert.True(rendered.HasAudio);
         Assert.InRange(rendered.DurationSeconds, 0.5, 2.0);
         Assert.Contains(progress, item => item.Stage == VideoRenderStage.Rendering);
+    }
+
+    private sealed class SynchronousProgress<T>(Action<T> report) : IProgress<T>
+    {
+        public void Report(T value) => report(value);
     }
 
     [Fact]

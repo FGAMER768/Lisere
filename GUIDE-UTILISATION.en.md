@@ -7,7 +7,7 @@ This guide covers two levels:
 1. **The application guide**: launching Liseré, understanding the window, navigating and completing a project from start to finish.
 2. **The feature guide**: every page, button, setting and limit, with usage advice.
 
-Liseré runs **entirely locally**: no image, video or setting is sent over the Internet. No account is required.
+Liseré runs **entirely locally**: no image, video or setting is sent over the Internet. No account is required. Only the optional update check, started on your request, contacts GitHub.
 
 ---
 
@@ -19,6 +19,7 @@ Liseré enhances an **image** or a **video**, then lets you compare the result w
 |---|---|
 | **Image** | Open a photo, apply a six-setting pipeline, estimate the parameters automatically, compare before/after and export as JPEG. |
 | **Video** | Analyse a clip with FFmpeg, prepare a preview, render a one-second test, export the complete clip as MP4 with audio, or process several clips in a queue. |
+| **Updates** | Check published GitHub versions, download the package, verify its digest and restart with the new version. |
 
 Both workspaces share the same six main parameters and enhancement presets; Ultron grading is specific to the Image page. Video adds enhancement engines, resolution, frame rate, stabilisation, deinterlacing, RIFE interpolation, codec and the queue.
 
@@ -31,21 +32,38 @@ Both workspaces share the same six main parameters and enhancement presets; Ultr
 ### 2.1 Prerequisites
 
 - **Windows 10 or Windows 11**.
-- **.NET SDK 10.0** or a version compatible with `net10.0-windows` to build and run from source.
-- **FFmpeg** for video features: `ffmpeg.exe` and `ffprobe.exe`. The Image page works without FFmpeg.
+- **Installed build**: no .NET runtime to download. The application is self-contained; the installer only uses .NET Framework 4.8, included with Windows 10 and Windows 11.
+- **From source**: **.NET SDK 10.0** or a version compatible with `net10.0-windows` to build and run.
+- **Bundled FFmpeg** for video features: `ffmpeg.exe`, `ffprobe.exe`, the DLLs and a manifest are delivered in `ffmpeg/` and verified by SHA-256 at startup. The Image page works without FFmpeg.
 
-Liseré looks for FFmpeg in this order:
+To develop from a checkout without the binaries, run `scripts/fetch-ffmpeg.ps1`. Liseré then looks for FFmpeg in this order:
 
 1. the `LISERE_FFMPEG` environment variable;
-2. the application folder;
-3. `C:\ffmpeg\bin`;
-4. `C:\ffmpeg`;
-5. `C:\Program Files\ffmpeg\bin`;
-6. the Windows `PATH`.
+2. the verified `ffmpeg/manifest.json` package shipped with the application;
+3. the application folder;
+4. `C:\ffmpeg\bin`;
+5. `C:\ffmpeg`;
+6. `C:\Program Files\ffmpeg\bin`;
+7. the Windows `PATH`.
+
+If a manifest is present but a file is missing or modified, video features are disabled instead of running an unverified binary.
 
 Three ONNX models are provided in `models/` and copied next to the executable: **Super-Resolution CNN x3**, **RIFE 4.9** and **YuNet** (face detection for Image page enhancement). The classic engine depends on no model. Licences and sources are detailed in section **12** and in [models/README.md](models/README.md).
 
-### 2.2 Running from source
+### 2.2 Installing or running from source
+
+#### With the installer
+
+1. Download **Lisere-Setup.exe** from the [latest GitHub release](https://github.com/FGAMER768/Lisere/releases/latest).
+2. Run the program. It does not ask for administrator rights and needs no additional .NET runtime: the application and FFmpeg are included.
+3. Choose the installation folder or keep the default, `%LOCALAPPDATA%\Programs\Lisere`, then tick the optional Desktop shortcut. A Start menu shortcut is always created.
+4. Click **Install**, then **Launch Liseré** when it finishes.
+
+The installer is not code-signed yet: Windows may show a SmartScreen warning. The SHA-256 digest published with the release lets you verify the file.
+
+To uninstall, use **Settings → Apps → Liseré** or `Lisere.exe --uninstall`. The application, its shortcuts and its uninstall registration are removed; images, presets and settings in `%APPDATA%\Lisere` are kept.
+
+#### From source
 
 From the repository root:
 
@@ -63,7 +81,7 @@ dotnet build Lisere.slnx
 ### 2.3 First launch
 
 1. The window opens on the **Image** page.
-2. To work on a video, check that FFmpeg is installed; otherwise the Video page shows why it is unavailable.
+2. The Video page reports whether the bundled FFmpeg package is verified; otherwise it shows why it is unavailable.
 3. Choose the language with **FR** or **EN** in the title bar. The choice is stored in `%APPDATA%\Lisere\settings.json` and restored on the next launch.
 
 ---
@@ -74,7 +92,7 @@ The window is organised into four areas:
 
 | Area | Role |
 |---|---|
-| **Title bar** | Application name, **FR** / **EN** buttons, window system buttons. |
+| **Title bar** | Application name, **Updates** button, **FR** / **EN** buttons, window system buttons. |
 | **Image / Video tabs** | Switch the workspace. The active tab is highlighted. |
 | **Central preview** | Shows the image or video frame, with the before/after comparison. |
 | **Right column** | Preset, settings, export options and, for video, engine, resolution and queue. |
@@ -440,8 +458,20 @@ Messages are translated into both languages. Source texts are in `src/Lisere/Lan
 
 - No file upload, no telemetry, no account.
 - ONNX models are local and verified by SHA-256.
-- FFmpeg is called locally.
-- The application does not need the Internet to work.
+- FFmpeg is called locally and its bundled package is verified by SHA-256.
+- The application does not need the Internet to work; only the voluntary update check contacts GitHub.
+
+### 7.5 Updates
+
+The **Updates** button in the title bar opens a dedicated window:
+
+1. **Check** reads `Update/version.txt` on GitHub and compares the published version with the application version.
+2. If a newer version exists, **Install** downloads `Lisere.zip` from the latest release, verifies its SHA-256 digest and checks every archive path.
+3. Liseré closes, a script waits for the process to exit, copies the files and restarts the application. Your settings in `%APPDATA%\Lisere` remain untouched.
+
+The official installer places the application in a writable per-user folder, which is what allows updating without UAC. If you copy Liseré to `C:\Program Files` or another protected folder, checking may work but installation will stop with a message explaining that the folder is not writable.
+
+A network error, a different digest or a non-writable installation folder stops the operation with a localised message; no application file is replaced before the full package is validated.
 
 ---
 
@@ -481,7 +511,7 @@ Messages are translated into both languages. Source texts are in `src/Lisere/Lan
 
 ### "The video engine is unavailable"
 
-FFmpeg or `ffprobe` cannot be found. Check the `LISERE_FFMPEG` variable, the application folder, `C:\ffmpeg\bin`, `C:\ffmpeg`, `C:\Program Files\ffmpeg\bin` or `PATH`. The Image page remains usable without FFmpeg.
+FFmpeg or `ffprobe` cannot be found, or the bundled package was modified. Reinstall Liseré or run `scripts/fetch-ffmpeg.ps1`; during development, also check `LISERE_FFMPEG`, `C:\ffmpeg\bin`, `C:\ffmpeg`, `C:\Program Files\ffmpeg\bin` and `PATH`. The Image page remains usable without FFmpeg.
 
 ### "Model unavailable" or a greyed-out neural engine
 
@@ -554,6 +584,6 @@ In `%APPDATA%\Lisere\settings.json`. The language choice is stored there.
 - **ONNX Runtime / DirectML**: Microsoft, MIT licence.
 - **WPF-UI**, **CommunityToolkit.Mvvm** and **Microsoft.Extensions.Hosting**: MIT licences.
 - **xUnit.net** and **Microsoft.NET.Test.Sdk**: Apache-2.0 and MIT.
-- **FFmpeg**: LGPL or GPL depending on the build; installed separately, not redistributed.
+- **FFmpeg**: BtbN build `N-129046-g3a78197c4c`, GNU GPL v3; bundled package verified by SHA-256. Provenance and licence in `ffmpeg/README.md` and `ffmpeg/LICENSE.txt`.
 - The After Effects presets mentioned belong to their owners; no `.ffx` file is distributed. Topaz and Adobe references are trademarks of their owners; no proprietary weights, code or media are included.
 - Test images and their sources are documented in `tests/Lisere.App.Tests/TestData/README.md`. The full list is in the **Credits, sources and licences** section of the [English README](README.en.md#credits-sources-and-licences).

@@ -376,3 +376,10 @@ Workspace/
 
 # Local-only analysis notes
 docs/
+
+# Bundled FFmpeg binaries (fetched by scripts/fetch-ffmpeg.ps1)
+tools/ffmpeg/
+
+# Generated update packages (published as GitHub release assets)
+Update/*.zip
+Update/*.sha256

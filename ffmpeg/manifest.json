@@ -1,0 +1,19 @@
+{
+  "version": "N-129046-g3a78197c4c",
+  "source": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/tag/autobuild-2026-11-18-12-39",
+  "archiveUrl": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-18-12-39/ffmpeg-N-129046-g3a78197c4c-win64-gpl-shared.zip",
+  "archiveSha256": "2bbd22022c116cc146eb25fb3b4d6a1e716be48bb430e7ecc6aefe39e60076ca",
+  "archivePrefix": "ffmpeg-N-129046-g3a78197c4c-win64-gpl-shared",
+  "license": "GPL-3.0-only",
+  "files": {
+    "ffmpeg.exe": "3837b6a48f702b4f4ee072d1afedac8ae3b616f616c2ea135b89a875ca64a515",
+    "ffprobe.exe": "25c1c6b704b514d4072aceb6b7748e040a923d07277827792e073fba710598dc",
+    "avcodec-63.dll": "0184dc1c7272fc226478eb31ba5fe487dfed36d14312caa3f05f35f78738470d",
+    "avdevice-63.dll": "a030616bc01827dbd7b380c6f074978938f3c0747d51bceb6f81402ae84f9009",
+    "avfilter-12.dll": "56d52ad329ca368e9d104e720aa9b075acdb212ee049ed8b7ae395d5f84e2446",
+    "avformat-63.dll": "3b62c267fd7f6bcc0a7d4eece0a4d0de4f9b005237fad3a4aa08d6cb28c00519",
+    "avutil-61.dll": "2a4f8f7ea2e4dd42303da828c7468f965e2b0ca3ebfcf5b4e2694f248c82b6f3",
+    "swresample-7.dll": "3d7d0fc3fdc88b8ecfe7eff0ff8cd1ebad6cb93bf248fefd0e4ad36853b7166d",
+    "swscale-10.dll": "9b98491b82dacab7d66481faf3a0b6301033881d0c0e8ea20deffc8b9e9802ef"
+  }
+}

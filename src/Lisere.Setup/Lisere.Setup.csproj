@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>LisereSetup</AssemblyName>
+    <RootNamespace>Lisere.Setup</RootNamespace>
+    <ApplicationIcon>..\..\assets\Lisere.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Company>FGAMER768</Company>
+    <Product>Liseré</Product>
+    <Description>Programme d'installation de Liseré</Description>
+    <Copyright>Copyright © 2026 FGAMER768</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies"
+                      Version="1.0.3"
+                      PrivateAssets="all" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\assets\Lisere.ico" Link="Assets\Lisere.ico" />
+    <Resource Include="..\..\assets\FluentSystemIcons-Regular.ttf"
+              Link="Assets\FluentSystemIcons-Regular.ttf" />
+    <EmbeddedResource Include="..\..\Update\Lisere.zip"
+                      Link="Payload\Lisere.zip"
+                      LogicalName="Lisere.Setup.Payload.zip"
+                      Condition="Exists('..\..\Update\Lisere.zip')" />
+  </ItemGroup>
+
+</Project>

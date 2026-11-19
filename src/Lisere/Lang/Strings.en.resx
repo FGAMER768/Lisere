@@ -870,4 +870,157 @@
   <data name="paramRefineFacesNote" xml:space="preserve">
     <value>Detects faces and strengthens their micro-texture; the rest of the image keeps its own.</value>
   </data>
+  <data name="updateButton" xml:space="preserve">
+    <value>Updates</value>
+  </data>
+  <data name="updateWindowTitle" xml:space="preserve">
+    <value>Liseré updates</value>
+  </data>
+  <data name="updateHeading" xml:space="preserve">
+    <value>Keep Liseré up to date</value>
+  </data>
+  <data name="updateCurrentVersion" xml:space="preserve">
+    <value>Installed version: {0}</value>
+  </data>
+  <data name="updateIdle" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="updateIdleDetail" xml:space="preserve">
+    <value>Liseré can look for the latest published version on GitHub.</value>
+  </data>
+  <data name="updateChecking" xml:space="preserve">
+    <value>Looking for an update...</value>
+  </data>
+  <data name="updateCheckingDetail" xml:space="preserve">
+    <value>Connecting to GitHub.</value>
+  </data>
+  <data name="updateAvailable" xml:space="preserve">
+    <value>Version {0} available</value>
+  </data>
+  <data name="updateAvailableDetail" xml:space="preserve">
+    <value>The update will be downloaded, verified, then installed on restart.</value>
+  </data>
+  <data name="updateUpToDate" xml:space="preserve">
+    <value>Liseré is up to date</value>
+  </data>
+  <data name="updateUpToDateDetail" xml:space="preserve">
+    <value>Version {0} is the latest release.</value>
+  </data>
+  <data name="updateInvalidVersion" xml:space="preserve">
+    <value>Published version is unreadable</value>
+  </data>
+  <data name="updateInvalidVersionDetail" xml:space="preserve">
+    <value>GitHub returned a version Liseré cannot read. Try again later.</value>
+  </data>
+  <data name="updateNetworkError" xml:space="preserve">
+    <value>Update check failed</value>
+  </data>
+  <data name="updateNetworkErrorDetail" xml:space="preserve">
+    <value>Check your Internet connection, then try again.</value>
+  </data>
+  <data name="updateDownloading" xml:space="preserve">
+    <value>Downloading the update</value>
+  </data>
+  <data name="updateDownloadingDetail" xml:space="preserve">
+    <value>The package is being fetched from GitHub.</value>
+  </data>
+  <data name="updateVerifying" xml:space="preserve">
+    <value>Verifying integrity</value>
+  </data>
+  <data name="updateVerifyingDetail" xml:space="preserve">
+    <value>The package is checked against its SHA-256 digest.</value>
+  </data>
+  <data name="updateExtracting" xml:space="preserve">
+    <value>Preparing files</value>
+  </data>
+  <data name="updateExtractingDetail" xml:space="preserve">
+    <value>The package is inspected and unpacked into a temporary folder.</value>
+  </data>
+  <data name="updateApplying" xml:space="preserve">
+    <value>Installing on restart</value>
+  </data>
+  <data name="updateApplyingDetail" xml:space="preserve">
+    <value>Liseré will close, replace its files, then restart.</value>
+  </data>
+  <data name="updateInstallScheduled" xml:space="preserve">
+    <value>Update ready</value>
+  </data>
+  <data name="updateInstallScheduledDetail" xml:space="preserve">
+    <value>Liseré is restarting with the new version.</value>
+  </data>
+  <data name="updateCanceled" xml:space="preserve">
+    <value>Update cancelled</value>
+  </data>
+  <data name="updateCanceledDetail" xml:space="preserve">
+    <value>No application file was changed.</value>
+  </data>
+  <data name="updateFailed" xml:space="preserve">
+    <value>The update failed</value>
+  </data>
+  <data name="updateCheckFailed" xml:space="preserve">
+    <value>The update check failed</value>
+  </data>
+  <data name="updateInstall" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="updateCheck" xml:space="preserve">
+    <value>Check</value>
+  </data>
+  <data name="updateExplanation" xml:space="preserve">
+    <value>Your images, presets and settings stay in place. Only application files are replaced.</value>
+  </data>
+  <data name="updateProgress" xml:space="preserve">
+    <value>Update progress</value>
+  </data>
+  <data name="updateSecurityNote" xml:space="preserve">
+    <value>The package is fetched over HTTPS, checked with SHA-256 and inspected before any copy. If it fails, Liseré restarts with its current version.</value>
+  </data>
+  <data name="errorUpdateDownload" xml:space="preserve">
+    <value>The update download failed.</value>
+  </data>
+  <data name="errorUpdateChecksum" xml:space="preserve">
+    <value>The update package is incomplete or corrupted. Try again.</value>
+  </data>
+  <data name="errorUpdatePackage" xml:space="preserve">
+    <value>The update package is invalid. Try again.</value>
+  </data>
+  <data name="errorUpdateAccess" xml:space="preserve">
+    <value>Liseré cannot write to its installation folder. Move the application to a folder you can write to.</value>
+  </data>
+  <data name="errorUpdateInstall" xml:space="preserve">
+    <value>The installer could not start. Try again.</value>
+  </data>
+  <data name="videoFfmpegBundled" xml:space="preserve">
+    <value>Bundled FFmpeg verified · {0}</value>
+  </data>
+  <data name="videoFfmpegExternal" xml:space="preserve">
+    <value>External FFmpeg detected</value>
+  </data>
+  <data name="videoFfmpegMissing" xml:space="preserve">
+    <value>FFmpeg unavailable</value>
+  </data>
+  <data name="uninstallWindowTitle" xml:space="preserve">
+    <value>Uninstall Liseré</value>
+  </data>
+  <data name="uninstallHeading" xml:space="preserve">
+    <value>Uninstall Liseré?</value>
+  </data>
+  <data name="uninstallMessage" xml:space="preserve">
+    <value>The application will be removed from this computer.</value>
+  </data>
+  <data name="uninstallDataNote" xml:space="preserve">
+    <value>Your images, presets and settings in %APPDATA%\Lisere are kept. Shortcuts and the installation folder will be removed.</value>
+  </data>
+  <data name="uninstallAction" xml:space="preserve">
+    <value>Uninstall</value>
+  </data>
+  <data name="uninstallCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="uninstallRunning" xml:space="preserve">
+    <value>Liseré is still open. Close all of its windows and try again.</value>
+  </data>
+  <data name="uninstallError" xml:space="preserve">
+    <value>The uninstall could not be started.</value>
+  </data>
 </root>

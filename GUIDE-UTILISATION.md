@@ -7,7 +7,7 @@ Ce guide couvre deux niveaux :
 1. **Le guide de l'application** : lancer Liseré, comprendre la fenêtre, naviguer et mener un projet de bout en bout.
 2. **Le guide des fonctionnalités** : chaque page, chaque bouton, chaque réglage et chaque limite, avec des conseils d'usage.
 
-Liseré fonctionne **entièrement en local** : aucune image, aucune vidéo et aucun réglage ne sont envoyés sur Internet. Aucun compte n'est nécessaire.
+Liseré fonctionne **entièrement en local** : aucune image, aucune vidéo et aucun réglage ne sont envoyés sur Internet. Aucun compte n'est nécessaire. Seule la vérification de mise à jour, lancée à votre demande, contacte GitHub.
 
 ---
 
@@ -19,6 +19,7 @@ Liseré améliore une **image** ou une **vidéo**, puis permet de comparer le r�
 |---|---|
 | **Image** | Ouvrir une photo, appliquer un pipeline de six réglages, estimer automatiquement les paramètres, comparer avant/après et exporter en JPEG. |
 | **Vidéo** | Analyser un clip avec FFmpeg, préparer un aperçu, rendre une seconde de test, exporter le clip complet en MP4 avec audio, ou traiter plusieurs clips dans une file d'attente. |
+| **Mises à jour** | Vérifier les versions publiées sur GitHub, télécharger le paquet, contrôler son empreinte et redémarrer avec la nouvelle version. |
 
 Les deux espaces partagent les mêmes six paramètres principaux et les mêmes préréglages d'amélioration ; l'étalonnage Ultron est propre à la page Image. La vidéo ajoute les moteurs d'amélioration, la résolution, la cadence, la stabilisation, le désentrelacement, l'interpolation RIFE, le codec et la file d'attente.
 
@@ -31,21 +32,38 @@ Les deux espaces partagent les mêmes six paramètres principaux et les mêmes p
 ### 2.1 Prérequis
 
 - **Windows 10 ou Windows 11**.
-- **.NET SDK 10.0** ou une version compatible avec `net10.0-windows` pour compiler et lancer depuis les sources.
-- **FFmpeg** pour les fonctions vidéo : `ffmpeg.exe` et `ffprobe.exe`. L'image fonctionne sans FFmpeg.
+- **Version installée** : aucun runtime .NET à télécharger. L'application est autonome ; l'installateur utilise uniquement .NET Framework 4.8, fourni avec Windows 10 et Windows 11.
+- **Depuis les sources** : **.NET SDK 10.0** ou une version compatible avec `net10.0-windows` pour compiler et lancer.
+- **FFmpeg intégré** pour les fonctions vidéo : `ffmpeg.exe`, `ffprobe.exe`, les DLL et un manifeste sont livrés dans `ffmpeg/` et vérifiés par SHA-256 au démarrage. L'image fonctionne sans FFmpeg.
 
-Liseré cherche FFmpeg dans cet ordre :
+Pour développer depuis un checkout sans binaires, lancez `scripts/fetch-ffmpeg.ps1`. Liseré cherche alors FFmpeg dans cet ordre :
 
 1. la variable d'environnement `LISERE_FFMPEG` ;
-2. le dossier de l'application ;
-3. `C:\ffmpeg\bin` ;
-4. `C:\ffmpeg` ;
-5. `C:\Program Files\ffmpeg\bin` ;
-6. le `PATH` Windows.
+2. le paquet vérifié `ffmpeg/manifest.json` livré avec l'application ;
+3. le dossier de l'application ;
+4. `C:\ffmpeg\bin` ;
+5. `C:\ffmpeg` ;
+6. `C:\Program Files\ffmpeg\bin` ;
+7. le `PATH` Windows.
+
+Si un manifeste est présent mais qu'un fichier manque ou a été modifié, les fonctions vidéo sont désactivées plutôt que d'exécuter un binaire non vérifié.
 
 Trois modèles ONNX sont fournis dans `models/` et copiés à côté de l'exécutable : **Super-Resolution CNN ×3**, **RIFE 4.9** et **YuNet** (détection des visages pour le renforcement de la page Image). Le moteur classique, lui, ne dépend d'aucun modèle. Les licences et les sources sont détaillées dans la section **12** et dans [models/README.md](models/README.md).
 
-### 2.2 Lancer depuis les sources
+### 2.2 Installer ou lancer depuis les sources
+
+#### Avec l'installateur
+
+1. Téléchargez **Lisere-Setup.exe** depuis la [dernière release GitHub](https://github.com/FGAMER768/Lisere/releases/latest).
+2. Lancez le programme. Il ne demande pas de droits administrateur et ne nécessite aucun runtime .NET supplémentaire : l'application et FFmpeg sont inclus.
+3. Choisissez le dossier d'installation ou gardez le dossier par défaut, `%LOCALAPPDATA%\Programs\Lisere`, puis cochez si vous voulez un raccourci sur le Bureau. Un raccourci dans le menu Démarrer est toujours créé.
+4. Cliquez sur **Installer**, puis sur **Lancer Liseré** à la fin.
+
+L'installateur n'est pas encore signé numériquement : Windows peut afficher un avertissement SmartScreen. L'empreinte SHA-256 publiée avec la release permet de vérifier le fichier.
+
+Pour désinstaller, utilisez **Paramètres → Applications → Liseré** ou `Lisere.exe --uninstall`. L'application, ses raccourcis et sa clé de désinstallation sont supprimés ; les images, presets et réglages de `%APPDATA%\Lisere` sont conservés.
+
+#### Depuis les sources
 
 Depuis la racine du dépôt :
 
@@ -63,7 +81,7 @@ dotnet build Lisere.slnx
 ### 2.3 Premier lancement
 
 1. La fenêtre s'ouvre sur la page **Image**.
-2. Si vous voulez travailler sur une vidéo, vérifiez que FFmpeg est installé ; sinon, la page Vidéo affiche la raison de l'indisponibilité.
+2. La page Vidéo indique si le paquet FFmpeg intégré est vérifié ; sinon, elle affiche la raison de l'indisponibilité.
 3. Choisissez la langue avec **FR** ou **EN** dans la barre de titre. Le choix est mémorisé dans `%APPDATA%\Lisere\settings.json` et restauré au prochain lancement.
 
 ---
@@ -74,7 +92,7 @@ La fenêtre est organisée en quatre zones :
 
 | Zone | Rôle |
 |---|---|
-| **Barre de titre** | Nom de l'application, boutons **FR** / **EN**, boutons système de la fenêtre. |
+| **Barre de titre** | Nom de l'application, bouton **Mises à jour**, boutons **FR** / **EN**, boutons système de la fenêtre. |
 | **Onglets Image / Vidéo** | Changent l'espace de travail. L'onglet actif est mis en évidence. |
 | **Aperçu central** | Montre l'image ou la frame vidéo, avec la comparaison avant/après. |
 | **Colonne de droite** | Préréglage, réglages, options d'export et, pour la vidéo, moteur, résolution et file d'attente. |
@@ -440,8 +458,20 @@ Les messages sont traduits dans les deux langues. Les textes sources se trouvent
 
 - Aucun envoi de fichier, aucune télémétrie, aucun compte.
 - Les modèles ONNX sont locaux et vérifiés par SHA-256.
-- FFmpeg est appelé localement.
-- L'application n'a pas besoin d'Internet pour fonctionner.
+- FFmpeg est appelé localement et son paquet intégré est vérifié par SHA-256.
+- L'application n'a pas besoin d'Internet pour fonctionner ; seule la vérification de mise à jour, volontaire, contacte GitHub.
+
+### 7.5 Mises à jour
+
+Le bouton **Mises à jour** de la barre de titre ouvre une fenêtre dédiée :
+
+1. **Vérifier** lit `Update/version.txt` sur GitHub et compare la version publiée à celle de l'application.
+2. Si une version plus récente existe, **Installer** télécharge `Lisere.zip` depuis la dernière release, contrôle son empreinte SHA-256 et vérifie chaque chemin de l'archive.
+3. Liseré se ferme, un script attend la fin du processus, copie les fichiers puis relance l'application. Vos réglages dans `%APPDATA%\Lisere` restent intacts.
+
+L'installateur officiel place l'application dans un dossier utilisateur inscriptible : c'est ce qui permet la mise à jour sans UAC. Si vous copiez Liseré dans `C:\Program Files` ou dans un dossier protégé, la vérification peut fonctionner mais l'installation échouera avec un message expliquant que le dossier n'est pas accessible en écriture.
+
+Une erreur réseau, une empreinte différente ou un dossier d'installation non inscriptible arrête l'opération avec un message localisé ; aucun fichier de l'application n'est remplacé avant la validation complète.
 
 ---
 
@@ -481,7 +511,7 @@ Les messages sont traduits dans les deux langues. Les textes sources se trouvent
 
 ### « Le moteur vidéo est indisponible »
 
-FFmpeg ou `ffprobe` est introuvable. Vérifiez la variable `LISERE_FFMPEG`, le dossier de l'application, `C:\ffmpeg\bin`, `C:\ffmpeg`, `C:\Program Files\ffmpeg\bin` ou le `PATH`. L'image reste utilisable sans FFmpeg.
+FFmpeg ou `ffprobe` est introuvable ou le paquet intégré a été modifié. Réinstallez Liseré ou lancez `scripts/fetch-ffmpeg.ps1` ; en développement, vérifiez aussi `LISERE_FFMPEG`, `C:\ffmpeg\bin`, `C:\ffmpeg`, `C:\Program Files\ffmpeg\bin` et le `PATH`. L'image reste utilisable sans FFmpeg.
 
 ### « Modèle indisponible » ou moteur neuronal grisé
 
@@ -554,7 +584,7 @@ Dans `%APPDATA%\Lisere\settings.json`. Le choix de langue y est enregistré.
 - **ONNX Runtime / DirectML** : Microsoft, licence MIT.
 - **WPF-UI**, **CommunityToolkit.Mvvm** et **Microsoft.Extensions.Hosting** : licences MIT.
 - **xUnit.net** et **Microsoft.NET.Test.Sdk** : Apache-2.0 et MIT.
-- **FFmpeg** : LGPL ou GPL selon la compilation ; installé séparément, non redistribué.
+- **FFmpeg** : compilation BtbN `N-129046-g3a78197c4c`, GNU GPL v3 ; paquet intégré vérifié par SHA-256. Provenance et licence dans `ffmpeg/README.md` et `ffmpeg/LICENSE.txt`.
 - Les presets After Effects cités appartiennent à leurs détenteurs ; aucun fichier `.ffx` n'est distribué. Les références Topaz et Adobe sont des marques de leurs propriétaires ; aucun poids, code ou média propriétaire n'est inclus.
 - Les images de test et leurs sources sont documentées dans `tests/Lisere.App.Tests/TestData/README.md`. La liste complète figure dans la section **Crédits, sources et licences** du [README](README.md#crédits-sources-et-licences).
 
