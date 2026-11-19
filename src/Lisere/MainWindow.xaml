@@ -7,6 +7,7 @@
                  xmlns:dialogs="clr-namespace:Lisere.Views.Dialogs"
                  mc:Ignorable="d"
                  Title="Liseré"
+                 Icon="/Assets/Lisere.ico"
                  Width="1200"
                  Height="675"
                  MinWidth="1024"
@@ -31,6 +32,13 @@
         </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0" Title="Liseré">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon>
+                    <ui:ImageIcon.Source>
+                        <BitmapImage UriSource="pack://application:,,,/Assets/Lisere.ico" />
+                    </ui:ImageIcon.Source>
+                </ui:ImageIcon>
+            </ui:TitleBar.Icon>
             <ui:TitleBar.TrailingContent>
                 <StackPanel Margin="0,0,6,0"
                             VerticalAlignment="Center"

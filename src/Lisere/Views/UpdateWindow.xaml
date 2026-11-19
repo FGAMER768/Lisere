@@ -3,6 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="{Binding Strings[updateWindowTitle]}"
+                 Icon="/Assets/Lisere.ico"
                  Width="560"
                  Height="400"
                  MinWidth="480"
@@ -24,7 +25,15 @@
         <ui:TitleBar Grid.Row="0"
                      Title="{Binding Strings[updateWindowTitle]}"
                      ShowMaximize="False"
-                     ShowMinimize="False" />
+                     ShowMinimize="False">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon>
+                    <ui:ImageIcon.Source>
+                        <BitmapImage UriSource="pack://application:,,,/Assets/Lisere.ico" />
+                    </ui:ImageIcon.Source>
+                </ui:ImageIcon>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
 
         <ScrollViewer Grid.Row="1"
                       HorizontalScrollBarVisibility="Disabled"

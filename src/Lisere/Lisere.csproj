@@ -25,6 +25,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="..\..\assets\Lisere.ico" Link="Assets\Lisere.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="..\..\models\catalog.json" Link="models\catalog.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\models\onnx\*.onnx" Link="models\onnx\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
