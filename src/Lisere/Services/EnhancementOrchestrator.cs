@@ -41,7 +41,10 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                 skipsEnhancement ? 0 : request.RecoverOriginalDetail,
                 skipsEnhancement ? 0 : request.AddNoise,
                 pipelineProgress,
-                cancellationToken);
+                cancellationToken,
+                // Un motif de pores fixe scintillerait sur une vidéo : la
+                // synthèse est réservée au rendu photo.
+                synthesizeSkinTexture: true);
 
             // L'étalonnage est un étage distinct : il s'applique après
             // l'amélioration, quel que soit le préréglage IA choisi.

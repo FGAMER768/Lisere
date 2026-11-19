@@ -31,7 +31,8 @@ public static class EnhancementPipeline
         double recoverOriginalDetail = 0.0,
         double addNoise = 0.0,
         IProgress<EnhancementProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool synthesizeSkinTexture = false)
     {
         ArgumentNullException.ThrowIfNull(source);
         cancellationToken.ThrowIfCancellationRequested();
@@ -224,6 +225,7 @@ public static class EnhancementPipeline
                 EnhancementTuning.Pipeline.DetailReferenceAcutance,
                 EnhancementTuning.Pipeline.DetailMinimumScale,
                 work?.Slice(0.1, 0.4));
+            var sharpenEnd = synthesizeSkinTexture ? 0.82 : 1.0;
             output = ImageFilters.MultiScaleSharpen(
                 output,
                 EnhancementTuning.Pipeline.DetailRadii,
@@ -231,7 +233,16 @@ public static class EnhancementPipeline
                 model.Details * detailScale,
                 EnhancementTuning.Pipeline.DetailOvershoot,
                 detailReference,
-                work?.Slice(0.4, 1.0));
+                work?.Slice(0.4, sharpenEnd));
+
+            if (synthesizeSkinTexture)
+            {
+                output = SkinTexture.Apply(
+                    output,
+                    model.Details * SkinTexture.DetailStrength,
+                    work?.Slice(0.82, 1.0));
+            }
+
             work?.Complete();
             plan.Complete();
         }

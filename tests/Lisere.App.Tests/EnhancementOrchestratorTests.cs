@@ -39,6 +39,35 @@ public class EnhancementOrchestratorTests
     }
 
     [Fact]
+    public async Task ImageEnhancementSynthesizesSkinTexture()
+    {
+        var source = new RgbImage(96, 96);
+        for (var i = 0; i < source.Pixels.Length; i += 3)
+        {
+            source.Pixels[i] = 200;
+            source.Pixels[i + 1] = 150;
+            source.Pixels[i + 2] = 125;
+        }
+
+        var request = new EnhancementRequest(
+            source,
+            EnhancementMode.Manual,
+            new EnhancementParameters(0, 0, 0, 85, 0, 0),
+            0,
+            0,
+            ColorPreset.None,
+            null);
+
+        var result = await new EnhancementOrchestrator().EnhanceAsync(
+            request,
+            CancellationToken.None);
+
+        Assert.True(
+            LumaStandardDeviation(result.Image) > 0.8,
+            $"le rendu photo doit ajouter une micro-texture ({LumaStandardDeviation(result.Image):0.00})");
+    }
+
+    [Fact]
     public async Task CancellationDuringGradingStopsTheOrchestrator()
     {
         using var cancellation = new CancellationTokenSource();
@@ -60,5 +89,13 @@ public class EnhancementOrchestratorTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             new EnhancementOrchestrator().EnhanceAsync(request, cancellation.Token));
+    }
+
+    private static double LumaStandardDeviation(RgbImage image)
+    {
+        var luma = ImageFilters.ToGray(image).Pixels;
+        var mean = luma.Average(value => (double)value);
+        var variance = luma.Average(value => (value - mean) * (value - mean));
+        return Math.Sqrt(variance);
     }
 }

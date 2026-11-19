@@ -106,6 +106,47 @@ public class PipelineTests
     }
 
     [Fact]
+    public void PhotoPipelineSynthesizesSkinTextureFromTheDetailSlider()
+    {
+        var source = new RgbImage(96, 96);
+        for (var i = 0; i < source.Pixels.Length; i += 3)
+        {
+            source.Pixels[i] = 200;
+            source.Pixels[i + 1] = 150;
+            source.Pixels[i + 2] = 125;
+        }
+
+        var result = EnhancementPipeline.Enhance(
+            source,
+            new EnhancementParameters(0, 0, 0, 85, 0, 0),
+            0,
+            0,
+            synthesizeSkinTexture: true);
+
+        Assert.True(
+            LumaStandardDeviation(result) > LumaStandardDeviation(source) + 0.8,
+            $"la peau doit gagner une micro-texture ({LumaStandardDeviation(source):0.00} -> {LumaStandardDeviation(result):0.00})");
+    }
+
+    [Fact]
+    public void VideoPipelineKeepsSkinFlatWhenTextureIsNotRequested()
+    {
+        var source = new RgbImage(96, 96);
+        for (var i = 0; i < source.Pixels.Length; i += 3)
+        {
+            source.Pixels[i] = 200;
+            source.Pixels[i + 1] = 150;
+            source.Pixels[i + 2] = 125;
+        }
+
+        var result = EnhancementPipeline.Enhance(
+            source,
+            new EnhancementParameters(0, 0, 0, 85, 0, 0));
+
+        Assert.Equal(0.0, LumaStandardDeviation(result), 3);
+    }
+
+    [Fact]
     public void FullRecoverOriginalDetailReturnsTheSource()
     {
         var source = TestImages.CreatePattern();
@@ -113,7 +154,8 @@ public class PipelineTests
             source,
             new EnhancementParameters(60, 40, 10, 85, 10, 95),
             100,
-            0);
+            0,
+            synthesizeSkinTexture: true);
 
         Assert.Equal(source.Pixels, result.Pixels);
     }
@@ -154,6 +196,14 @@ public class PipelineTests
         }
 
         return sum / ((image.Width - 2) * (image.Height - 2));
+    }
+
+    private static double LumaStandardDeviation(RgbImage image)
+    {
+        var luma = ImageFilters.ToGray(image).Pixels;
+        var mean = luma.Average(value => (double)value);
+        var variance = luma.Average(value => (value - mean) * (value - mean));
+        return Math.Sqrt(variance);
     }
 
     private static string Hash(byte[] pixels) =>
