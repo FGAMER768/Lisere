@@ -20,7 +20,7 @@ La désinstallation se fait depuis **Paramètres → Applications → Liseré**,
 
 L'application, ses raccourcis et sa clé de désinstallation sont supprimés après la fermeture de Liseré. Les images, presets et réglages de `%APPDATA%\Lisere` sont conservés.
 
-L'installateur n'est pas encore signé numériquement : Windows peut afficher un avertissement SmartScreen. L'empreinte `Lisere-Setup.exe.sha256` publiée avec la release permet de vérifier le fichier.
+La signature Authenticode est prise en charge : les scripts acceptent un certificat par empreinte ou PFX. Une release produite sans certificat n'est pas signée et Windows peut afficher un avertissement SmartScreen ; dans ce cas, l'empreinte `Lisere-Setup.exe.sha256` publiée avec la release permet de vérifier le fichier.
 
 Le dossier d'installation doit rester accessible en écriture par l'utilisateur : c'est ce qui permet à Liseré de se mettre à jour sans UAC. Une copie placée dans `C:\Program Files` ne peut pas se mettre à jour toute seule.
 
@@ -58,6 +58,16 @@ de l'exécutable autonome et du bundle FFmpeg.
    `Lisere.exe` et du dossier `ffmpeg/`, produit `Update/Lisere.zip` et
    `Update/Lisere.zip.sha256`, puis écrit la version dans `Update/version.txt`.
 
+   Pour signer l'application avant l'archive, ajoutez un certificat :
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts/publish-update.ps1 `
+     -CertificateThumbprint <empreinte>
+   ```
+
+   `-CertificatePath <fichier.pfx>` est aussi accepté. Le certificat doit être
+   un certificat de signature de code avec sa clé privée.
+
 3. Reconstruisez l'installateur avec ce nouveau paquet :
 
    ```powershell
@@ -73,7 +83,9 @@ de l'exécutable autonome et du bundle FFmpeg.
    - `artifacts/installer/Lisere-Setup.exe.sha256`.
 
    L'installateur embarque le ZIP : il doit toujours être reconstruit après
-   `publish-update.ps1`.
+   `publish-update.ps1`. Ajoutez les mêmes options de certificat à
+   `scripts/build-setup.ps1` pour signer l'installateur avant de calculer son
+   empreinte. Les deux scripts utilisent `scripts/sign-artifacts.ps1`.
 
 4. Créez une release GitHub dont le tag correspond à la version (par exemple
    `v1.0.2`) et joignez les quatre assets :

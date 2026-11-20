@@ -129,6 +129,12 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private ColorPresetOption? _selectedColorPreset;
 
     [ObservableProperty]
+    private bool _isEnhancementTab = true;
+
+    [ObservableProperty]
+    private bool _isColorTab;
+
+    [ObservableProperty]
     private double _colorSaturation = UltronCcSettings.FromPreset.SaturationPercent;
 
     [ObservableProperty]
@@ -257,8 +263,13 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     /// <summary>Un étalonnage autre que « Aucune » est sélectionné.</summary>
     public bool IsColorGradingActive => SelectedColorPreset is { Preset: not ColorPreset.None };
 
-    /// <summary>Seul Ultron expose des curseurs ; les autres presets gardent les valeurs du fichier.</summary>
-    public bool HasAdjustableColorSettings => SelectedColorPreset?.Preset is ColorPreset.UltronCc;
+    /// <summary>Ultron et le mode Manuel exposent des curseurs ; les autres presets gardent les valeurs du fichier.</summary>
+    public bool HasAdjustableColorSettings => SelectedColorPreset?.Preset is ColorPreset.UltronCc or ColorPreset.Manual;
+
+    /// <summary>La carte des curseurs ne s'affiche que dans l'onglet Colorimétrie.</summary>
+    public bool ShowColorSettings => IsColorTab && IsColorGradingActive;
+
+    public double DurationSeconds => _video?.DurationSeconds ?? 0;
 
     public UltronCcSettings CurrentColorSettings => new(
         ColorSaturation,
@@ -486,7 +497,28 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         ApplyColorDefaults(value?.Preset ?? ColorPreset.None);
         OnPropertyChanged(nameof(IsColorGradingActive));
         OnPropertyChanged(nameof(HasAdjustableColorSettings));
+        OnPropertyChanged(nameof(ShowColorSettings));
         UpdatePendingStatus();
+    }
+
+    partial void OnIsEnhancementTabChanged(bool value)
+    {
+        if (value)
+        {
+            IsColorTab = false;
+        }
+
+        OnPropertyChanged(nameof(ShowColorSettings));
+    }
+
+    partial void OnIsColorTabChanged(bool value)
+    {
+        if (value)
+        {
+            IsEnhancementTab = false;
+        }
+
+        OnPropertyChanged(nameof(ShowColorSettings));
     }
 
     partial void OnColorSaturationChanged(double value) => UpdatePendingStatus();
@@ -643,12 +675,18 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     private void ApplyColorDefaults(ColorPreset preset)
     {
-        if (preset is not ColorPreset.UltronCc)
+        var settings = preset switch
+        {
+            ColorPreset.UltronCc => UltronCcSettings.FromPreset,
+            ColorPreset.Manual => UltronCcSettings.Neutral,
+            _ => null
+        };
+
+        if (settings is null)
         {
             return;
         }
 
-        var settings = UltronCcSettings.FromPreset;
         ColorSaturation = settings.SaturationPercent;
         ColorBrightness = settings.Brightness;
         ColorContrast = settings.Contrast;

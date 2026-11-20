@@ -177,8 +177,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     /// <summary>Un étalonnage autre que « Aucune » est sélectionné.</summary>
     public bool IsColorGradingActive => ActiveColorPreset is not null;
 
-    /// <summary>Seul Ultron expose des curseurs ; les autres presets gardent les valeurs du fichier.</summary>
-    public bool HasAdjustableColorSettings => SelectedColorPreset?.Preset is ColorPreset.UltronCc;
+    /// <summary>Ultron et le mode Manuel exposent des curseurs ; les autres presets gardent les valeurs du fichier.</summary>
+    public bool HasAdjustableColorSettings => SelectedColorPreset?.Preset is ColorPreset.UltronCc or ColorPreset.Manual;
 
     /// <summary>Une amélioration autre que « Aucune » est sélectionnée.</summary>
     public bool IsEnhancementActive => SelectedPreset is not { Mode: EnhancementMode.None };
@@ -851,7 +851,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             SelectedColorPreset = ColorPresets.First(
                 option => option.Preset == preset.ColorPreset);
 
-            if (preset.ColorPreset is ColorPreset.UltronCc)
+            if (preset.ColorPreset is ColorPreset.UltronCc or ColorPreset.Manual)
             {
                 ColorSaturation = preset.ColorSettings.SaturationPercent;
                 ColorBrightness = preset.ColorSettings.Brightness;
@@ -1029,12 +1029,18 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     private void ApplyColorDefaults(ColorPreset preset)
     {
-        if (preset is not ColorPreset.UltronCc)
+        var settings = preset switch
+        {
+            ColorPreset.UltronCc => UltronCcSettings.FromPreset,
+            ColorPreset.Manual => UltronCcSettings.Neutral,
+            _ => null
+        };
+
+        if (settings is null)
         {
             return;
         }
 
-        var settings = UltronCcSettings.FromPreset;
         ColorSaturation = settings.SaturationPercent;
         ColorBrightness = settings.Brightness;
         ColorContrast = settings.Contrast;
@@ -1084,6 +1090,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     private static string ColorPresetNoteKey(ColorPreset preset) => preset switch
     {
+        ColorPreset.Manual => "colorManualNote",
         ColorPreset.UltronCc => "colorUltronNote",
         ColorPreset.Matrix => "colorMatrixNote",
         ColorPreset.Infinity => "colorInfinityNote",

@@ -1,7 +1,10 @@
 [CmdletBinding()]
 param(
     [string]$Configuration = "Release",
-    [string]$Runtime = "win-x64"
+    [string]$Runtime = "win-x64",
+    [string]$CertificateThumbprint,
+    [string]$CertificatePath,
+    [string]$TimestampServer = "http://timestamp.digicert.com"
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,6 +48,31 @@ if (-not $version) {
 
 if (-not (Test-Path (Join-Path $publishDirectory "Lisere.exe"))) {
     throw "La publication ne contient pas Lisere.exe."
+}
+
+if ($CertificateThumbprint -and $CertificatePath) {
+    throw "Choisissez -CertificateThumbprint ou -CertificatePath, pas les deux."
+}
+
+if ($CertificateThumbprint -or $CertificatePath) {
+    $signArguments = @{
+        Files = @((Join-Path $publishDirectory "Lisere.exe"))
+        TimestampServer = $TimestampServer
+    }
+    if ($CertificateThumbprint) {
+        $signArguments.Thumbprint = $CertificateThumbprint
+    } else {
+        $signArguments.CertificatePath = $CertificatePath
+    }
+
+    try {
+        & (Join-Path $PSScriptRoot "sign-artifacts.ps1") @signArguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "Le script de signature a échoué."
+        }
+    } catch {
+        throw "Signature de Lisere.exe impossible : $_"
+    }
 }
 
 foreach ($required in @("ffmpeg\ffmpeg.exe", "ffmpeg\ffprobe.exe", "ffmpeg\manifest.json")) {

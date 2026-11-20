@@ -437,7 +437,8 @@
                         <Border Style="{StaticResource SettingsCardBorder}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[colorSectionPreset]}" />
-                                <ComboBox AutomationProperties.Name="{Binding Strings[colorSectionPreset]}"
+                                <ComboBox AutomationProperties.AutomationId="ImageColorPreset"
+                                          AutomationProperties.Name="{Binding Strings[colorSectionPreset]}"
                                           DisplayMemberPath="Label"
                                           ItemsSource="{Binding ColorPresets}"
                                           SelectedItem="{Binding SelectedColorPreset, Mode=TwoWay}" />
@@ -482,7 +483,8 @@
                                                   SmallChange="1"
                                                   Value="{Binding ColorSaturation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </Grid>
-                                <Slider AutomationProperties.Name="{Binding Strings[paramColorSaturation]}"
+                                <Slider AutomationProperties.AutomationId="ImageColorSaturation"
+                                        AutomationProperties.Name="{Binding Strings[paramColorSaturation]}"
                                         Maximum="{Binding ColorSaturationMaximum}"
                                         Minimum="{Binding ColorSaturationMinimum}"
                                         Style="{StaticResource ParameterSlider}"

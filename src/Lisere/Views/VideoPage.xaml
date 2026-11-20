@@ -89,25 +89,12 @@
                                                Localization="{Binding Strings}"
                                                Visibility="{Binding HasVideo, Converter={StaticResource BooleanToVisibility}}">
                             <views:BeforeAfterView.Footer>
-                                <Grid VerticalAlignment="Center">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="52" />
-                                    </Grid.ColumnDefinitions>
-                                    <Slider AutomationProperties.Name="{Binding Strings[videoLabelPreviewPosition]}"
-                                            IsSnapToTickEnabled="True"
-                                            Maximum="95"
-                                            Minimum="0"
-                                            Style="{StaticResource ParameterSlider}"
-                                            TickFrequency="1"
-                                            Value="{Binding PreviewPositionPercent, Mode=TwoWay}" />
-                                    <TextBlock Grid.Column="1"
-                                               HorizontalAlignment="Right"
-                                               VerticalAlignment="Center"
-                                               FontSize="12"
-                                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                               Text="{Binding PreviewPositionPercent, StringFormat={}{0:0}%}" />
-                                </Grid>
+                                <views:VideoTimeline AutomationProperties.AutomationId="VideoTimeline"
+                                                     AutomationProperties.HelpText="{Binding Strings[videoTimelineHelp]}"
+                                                     AutomationProperties.Name="{Binding Strings[videoLabelPreviewPosition]}"
+                                                     DurationSeconds="{Binding DurationSeconds}"
+                                                     MaximumPercent="95"
+                                                     PositionPercent="{Binding PreviewPositionPercent, Mode=TwoWay}" />
                             </views:BeforeAfterView.Footer>
                         </views:BeforeAfterView>
 
@@ -238,15 +225,43 @@
                                            Command="{Binding ExportPreviewCommand}"
                                            Content="{Binding Strings[videoPreviewExport]}"
                                            Icon="{ui:SymbolIcon Save24}" />
-                                <TextBlock Margin="0,6,0,0"
-                                           FontSize="12"
-                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding PreviewEstimateText}"
-                                           TextWrapping="Wrap"
-                                           Visibility="{Binding HasEstimate, Converter={StaticResource BooleanToVisibility}}" />
+                                                            <TextBlock Margin="0,6,0,0"
+                                       FontSize="12"
+                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding PreviewEstimateText}"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding HasEstimate, Converter={StaticResource BooleanToVisibility}}" />
                             </StackPanel>
                         </Border>
 
+                        <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionParameters]}" />
+                                <Border Padding="4"
+                                        Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+                                        CornerRadius="8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <RadioButton AutomationProperties.AutomationId="VideoEnhancementTab"
+                                                     AutomationProperties.Name="{Binding Strings[tabEnhancement]}"
+                                                     Content="{Binding Strings[tabEnhancement]}"
+                                                     GroupName="VideoParameterTabs"
+                                                     IsChecked="{Binding IsEnhancementTab, Mode=TwoWay}"
+                                                     Style="{StaticResource SegmentedTab}" />
+                                        <RadioButton Grid.Column="1"
+                                                     AutomationProperties.AutomationId="VideoColorTab"
+                                                     AutomationProperties.Name="{Binding Strings[tabColor]}"
+                                                     Content="{Binding Strings[tabColor]}"
+                                                     GroupName="VideoParameterTabs"
+                                                     IsChecked="{Binding IsColorTab, Mode=TwoWay}"
+                                                     Style="{StaticResource SegmentedTab}" />
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
 
                         <ui:InfoBar Margin="0,12,0,0"
                                     IsClosable="False"
@@ -255,7 +270,9 @@
                                     Severity="Warning"
                                     Title="{Binding Strings[dialogWarningTitle]}" />
 
-                        <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                        <Border Margin="0,12,0,0"
+                                Style="{StaticResource SettingsCardBorder}"
+                                Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionSettings]}" />
 
@@ -450,10 +467,13 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                        <Border Margin="0,12,0,0"
+                                Style="{StaticResource SettingsCardBorder}"
+                                Visibility="{Binding IsColorTab, Converter={StaticResource BooleanToVisibility}}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[videoSectionColor]}" />
-                                <ComboBox AutomationProperties.Name="{Binding Strings[videoSectionColor]}"
+                                <ComboBox AutomationProperties.AutomationId="VideoColorPreset"
+                                          AutomationProperties.Name="{Binding Strings[videoSectionColor]}"
                                           DisplayMemberPath="Label"
                                           ItemsSource="{Binding ColorPresets}"
                                           SelectedItem="{Binding SelectedColorPreset, Mode=TwoWay}" />
@@ -467,7 +487,7 @@
 
                         <Border Margin="0,12,0,0"
                                 Style="{StaticResource SettingsCardBorder}"
-                                Visibility="{Binding IsColorGradingActive, Converter={StaticResource BooleanToVisibility}}">
+                                Visibility="{Binding ShowColorSettings, Converter={StaticResource BooleanToVisibility}}">
                             <StackPanel IsEnabled="{Binding HasAdjustableColorSettings}">
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[colorSectionSettings]}" />
 
@@ -487,7 +507,8 @@
                                                   SmallChange="1"
                                                   Value="{Binding ColorSaturation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 </Grid>
-                                <Slider AutomationProperties.Name="{Binding Strings[paramColorSaturation]}"
+                                <Slider AutomationProperties.AutomationId="VideoColorSaturation"
+                                        AutomationProperties.Name="{Binding Strings[paramColorSaturation]}"
                                         Maximum="{Binding ColorSaturationMaximum}"
                                         Minimum="{Binding ColorSaturationMinimum}"
                                         Style="{StaticResource ParameterSlider}"
@@ -565,7 +586,9 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                        <Border Margin="0,12,0,0"
+                                Style="{StaticResource SettingsCardBorder}"
+                                Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[videoSectionOutput]}" />
 
@@ -661,7 +684,9 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                        <Border Margin="0,12,0,0"
+                                Style="{StaticResource SettingsCardBorder}"
+                                Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[videoSectionQueue]}" />
 

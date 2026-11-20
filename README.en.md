@@ -6,6 +6,14 @@
 
 Liseré is a Windows desktop application for enhancing **an image or a video**, comparing the result with the original and exporting the retouched version. All processing is local: no external service and no account. Only the optional update check, started on your request, contacts GitHub.
 
+## Screenshots
+
+| Image workspace | Video workspace |
+|:---:|:---:|
+| ![Liseré Image workspace: before/after comparison](assets/screenshots/image-en.png) | ![Liseré Video workspace: timeline and comparison](assets/screenshots/video-en.png) |
+
+Screenshots of the application with the **Chroma** preset, the before/after comparison, the three preview modes and the video timeline.
+
 ## Installation
 
 The installable build is in the latest [GitHub release](https://github.com/FGAMER768/Lisere/releases/latest). Download [Lisere-Setup.exe](https://github.com/FGAMER768/Lisere/releases/latest/download/Lisere-Setup.exe) and run it: the installer installs Liseré for the current Windows account without administrator rights and without asking to install the application or its dependencies. The package contains the self-contained application and FFmpeg.
@@ -22,12 +30,12 @@ For an unattended deployment, for example in a script or on a workstation image:
 
 `--silent` installs without UI, `--install-dir=...` selects the folder, `--no-shortcuts` creates no shortcut and `--desktop-shortcut` adds the Desktop shortcut. The exit code is `0` on success and `1` otherwise. The installer also recognises an existing installation through `Lisere.exe` or the `.lisere` marker, so it can update it in place.
 
-> The installer is not code-signed yet: Windows may show a SmartScreen warning. The SHA-256 digest published with the release lets you verify the file.
+> Authenticode signing is supported by the release scripts. A release signed with FGAMER768's certificate is produced with `-CertificateThumbprint` or `-CertificatePath`; without a certificate, Windows may show a SmartScreen warning. The SHA-256 digest published with the release lets you verify the file.
 
 The interface has two workspaces:
 
 - **Image**: deterministic six-parameter pipeline, presets, automatic estimation, a separate colour-grading menu and JPEG export.
-- **Video**: FFmpeg analysis, before/after preview, frame-by-frame rendering, interchangeable engines (local pipeline or ONNX models), FHD/4K resolutions, 30/60/120 fps, RIFE x2 neural interpolation, deinterlacing, stabilisation, colour grading, a queue and MP4 export with audio.
+- **Video**: FFmpeg analysis, before/after preview, editing timeline, frame-by-frame rendering, interchangeable engines (local pipeline or ONNX models), FHD/4K resolutions, 30/60/120 fps, RIFE x2 neural interpolation, deinterlacing, stabilisation, colour grading, a queue and MP4 export with audio.
 
 FFmpeg ships with the application and is verified by SHA-256 at startup. An **Updates** button in the title bar checks published GitHub versions, downloads the package, verifies its digest, then installs it on restart.
 
@@ -37,10 +45,11 @@ FFmpeg ships with the application and is verified by SHA-256 at startup. An **Up
 
 - Opens the image formats supported by Windows Imaging Component, with normalisation of irregular cases.
 - Before/after comparison with a divider that moves across the full image height.
+- Three comparison modes: **Split** (divider), **Single** (output only) and **Side by side**, selected with icons in the top-right corner. The Before/After labels are removed from the preview footer.
 - Opening shows the original: the enhancement is only computed when **Enhance image** is clicked.
 - Two parameter menus, **Enhancement (AI)** and **Colour grading**, each with its own preset and sliders.
 - Enhancement presets: Chroma, Auto, Manual and Auto + relative medium.
-- Colour presets **Ultron CC**, **Matrix CC**, **Infinity CC**, **Nebulus CC** and **Splendida CC**, reproductions of After Effects presets applied after enhancement (`docs/ULTRON-CC-ANALYSE.md` and `docs/PRESETS-ANALYSE.md`).
+- Colour presets **Ultron CC**, **Matrix CC**, **Infinity CC**, **Nebulus CC**, **Splendida CC**, reproductions of After Effects presets applied after enhancement (`docs/ULTRON-CC-ANALYSE.md` and `docs/PRESETS-ANALYSE.md`), plus **Manual (sliders)** for saturation, brightness, contrast and vibrance.
 - Settings for compression repair, noise reduction, sharpness, detail recovery, halo reduction and edge smoothing.
 - Additional settings for original detail and added noise.
 - **Face enhancement**: YuNet (MIT) locates faces and concentrates micro-texture on their skin without adding grain to the background or hair. If the model is missing, Liseré falls back to the global skin mask without blocking the render.
@@ -56,8 +65,9 @@ FFmpeg ships with the application and is verified by SHA-256 at startup. An **Up
 - **Bundled FFmpeg**: Windows build delivered in `ffmpeg/`, with `ffmpeg.exe`, `ffprobe.exe`, the DLLs and a manifest of digests. The package is verified at startup; a missing or modified file disables video features with an explicit reason.
 - File analysis with `ffprobe`: resolution, frame rate, duration, codec, audio presence and codec.
 - Before/after preview on a frame extracted at the chosen position; opening does not compute the preview, it must be requested explicitly (`Ctrl+Enter`).
+- **Editing timeline**: time ruler, ticks, playhead, click/drag seeking, arrow keys and `Home`/`End`.
 - Applies the same six parameters to each frame, with Auto estimation sampled across the clip.
-- **Video colour grading**: the five looks from the Image page (Ultron CC, Matrix CC, Infinity CC, Nebulus CC, Splendida CC) are applied to every frame, after enhancement and before the Chroma tone curve. Each queue job freezes the choice.
+- **Video colour grading**: the same **Enhancement (AI)** and **Colour grading** tabs as the Image page, with the five looks (Ultron CC, Matrix CC, Infinity CC, Nebulus CC, Splendida CC) and **Manual (sliders)**. They are applied to every frame, after enhancement and before the Chroma tone curve. Each queue job freezes the choice.
 - Interchangeable engines:
   - **Lisere Classic**: deterministic local pipeline, always available;
   - **Super-Resolution CNN x3**: local ONNX model, SHA-256 verified, DirectML inference on the iGPU with CPU fallback.
@@ -75,7 +85,8 @@ FFmpeg ships with the application and is verified by SHA-256 at startup. An **Up
 - **One-second preview render**: renders the real segment around the chosen position with the current settings, then shows the resulting frame.
 - **Preview export**: the same one-second segment can be written to a chosen file, without audio, for inspection or keeping.
 - **Live frame**: during a render, the latest produced frame replaces the preview and stays visible after cancellation.
-- **Synchronised zoom**: wheel, buttons or `+` / `-` / `0` keys on the comparison; before and after zoom together, the point under the cursor stays in place (the centre stays centred), and dragging moves the enlarged image.
+- **Synchronised zoom**: wheel, buttons or `+` / `-` / `0` keys on the comparison; before and after zoom together, the point under the cursor stays in place (the centre stays centred), and dragging moves the enlarged image. The `-` / `+` icons are centred in their buttons.
+- **Three preview modes**: split, single (output only) and side by side, with icon buttons on both image and video comparisons.
 
 ### Common
 
@@ -309,7 +320,7 @@ The `models/catalog.json` catalogue describes each model (file, scale, input/out
 
 ## Credits, sources and licences
 
-Liseré does not redistribute any proprietary weights, code or media. The third-party resources used are credited below; the full model licences are provided in `models/`.
+Liseré is designed and developed by **FGAMER768**. It does not redistribute any proprietary weights, code or media. The third-party resources used are credited below; the full model licences are provided in `models/`.
 
 ### Models and engines
 
@@ -359,7 +370,7 @@ dotnet test Lisere.slnx
 
 The solution contains four xUnit test projects: `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` and `Lisere.App.Tests`.
 
-Current state: **406 tests** (120 Core, 18 Ai, 52 Video, 216 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
+Current state: **424 tests** (125 Core, 18 Ai, 52 Video, 229 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
 
 Video integration tests generate a clip with FFmpeg and verify rendering, audio preservation, deinterlacing, exact size, cancellation and preview extraction. They are silently skipped when FFmpeg cannot be found, so the rest of the suite remains runnable on a machine without video tooling.
 
@@ -384,13 +395,15 @@ Publishing is scripted so the application, update package and installer stay con
 
    The script publishes `Release`/`win-x64` self-contained, checks `Lisere.exe` and the `ffmpeg/` folder, then writes `Update/Lisere.zip`, `Update/Lisere.zip.sha256` and `Update/version.txt`.
 
+   To sign `Lisere.exe` before creating the archive, add `-CertificateThumbprint <thumbprint>` (certificate in `CurrentUser\My` or `LocalMachine\My`) or `-CertificatePath <file.pfx>`. The certificate must have a private key and the code-signing usage. `scripts/sign-artifacts.ps1` can also be run by itself on already built artifacts.
+
 3. Rebuild the installer, which embeds that ZIP:
 
    ```powershell
    powershell -ExecutionPolicy Bypass -File scripts/build-setup.ps1
    ```
 
-   Outputs: `artifacts/installer/Lisere-Setup.exe` (stable name), `Lisere-Setup-<version>.exe` and `Lisere-Setup.exe.sha256`. The installer must always be rebuilt after `publish-update.ps1`.
+   Outputs: `artifacts/installer/Lisere-Setup.exe` (stable name), `Lisere-Setup-<version>.exe` and `Lisere-Setup.exe.sha256`. The installer must always be rebuilt after `publish-update.ps1`. Add the same certificate options to sign both installer copies before their digests are computed.
 
 4. Create a GitHub release tagged `v<version>` and attach the four assets: `Lisere-Setup.exe`, `Lisere-Setup.exe.sha256`, `Lisere.zip` and `Lisere.zip.sha256`. The release must remain the latest one: the application uses `releases/latest`.
 
@@ -436,4 +449,5 @@ scripts/
   fetch-ffmpeg.ps1
   publish-update.ps1
   build-setup.ps1
+  sign-artifacts.ps1
 ```

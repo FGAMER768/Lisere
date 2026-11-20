@@ -36,6 +36,12 @@ public partial class BeforeAfterView : UserControl
         typeof(BeforeAfterView),
         new PropertyMetadata(null, OnImageChanged));
 
+    public static readonly DependencyProperty PreviewModeProperty = DependencyProperty.Register(
+        nameof(PreviewMode),
+        typeof(PreviewMode),
+        typeof(BeforeAfterView),
+        new PropertyMetadata(PreviewMode.Split, OnPreviewModeChanged));
+
     public static readonly DependencyProperty ComparisonPositionProperty = DependencyProperty.Register(
         nameof(ComparisonPosition),
         typeof(double),
@@ -81,9 +87,12 @@ public partial class BeforeAfterView : UserControl
 
     public static readonly DependencyProperty IsZoomedProperty = IsZoomedPropertyKey.DependencyProperty;
 
+    private bool _syncingModeButtons;
+
     public BeforeAfterView()
     {
         InitializeComponent();
+        UpdatePreviewMode();
     }
 
     public ImageSource? BeforeImage
@@ -96,6 +105,12 @@ public partial class BeforeAfterView : UserControl
     {
         get => (ImageSource?)GetValue(AfterImageProperty);
         set => SetValue(AfterImageProperty, value);
+    }
+
+    public PreviewMode PreviewMode
+    {
+        get => (PreviewMode)GetValue(PreviewModeProperty);
+        set => SetValue(PreviewModeProperty, value);
     }
 
     public double ComparisonPosition
@@ -237,6 +252,56 @@ public partial class BeforeAfterView : UserControl
         DependencyPropertyChangedEventArgs e) =>
         ((BeforeAfterView)d).UpdateWipe();
 
+    private static void OnPreviewModeChanged(
+        DependencyObject d,
+        DependencyPropertyChangedEventArgs e)
+    {
+        var view = (BeforeAfterView)d;
+        view.UpdatePreviewMode();
+        view.ResetZoom();
+        view.UpdateImageLayout();
+    }
+
+    private void OnPreviewModeChecked(object sender, RoutedEventArgs e)
+    {
+        if (_syncingModeButtons ||
+            sender is not RadioButton { Tag: string tag } ||
+            !Enum.TryParse<PreviewMode>(tag, out var mode))
+        {
+            return;
+        }
+
+        PreviewMode = mode;
+    }
+
+    private void UpdateModeButtons()
+    {
+        if (SplitModeButton is null || SingleModeButton is null || SideBySideModeButton is null)
+        {
+            return;
+        }
+
+        _syncingModeButtons = true;
+        SplitModeButton.IsChecked = PreviewMode == PreviewMode.Split;
+        SingleModeButton.IsChecked = PreviewMode == PreviewMode.Single;
+        SideBySideModeButton.IsChecked = PreviewMode == PreviewMode.SideBySide;
+        _syncingModeButtons = false;
+    }
+
+    private void UpdatePreviewMode()
+    {
+        if (ImageLayer is null || SideBySideLayer is null || SideDivider is null)
+        {
+            return;
+        }
+
+        var sideBySide = PreviewMode == PreviewMode.SideBySide;
+        SideBySideLayer.Visibility = sideBySide ? Visibility.Visible : Visibility.Collapsed;
+        ImageLayer.Visibility = sideBySide ? Visibility.Collapsed : Visibility.Visible;
+        SideDivider.Visibility = sideBySide ? Visibility.Visible : Visibility.Collapsed;
+        UpdateModeButtons();
+    }
+
     private static void OnImageChanged(
         DependencyObject d,
         DependencyPropertyChangedEventArgs e)
@@ -271,6 +336,11 @@ public partial class BeforeAfterView : UserControl
 
     private void OnDividerDragDelta(object sender, DragDeltaEventArgs e)
     {
+        if (PreviewMode != PreviewMode.Split)
+        {
+            return;
+        }
+
         var width = ContentWidth * Zoom;
         if (width <= 0)
         {
@@ -283,6 +353,11 @@ public partial class BeforeAfterView : UserControl
 
     private void OnDividerKeyDown(object sender, KeyEventArgs e)
     {
+        if (PreviewMode != PreviewMode.Split)
+        {
+            return;
+        }
+
         switch (e.Key)
         {
             case Key.Left:
@@ -470,6 +545,22 @@ public partial class BeforeAfterView : UserControl
             return;
         }
 
+        UpdatePreviewMode();
+
+        if (PreviewMode == PreviewMode.SideBySide)
+        {
+            // Each half gets the full stage height; Uniform keeps both source
+            // ratios intact, including portrait clips.
+            var width = Math.Max(0, Stage.ActualWidth);
+            var height = Math.Max(0, Stage.ActualHeight);
+            ZoomHost.Width = width;
+            ZoomHost.Height = height;
+            ImageLayer.Width = width;
+            ImageLayer.Height = height;
+            ApplyZoom();
+            return;
+        }
+
         var (imageWidth, imageHeight) = GetImageSize(AfterImage ?? BeforeImage);
 
         var bounds = CalculateImageBounds(
@@ -558,15 +649,25 @@ public partial class BeforeAfterView : UserControl
             return;
         }
 
-        BeforeLayer.Visibility = BeforeImage is null
-            ? Visibility.Collapsed
-            : Visibility.Visible;
-
-        var hasBoth = BeforeImage is not null && AfterImage is not null;
-
-        if (!hasBoth)
+        if (PreviewMode == PreviewMode.SideBySide)
         {
-            BeforeLayer.Width = width;
+            Divider.Visibility = Visibility.Collapsed;
+            DividerThumb.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var isSplit = PreviewMode == PreviewMode.Split;
+        var hasBoth = BeforeImage is not null && AfterImage is not null;
+        // En vue simple, le résultat remplace la source. Sans résultat, on
+        // montre la source plutôt qu'un cadre vide.
+        var showBefore = isSplit && BeforeImage is not null ||
+            PreviewMode == PreviewMode.Single && AfterImage is null && BeforeImage is not null;
+
+        BeforeLayer.Visibility = showBefore ? Visibility.Visible : Visibility.Collapsed;
+        BeforeLayer.Width = width;
+
+        if (!isSplit || !hasBoth)
+        {
             Divider.Visibility = Visibility.Collapsed;
             DividerThumb.Visibility = Visibility.Collapsed;
             return;

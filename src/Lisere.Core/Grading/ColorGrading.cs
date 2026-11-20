@@ -17,6 +17,10 @@ public static class ColorGrading
 
         var output = preset switch
         {
+            ColorPreset.Manual => ManualLook.Apply(
+                source,
+                settings ?? UltronCcSettings.Neutral,
+                work),
             ColorPreset.UltronCc => UltronCcLook.Apply(
                 source,
                 settings ?? UltronCcSettings.FromPreset,

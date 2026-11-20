@@ -120,6 +120,9 @@
   <data name="colorNone" xml:space="preserve">
     <value>Aucune</value>
   </data>
+  <data name="colorManual" xml:space="preserve">
+    <value>Manuel (curseurs)</value>
+  </data>
   <data name="colorUltron" xml:space="preserve">
     <value>Ultron CC</value>
   </data>
@@ -152,6 +155,9 @@
   </data>
   <data name="colorUltronNote" xml:space="preserve">
     <value>Étalonnage du preset After Effects Ultron_CC. Choisir ce préréglage remet ses curseurs aux valeurs enregistrées dans le preset.</value>
+  </data>
+  <data name="colorManualNote" xml:space="preserve">
+    <value>Quatre curseurs indépendants : saturation, luminosité, contraste et vibrance. Le mode démarre sur des valeurs neutres, sans accentuation ni look propriétaire.</value>
   </data>
   <data name="paramColorSaturation" xml:space="preserve">
     <value>Saturation</value>
@@ -218,6 +224,30 @@
     <value>Auto + relatif moyen</value>
   </data>
 
+  <data name="previewModeSplit" xml:space="preserve">
+    <value>Vue partagée</value>
+  </data>
+  <data name="previewModeSingle" xml:space="preserve">
+    <value>Vue simple</value>
+  </data>
+  <data name="previewModeSideBySide" xml:space="preserve">
+    <value>Côte à côte</value>
+  </data>
+  <data name="previewModeHelp" xml:space="preserve">
+    <value>Choisir le mode d'aperçu</value>
+  </data>
+  <data name="previewModeSplitTip" xml:space="preserve">
+    <value>Vue partagée : comparer avec le séparateur.</value>
+  </data>
+  <data name="previewModeSingleTip" xml:space="preserve">
+    <value>Vue simple : afficher uniquement le résultat.</value>
+  </data>
+  <data name="previewModeSideBySideTip" xml:space="preserve">
+    <value>Côte à côte : afficher les deux panneaux.</value>
+  </data>
+  <data name="videoTimelineHelp" xml:space="preserve">
+    <value>Survolez pour viser, cliquez ou glissez pour déplacer le curseur.</value>
+  </data>
   <data name="beforeAfterBefore" xml:space="preserve">
     <value>Avant</value>
   </data>
@@ -460,7 +490,7 @@
     <value>Colorimétrie</value>
   </data>
   <data name="videoColorNote" xml:space="preserve">
-    <value>L'étalonnage s'applique après l'amélioration, sur l'aperçu comme à l'export. Ultron CC permet d'ajuster ses valeurs.</value>
+    <value>L'étalonnage s'applique après l'amélioration, sur l'aperçu comme à l'export. Manuel et Ultron CC permettent d'ajuster les curseurs.</value>
   </data>
   <data name="videoLabelEngine" xml:space="preserve">
     <value>Moteur</value>
@@ -1010,6 +1040,39 @@
   </data>
   <data name="videoFfmpegMissing" xml:space="preserve">
     <value>FFmpeg indisponible</value>
+  </data>
+  <data name="aboutButton" xml:space="preserve">
+    <value>À propos</value>
+  </data>
+  <data name="aboutWindowTitle" xml:space="preserve">
+    <value>À propos de Liseré</value>
+  </data>
+  <data name="aboutTagline" xml:space="preserve">
+    <value>Amélioration d'images et de vidéos, colorimétrie et rendu local.</value>
+  </data>
+  <data name="aboutAuthorLabel" xml:space="preserve">
+    <value>Auteur</value>
+  </data>
+  <data name="aboutAuthor" xml:space="preserve">
+    <value>FGAMER768</value>
+  </data>
+  <data name="aboutVersion" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="aboutRepository" xml:space="preserve">
+    <value>Code source sur GitHub</value>
+  </data>
+  <data name="aboutCreditsTitle" xml:space="preserve">
+    <value>Crédits</value>
+  </data>
+  <data name="aboutCreditsBody" xml:space="preserve">
+    <value>Conçu et développé par FGAMER768. Merci aux projets open source qui rendent Liseré possible : FFmpeg, WPF UI et CommunityToolkit.Mvvm.</value>
+  </data>
+  <data name="aboutCopyright" xml:space="preserve">
+    <value>© 2026 FGAMER768</value>
+  </data>
+  <data name="aboutClose" xml:space="preserve">
+    <value>Fermer</value>
   </data>
   <data name="uninstallWindowTitle" xml:space="preserve">
     <value>Désinstaller Liseré</value>

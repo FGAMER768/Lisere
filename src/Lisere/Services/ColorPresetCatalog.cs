@@ -18,6 +18,7 @@ public static class ColorPresetCatalog
         return
         [
             Create(strings, ColorPreset.None),
+            Create(strings, ColorPreset.Manual),
             Create(strings, ColorPreset.UltronCc),
             Create(strings, ColorPreset.Matrix),
             Create(strings, ColorPreset.Infinity),
@@ -28,6 +29,7 @@ public static class ColorPresetCatalog
 
     public static string LabelKey(ColorPreset preset) => preset switch
     {
+        ColorPreset.Manual => "colorManual",
         ColorPreset.UltronCc => "colorUltron",
         ColorPreset.Matrix => "colorMatrix",
         ColorPreset.Infinity => "colorInfinity",

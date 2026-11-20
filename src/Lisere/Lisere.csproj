@@ -9,7 +9,12 @@
     <AssemblyName>Lisere</AssemblyName>
     <RootNamespace>Lisere</RootNamespace>
     <ApplicationIcon>..\..\assets\Lisere.ico</ApplicationIcon>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
+    <Authors>FGAMER768</Authors>
+    <Company>FGAMER768</Company>
+    <Product>Liseré</Product>
+    <Description>Amélioration d'images et de vidéos, colorimétrie et rendu local.</Description>
+    <Copyright>Copyright © 2026 FGAMER768</Copyright>
   </PropertyGroup>
 
   <ItemGroup>

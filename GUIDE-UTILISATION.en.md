@@ -108,8 +108,8 @@ The window is organised into four areas:
 
 The central preview is interactive:
 
-- **Drag the divider** horizontally to reveal more or less of the original.
-- **Use the slider** below the preview for the same action.
+- **Three modes** in the top-right corner: **Split** (divider), **Single** (output only) and **Side by side**. The Before/After labels are no longer shown in the preview footer.
+- **Drag the divider** horizontally to reveal more or less of the original in Split mode.
 - **Mouse wheel** over the preview to zoom.
 - **+ / - buttons** to zoom in 25% steps.
 - **`+` / `-` keys** when the preview has focus.
@@ -230,10 +230,11 @@ The **Colour preset** menu offers:
 | **Infinity CC** | Grading of the After Effects preset `Infinity_CC.ffx`: multiscale sharpening, unsharp mask 16% / radius 9.8, soft halo, exposure -0.36. Fixed values. | A sharp, slightly darkened look with a subtle highlight halo. |
 | **Nebulus CC** | Grading of the After Effects preset `Nebulus_CC.ffx`: multiscale sharpening, unsharp mask 10% / radius 20, pronounced halo. Fixed values. | A sharp, bright look with a strong halo around bright areas. |
 | **Splendida CC** | Grading of the After Effects preset `Splendida_CC.ffx`: sharpness 50, unsharp mask 15% / radius 25, 25% vignette at 40 degrees, brightness +21 / contrast +10, then its master curve (128 to 118). Fixed values. | A sharp, brighter and more contrasted look with slight vignetting. |
+| **Manual (sliders)** | Four sliders: saturation, brightness, contrast and vibrance, starting from neutral. | You want to grade by hand without a preset. |
 
 The two menus combine in this order: enhancement first, colour grading second. Choosing **None** in the first menu applies only grading; choosing **None** in the second applies only enhancement. **Nebulus CC** has a pronounced halo: it suits dark or contrasted scenes, whereas on an already very bright image it strongly brightens the sky. **Infinity CC** is more subtle and slightly darkens the image.
 
-Choosing **Ultron CC** initialises the four colour sliders to the preset values; they remain adjustable. **Matrix CC**, **Infinity CC**, **Nebulus CC** and **Splendida CC** apply their file values and leave the sliders disabled, with a note explaining this. Sharpening, specific to each preset, keeps the file values and is not exposed. Grading applies **after** enhancement: the six AI sliders and colour grading combine, and **None** leaves the image as the enhancement produced it.
+Choosing **Ultron CC** initialises the four colour sliders to the preset values; they remain adjustable. **Manual (sliders)** starts neutral and enables all four sliders. **Matrix CC**, **Infinity CC**, **Nebulus CC** and **Splendida CC** apply their file values and leave the sliders disabled, with a note explaining this. Sharpening, specific to each preset, keeps the file values and is not exposed. Grading applies **after** enhancement: the six AI sliders and colour grading combine, and **None** leaves the image as the enhancement produced it.
 
 Ultron CC is a documented reproduction: native After Effects effects are exact, third-party plug-ins (Magic Bullet Looks, Sapphire, Boris Continuum) are approximated from their saved parameters, and non-decodable proprietary tools in the Looks graph are not reproduced. The full analysis is in `docs/ULTRON-CC-ANALYSE.md`.
 
@@ -353,7 +354,7 @@ A 4K output is noticeably slower and larger. For a test, prefer a modest resolut
 
 ### 6.5 Position and preview
 
-The **Preview position** slider ranges from 0 to 95%. It determines the image extracted for comparison.
+The **timeline** below the preview shows the duration and selects the position: click or drag the playhead, or use the arrow keys and `Home` / `End` when the timeline has focus. The position stays limited to 95% so the last frame remains decodable.
 
 - **Refresh preview** (`Ctrl+Enter`) extracts the frame at the chosen position and applies the current settings.
 - **Render 1 second** runs the real pipeline on a segment around the position, then displays the middle frame. The file is temporary and silent.

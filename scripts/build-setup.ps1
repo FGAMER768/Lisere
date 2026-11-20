@@ -1,7 +1,10 @@
 [CmdletBinding()]
 param(
     [string]$Configuration = "Release",
-    [switch]$SkipPayloadCheck
+    [switch]$SkipPayloadCheck,
+    [string]$CertificateThumbprint,
+    [string]$CertificatePath,
+    [string]$TimestampServer = "http://timestamp.digicert.com"
 )
 
 $ErrorActionPreference = "Stop"
@@ -61,6 +64,32 @@ $setup = Join-Path $output "Lisere-Setup-$version.exe"
 $stable = Join-Path $output "Lisere-Setup.exe"
 Copy-Item $built $setup -Force
 Copy-Item $built $stable -Force
+
+if ($CertificateThumbprint -and $CertificatePath) {
+    throw "Choisissez -CertificateThumbprint ou -CertificatePath, pas les deux."
+}
+
+if ($CertificateThumbprint -or $CertificatePath) {
+    $signArguments = @{
+        Files = @($setup, $stable)
+        TimestampServer = $TimestampServer
+    }
+    if ($CertificateThumbprint) {
+        $signArguments.Thumbprint = $CertificateThumbprint
+    } else {
+        $signArguments.CertificatePath = $CertificatePath
+    }
+
+    try {
+        & (Join-Path $PSScriptRoot "sign-artifacts.ps1") @signArguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "Le script de signature a échoué."
+        }
+    } catch {
+        throw "Signature de l'installateur impossible : $_"
+    }
+}
+
 $hash = (Get-FileHash $stable -Algorithm SHA256).Hash.ToLowerInvariant()
 Set-Content -Path (Join-Path $output "Lisere-Setup.exe.sha256") `
     -Value "$hash  Lisere-Setup.exe" `

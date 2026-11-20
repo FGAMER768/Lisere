@@ -10,6 +10,9 @@ public enum ColorPreset
     /// <summary>Aucun étalonnage : l'image garde les couleurs de l'amélioration.</summary>
     None,
 
+    /// <summary>Etalonnage libre par les quatre curseurs, sans look propriétaire.</summary>
+    Manual,
+
     /// <summary>Reproduction du preset After Effects <c>Ultron_CC.ffx</c>.</summary>
     UltronCc,
 

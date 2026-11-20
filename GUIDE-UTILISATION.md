@@ -21,7 +21,7 @@ Liseré améliore une **image** ou une **vidéo**, puis permet de comparer le r�
 | **Vidéo** | Analyser un clip avec FFmpeg, préparer un aperçu, rendre une seconde de test, exporter le clip complet en MP4 avec audio, ou traiter plusieurs clips dans une file d'attente. |
 | **Mises à jour** | Vérifier les versions publiées sur GitHub, télécharger le paquet, contrôler son empreinte et redémarrer avec la nouvelle version. |
 
-Les deux espaces partagent les mêmes six paramètres principaux et les mêmes préréglages d'amélioration ; l'étalonnage Ultron est propre à la page Image. La vidéo ajoute les moteurs d'amélioration, la résolution, la cadence, la stabilisation, le désentrelacement, l'interpolation RIFE, le codec et la file d'attente.
+Les deux espaces partagent les mêmes six paramètres principaux, les préréglages d'amélioration et les deux menus **Amélioration (IA)** / **Colorimétrie**. La vidéo ajoute les moteurs d'amélioration, la résolution, la cadence, la stabilisation, le désentrelacement, l'interpolation RIFE, le codec et la file d'attente.
 
 ---
 
@@ -108,8 +108,8 @@ La fenêtre est organisée en quatre zones :
 
 L'aperçu central est interactif :
 
-- **Faire glisser le séparateur** horizontalement pour révéler plus ou moins l'original.
-- **Utiliser le curseur** sous l'aperçu pour la même action.
+- **Trois modes** dans le coin supérieur droit : **Split** (séparateur), **Single** (sortie seule) et **Côte à côte**. Les libellés Avant/Après ne sont plus affichés dans le pied de l'aperçu.
+- **Faire glisser le séparateur** horizontalement pour révéler plus ou moins l'original en mode Split.
 - **Molette** au-dessus de l'aperçu pour zoomer.
 - **Boutons + / −** pour zoomer par pas de 25 %.
 - **Touches `+` / `−`** lorsque l'aperçu a le focus.
@@ -230,10 +230,11 @@ Le menu **Préréglage de colorimétrie** propose :
 | **Infinity CC** | Étalonnage du preset After Effects `Infinity_CC.ffx` : accentuation multi-échelles, unsharp mask 16 % / rayon 9,8, halo doux, exposition −0,36. Valeurs fixes. | Un rendu net et légèrement assombri, avec un halo discret sur les hautes lumières. |
 | **Nebulus CC** | Étalonnage du preset After Effects `Nebulus_CC.ffx` : accentuation multi-échelles, unsharp mask 10 % / rayon 20, halo marqué. Valeurs fixes. | Un rendu net et lumineux, avec un halo prononcé autour des zones claires. |
 | **Splendida CC** | Étalonnage du preset After Effects `Splendida_CC.ffx` : netteté 50, unsharp mask 15 % / rayon 25, vignettage 25 % à 40°, luminosité +21 / contraste +10, puis sa courbe maître (128 → 118). Valeurs fixes. | Un rendu net, plus clair et contrasté, avec un léger vignettage. |
+| **Manuel (curseurs)** | Quatre curseurs : saturation, luminosité, contraste et vibrance. Le point de départ est neutre. | Vous voulez régler l'étalonnage à la main, sans preset. |
 
 Les deux menus se cumulent dans cet ordre : amélioration d'abord, colorimétrie ensuite. Choisir **Aucune** dans le premier menu n'applique que l'étalonnage ; choisir **Aucune** dans le second n'applique que l'amélioration. Le halo de **Nebulus CC** est marqué : il convient aux scènes sombres ou contrastées, alors que sur une image déjà très claire il éclaircit fortement le ciel. **Infinity CC** reste plus discret et assombrit légèrement l'image.
 
-Choisir **Ultron CC** initialise les quatre curseurs de colorimétrie aux valeurs du preset ; ils restent réglables. **Matrix CC**, **Infinity CC**, **Nebulus CC** et **Splendida CC** appliquent leurs valeurs du fichier et laissent les curseurs désactivés, avec une note qui l'explique. Les accentuations, propres à chaque preset, gardent les valeurs du fichier et ne sont pas exposées. L'étalonnage s'applique **après** l'amélioration : les six curseurs IA et la colorimétrie se cumulent, et **Aucune** laisse l'image telle que l'amélioration la produit.
+Choisir **Ultron CC** initialise les quatre curseurs de colorimétrie aux valeurs du preset ; ils restent réglables. **Manuel (curseurs)** part d'un réglage neutre et active les quatre curseurs. **Matrix CC**, **Infinity CC**, **Nebulus CC** et **Splendida CC** appliquent leurs valeurs du fichier et laissent les curseurs désactivés, avec une note qui l'explique. Les accentuations, propres à chaque preset, gardent les valeurs du fichier et ne sont pas exposées. L'étalonnage s'applique **après** l'amélioration : les six curseurs IA et la colorimétrie se cumulent, et **Aucune** laisse l'image telle que l'amélioration la produit.
 
 Ultron CC est une reproduction documentée : les effets natifs d'After Effects sont exacts, les plug-ins tiers (Magic Bullet Looks, Sapphire, Boris Continuum) sont approchés d'après leurs paramètres enregistrés, et les outils propriétaires non décodables du graphe Looks ne sont pas reproduits. L'analyse complète est dans `docs/ULTRON-CC-ANALYSE.md`.
 
@@ -353,7 +354,7 @@ Une sortie 4K est nettement plus lente et plus volumineuse. Pour un test, préf�
 
 ### 6.5 Position et aperçu
 
-Le curseur **Position de l'aperçu** va de 0 à 95 %. Il détermine l'image extraite pour la comparaison.
+La **timeline** sous l'aperçu affiche la durée et permet de choisir la position : cliquez ou faites glisser la tête de lecture, ou utilisez les flèches et `Début` / `Fin` lorsque la timeline a le focus. La position reste limitée à 95 % pour que la dernière frame soit décodable.
 
 - **Rafraîchir l'aperçu** (`Ctrl+Entrée`) extrait la frame à la position choisie et applique les réglages courants.
 - **Rendre 1 seconde** exécute le vrai pipeline sur un segment autour de la position, puis affiche la frame du milieu. Le fichier est temporaire et sans audio.

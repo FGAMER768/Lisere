@@ -31,7 +31,8 @@ public class EnhanceViewModelPresetTests
             viewModel.RecoverOriginalDetail = 17;
             viewModel.AddNoise = 0.015;
 
-            viewModel.SelectedColorPreset = viewModel.ColorPresets[1];
+            viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+                option => option.Preset == ColorPreset.UltronCc);
             viewModel.ColorSaturation = 150;
             viewModel.ColorBrightness = 10;
             viewModel.ColorContrast = 12;

@@ -54,6 +54,7 @@ public sealed partial class VideoViewModel
         {
             var video = await _probe.ProbeAsync(path, cancellation.Token);
             _video = video;
+            OnPropertyChanged(nameof(DurationSeconds));
             _autoSamples = null;
             _previewFrame = null;
             AfterImage = null;

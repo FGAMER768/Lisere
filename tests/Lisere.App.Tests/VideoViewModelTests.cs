@@ -31,6 +31,7 @@ public class VideoViewModelTests
         Assert.Empty(renderer.Requests);
         Assert.Contains("clip.mp4", viewModel.VideoInfoText, StringComparison.Ordinal);
         Assert.Contains("640 × 360", viewModel.VideoInfoText, StringComparison.Ordinal);
+        Assert.Equal(1, viewModel.DurationSeconds, 3);
         Assert.True(viewModel.RenderCommand.CanExecute(null));
         Assert.False(viewModel.HasWarnings);
     }
@@ -129,6 +130,59 @@ public class VideoViewModelTests
         viewModel.FixCompression = 20;
         await viewModel.RenderPreviewCommand.ExecuteAsync(null);
         Assert.False(renderer.Request!.Frame.ApplyChromaTone);
+    }
+
+    [Fact]
+    public void VideoParameterTabsMirrorTheImagePage()
+    {
+        var viewModel = CreateViewModel();
+
+        Assert.True(viewModel.IsEnhancementTab);
+        Assert.False(viewModel.IsColorTab);
+        Assert.False(viewModel.ShowColorSettings);
+
+        viewModel.IsColorTab = true;
+
+        Assert.False(viewModel.IsEnhancementTab);
+        Assert.True(viewModel.IsColorTab);
+        Assert.False(viewModel.ShowColorSettings);
+
+        viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+            option => option.Preset == ColorPreset.Manual);
+
+        Assert.True(viewModel.ShowColorSettings);
+        Assert.True(viewModel.HasAdjustableColorSettings);
+        Assert.Equal(100, viewModel.ColorSaturation);
+        Assert.Equal(0, viewModel.ColorBrightness);
+        Assert.Equal(0, viewModel.ColorContrast);
+        Assert.Equal(0, viewModel.ColorVibrance);
+
+        viewModel.IsEnhancementTab = true;
+
+        Assert.False(viewModel.IsColorTab);
+        Assert.False(viewModel.ShowColorSettings);
+    }
+
+    [Fact]
+    public async Task ManualColorGradeSendsSliderSettingsToTheFrame()
+    {
+        var engine = new FakeEngine(unavailable: false);
+        var viewModel = CreateViewModel(engine: engine);
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+            option => option.Preset == ColorPreset.Manual);
+        viewModel.ColorSaturation = 140;
+        viewModel.ColorBrightness = 12;
+        viewModel.ColorContrast = 8;
+        viewModel.ColorVibrance = 25;
+
+        await viewModel.RefreshPreviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(ColorPreset.Manual, engine.LastRequest?.Grading);
+        Assert.Equal(
+            new UltronCcSettings(140, 12, 8, 25),
+            engine.LastRequest?.GradingSettings);
     }
 
     [Fact]

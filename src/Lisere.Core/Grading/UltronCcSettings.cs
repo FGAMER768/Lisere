@@ -19,6 +19,9 @@ public sealed record UltronCcSettings(
         UltronCcTuning.BrightnessContrast.Contrast,
         UltronCcTuning.Vibrance.Amount);
 
+    /// <summary>Point de départ neutre du mode Manuel.</summary>
+    public static UltronCcSettings Neutral { get; } = new(100.0, 0.0, 0.0, 0.0);
+
     /// <summary>Bornes d'interface reprises des curseurs d'After Effects.</summary>
     public static double BrightnessMinimum => -150.0;
 

@@ -6,6 +6,24 @@
              KeyDown="OnStageKeyDown"
              x:Name="Root">
     <UserControl.Resources>
+        <!-- The preview uses a dark glass surface. A dedicated opaque tooltip
+             avoids the underlying image text showing through the popup. -->
+        <Style TargetType="ToolTip">
+            <Setter Property="MaxWidth" Value="300" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Background" Value="#FF202020" />
+            <Setter Property="Foreground" Value="#FFF2F2F2" />
+            <Setter Property="BorderBrush" Value="#40FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- The zoom pill keeps its own dark surface, so its buttons must not
              inherit the light/dark theme hover brushes: white on white would
              disappear in light mode. -->
@@ -18,6 +36,8 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Foreground" Value="#FFF2F2F2" />
             <Setter Property="FontSize" Value="16" />
+            <Setter Property="ToolTipService.InitialShowDelay" Value="200" />
+            <Setter Property="ToolTipService.ShowDuration" Value="8000" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -42,6 +62,48 @@
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PreviewModeButton" TargetType="RadioButton">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="ToolTipService.InitialShowDelay" Value="200" />
+            <Setter Property="ToolTipService.Placement" Value="Top" />
+            <Setter Property="ToolTipService.ShowDuration" Value="8000" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#4D60CDFF" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#33FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#4DFFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Chrome" Property="BorderBrush" Value="#FF60CDFF" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -103,6 +165,25 @@
                                Source="{Binding BeforeImage, ElementName=Root}"
                                Stretch="UniformToFill" />
                     </Grid>
+                </Grid>
+
+                <Grid x:Name="SideBySideLayer" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Image x:Name="SideBySideBeforeImage"
+                           Grid.Column="0"
+                           AutomationProperties.Name="{Binding Localization[beforeAfterBeforePreview], ElementName=Root}"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           Source="{Binding BeforeImage, ElementName=Root}"
+                           Stretch="Uniform" />
+                    <Image x:Name="SideBySideAfterImage"
+                           Grid.Column="1"
+                           AutomationProperties.Name="{Binding Localization[beforeAfterAfterPreview], ElementName=Root}"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           Source="{Binding AfterImage, ElementName=Root}"
+                           Stretch="Uniform" />
                 </Grid>
             </Grid>
 
@@ -177,72 +258,185 @@
                 </Thumb.Template>
             </Thumb>
 
-            <Border Margin="10"
-                    Padding="3"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Top"
-                    Background="#E61A1A1A"
-                    BorderBrush="#40FFFFFF"
-                    BorderThickness="1"
-                    CornerRadius="10">
-                <StackPanel Orientation="Horizontal">
-                    <Button AutomationProperties.Name="{Binding Localization[beforeAfterZoomOut], ElementName=Root}"
-                            Click="OnZoomOutClick"
-                            Content="−"
-                            Style="{StaticResource ZoomButton}"
-                            ToolTip="{Binding Localization[beforeAfterZoomOutTip], ElementName=Root}" />
-                    <Border Width="1"
-                            Height="18"
-                            Margin="4,0"
-                            VerticalAlignment="Center"
-                            Background="#33FFFFFF" />
-                    <Button Width="56"
-                            AutomationProperties.Name="{Binding Localization[beforeAfterFit], ElementName=Root}"
-                            Click="OnZoomResetClick"
-                            IsEnabled="{Binding IsZoomed, ElementName=Root}"
-                            Style="{StaticResource ZoomButton}"
-                            ToolTip="{Binding Localization[beforeAfterFitTip], ElementName=Root}">
-                        <TextBlock x:Name="ZoomText"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   Foreground="#FFF2F2F2"
-                                   Text="100%" />
-                    </Button>
-                    <Border Width="1"
-                            Height="18"
-                            Margin="4,0"
-                            VerticalAlignment="Center"
-                            Background="#33FFFFFF" />
-                    <Button AutomationProperties.Name="{Binding Localization[beforeAfterZoomIn], ElementName=Root}"
-                            Click="OnZoomInClick"
-                            Content="+"
-                            Style="{StaticResource ZoomButton}"
-                            ToolTip="{Binding Localization[beforeAfterZoomInTip], ElementName=Root}" />
-                </StackPanel>
-            </Border>
+            <Border x:Name="SideDivider"
+                    Width="1"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Stretch"
+                    Background="#66FFFFFF"
+                    IsHitTestVisible="False"
+                    Visibility="Collapsed" />
+
+            <StackPanel Margin="10"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top">
+                <Border Padding="3"
+                        HorizontalAlignment="Right"
+                        Background="#E61A1A1A"
+                        BorderBrush="#40FFFFFF"
+                        BorderThickness="1"
+                        CornerRadius="10">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="SplitModeButton"
+                                     AutomationProperties.AutomationId="PreviewModeSplit"
+                                     AutomationProperties.Name="{Binding Localization[previewModeSplit], ElementName=Root}"
+                                     Checked="OnPreviewModeChecked"
+                                     GroupName="PreviewModes"
+                                     IsChecked="True"
+                                     AutomationProperties.HelpText="{Binding Localization[previewModeSplitTip], ElementName=Root}"
+                                     Style="{StaticResource PreviewModeButton}"
+                                     Tag="Split"
+                                     ToolTip="{Binding Localization[previewModeSplitTip], ElementName=Root}">
+                            <Viewbox Width="18" Height="18">
+                                <Canvas Width="18" Height="18">
+                                    <Rectangle Canvas.Left="2"
+                                               Canvas.Top="3"
+                                               Width="14"
+                                               Height="12"
+                                               Fill="#1FF2F2F2"
+                                               RadiusX="2.5"
+                                               RadiusY="2.5"
+                                               Stroke="#FFF2F2F2"
+                                               StrokeThickness="1.2" />
+                                    <Rectangle Canvas.Left="2.6"
+                                               Canvas.Top="3.6"
+                                               Width="5.8"
+                                               Height="10.8"
+                                               Fill="#73F2F2F2"
+                                               RadiusX="1.6"
+                                               RadiusY="1.6" />
+                                    <Path Data="M9,3 V15"
+                                          Stroke="#FFF2F2F2"
+                                          StrokeEndLineCap="Round"
+                                          StrokeStartLineCap="Round"
+                                          StrokeThickness="1.2" />
+                                </Canvas>
+                            </Viewbox>
+                        </RadioButton>
+                        <RadioButton x:Name="SingleModeButton"
+                                     AutomationProperties.AutomationId="PreviewModeSingle"
+                                     AutomationProperties.Name="{Binding Localization[previewModeSingle], ElementName=Root}"
+                                     Checked="OnPreviewModeChecked"
+                                     GroupName="PreviewModes"
+                                     AutomationProperties.HelpText="{Binding Localization[previewModeSingleTip], ElementName=Root}"
+                                     Style="{StaticResource PreviewModeButton}"
+                                     Tag="Single"
+                                     ToolTip="{Binding Localization[previewModeSingleTip], ElementName=Root}">
+                            <Viewbox Width="18" Height="18">
+                                <Canvas Width="18" Height="18">
+                                    <Rectangle Canvas.Left="2"
+                                               Canvas.Top="3"
+                                               Width="14"
+                                               Height="12"
+                                               Fill="#59F2F2F2"
+                                               RadiusX="2.5"
+                                               RadiusY="2.5"
+                                               Stroke="#FFF2F2F2"
+                                               StrokeThickness="1.2" />
+                                </Canvas>
+                            </Viewbox>
+                        </RadioButton>
+                        <RadioButton x:Name="SideBySideModeButton"
+                                     AutomationProperties.AutomationId="PreviewModeSideBySide"
+                                     AutomationProperties.Name="{Binding Localization[previewModeSideBySide], ElementName=Root}"
+                                     Checked="OnPreviewModeChecked"
+                                     GroupName="PreviewModes"
+                                     AutomationProperties.HelpText="{Binding Localization[previewModeSideBySideTip], ElementName=Root}"
+                                     Style="{StaticResource PreviewModeButton}"
+                                     Tag="SideBySide"
+                                     ToolTip="{Binding Localization[previewModeSideBySideTip], ElementName=Root}">
+                            <Viewbox Width="18" Height="18">
+                                <Canvas Width="18" Height="18">
+                                    <Rectangle Canvas.Left="1.5"
+                                               Canvas.Top="3"
+                                               Width="6.6"
+                                               Height="12"
+                                               Fill="#59F2F2F2"
+                                               RadiusX="2"
+                                               RadiusY="2"
+                                               Stroke="#FFF2F2F2"
+                                               StrokeThickness="1.2" />
+                                    <Rectangle Canvas.Left="9.9"
+                                               Canvas.Top="3"
+                                               Width="6.6"
+                                               Height="12"
+                                               Fill="#59F2F2F2"
+                                               RadiusX="2"
+                                               RadiusY="2"
+                                               Stroke="#FFF2F2F2"
+                                               StrokeThickness="1.2" />
+                                </Canvas>
+                            </Viewbox>
+                        </RadioButton>
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,6,0,0"
+                        Padding="3"
+                        Background="#E61A1A1A"
+                        BorderBrush="#40FFFFFF"
+                        BorderThickness="1"
+                        CornerRadius="10">
+                    <StackPanel Orientation="Horizontal">
+                        <Button AutomationProperties.Name="{Binding Localization[beforeAfterZoomOut], ElementName=Root}"
+                                Click="OnZoomOutClick"
+                                Style="{StaticResource ZoomButton}"
+                                ToolTip="{Binding Localization[beforeAfterZoomOutTip], ElementName=Root}">
+                            <Viewbox Width="14" Height="14">
+                                <Canvas Width="12" Height="12">
+                                    <Path Data="M1,6 H11"
+                                          Stroke="#FFF2F2F2"
+                                          StrokeEndLineCap="Round"
+                                          StrokeStartLineCap="Round"
+                                          StrokeThickness="1.5" />
+                                </Canvas>
+                            </Viewbox>
+                        </Button>
+                        <Border Width="1"
+                                Height="18"
+                                Margin="4,0"
+                                VerticalAlignment="Center"
+                                Background="#33FFFFFF" />
+                        <Button Width="56"
+                                AutomationProperties.Name="{Binding Localization[beforeAfterFit], ElementName=Root}"
+                                Click="OnZoomResetClick"
+                                IsEnabled="{Binding IsZoomed, ElementName=Root}"
+                                Style="{StaticResource ZoomButton}"
+                                ToolTip="{Binding Localization[beforeAfterFitTip], ElementName=Root}">
+                            <TextBlock x:Name="ZoomText"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="#FFF2F2F2"
+                                       Text="100%" />
+                        </Button>
+                        <Border Width="1"
+                                Height="18"
+                                Margin="4,0"
+                                VerticalAlignment="Center"
+                                Background="#33FFFFFF" />
+                        <Button AutomationProperties.Name="{Binding Localization[beforeAfterZoomIn], ElementName=Root}"
+                                Click="OnZoomInClick"
+                                Style="{StaticResource ZoomButton}"
+                                ToolTip="{Binding Localization[beforeAfterZoomInTip], ElementName=Root}">
+                            <Viewbox Width="14" Height="14">
+                                <Canvas Width="12" Height="12">
+                                    <Path Data="M1,6 H11 M6,1 V11"
+                                          Stroke="#FFF2F2F2"
+                                          StrokeEndLineCap="Round"
+                                          StrokeStartLineCap="Round"
+                                          StrokeThickness="1.5" />
+                                </Canvas>
+                            </Viewbox>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1" Margin="10,8,10,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock VerticalAlignment="Center"
-                       FontSize="12"
-                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                       Text="{Binding Localization[beforeAfterBefore], ElementName=Root}" />
-            <ContentPresenter Grid.Column="1"
-                              Margin="10,0"
-                              VerticalAlignment="Center"
-                              Content="{Binding Footer, ElementName=Root}" />
-            <TextBlock Grid.Column="2"
-                       VerticalAlignment="Center"
-                       FontSize="12"
-                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                       Text="{Binding Localization[beforeAfterAfter], ElementName=Root}" />
-        </Grid>
+        <ContentPresenter Grid.Row="1"
+                          Margin="10,8,10,8"
+                          VerticalAlignment="Center"
+                          Content="{Binding Footer, ElementName=Root}" />
     </Grid>
 </UserControl>

@@ -15,6 +15,7 @@ public partial class MainWindow : FluentWindow
     private readonly EnhancePage _enhancePage;
     private readonly VideoPage _videoPage;
     private readonly UpdateViewModel _updateViewModel;
+    private readonly ILocalizationService _localization;
     private Control? _lastPageFocus;
     private bool _isPageDisabled;
 
@@ -22,12 +23,14 @@ public partial class MainWindow : FluentWindow
         EnhancePage enhancePage,
         VideoPage videoPage,
         DialogService dialogService,
-        UpdateViewModel updateViewModel)
+        UpdateViewModel updateViewModel,
+        ILocalizationService localization)
     {
         _dialogService = dialogService;
         _enhancePage = enhancePage;
         _videoPage = videoPage;
         _updateViewModel = updateViewModel;
+        _localization = localization;
 
         InitializeComponent();
         ShowPage(enhancePage, ImageTabButton, VideoTabButton);
@@ -48,6 +51,15 @@ public partial class MainWindow : FluentWindow
     private void OnUpdateClick(object sender, RoutedEventArgs e)
     {
         var window = new UpdateWindow(_updateViewModel)
+        {
+            Owner = this
+        };
+        window.ShowDialog();
+    }
+
+    private void OnAboutClick(object sender, RoutedEventArgs e)
+    {
+        var window = new AboutWindow(_localization)
         {
             Owner = this
         };

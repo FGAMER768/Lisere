@@ -6,6 +6,14 @@
 
 Liseré est une application de bureau Windows pour améliorer **une image ou une vidéo**, comparer le résultat à l'original et exporter la version retouchée. Les traitements sont effectués localement : aucun service externe, aucun compte. Seule la vérification de mise à jour, lancée à votre demande, contacte GitHub.
 
+## Aperçu
+
+| Espace Image | Espace Vidéo |
+|:---:|:---:|
+| ![Espace Image de Liseré : comparaison avant/après](assets/screenshots/image-fr.png) | ![Espace Vidéo de Liseré : timeline et comparaison](assets/screenshots/video-fr.png) |
+
+Captures de l'application avec le préréglage **Chroma**, la comparaison avant/après, les trois modes de prévisualisation et la timeline vidéo.
+
 ## Installation
 
 La version installable se trouve dans la dernière [release GitHub](https://github.com/FGAMER768/Lisere/releases/latest). Téléchargez [Lisere-Setup.exe](https://github.com/FGAMER768/Lisere/releases/latest/download/Lisere-Setup.exe) et lancez-le : l'installateur installe Liseré pour le compte Windows courant, sans droits administrateur et sans demander d'installer l'application ou ses dépendances. Le paquet contient l'application autonome et FFmpeg.
@@ -22,12 +30,12 @@ Pour un déploiement silencieux, par exemple dans un script ou sur une image de 
 
 `--silent` installe sans interface, `--install-dir=...` choisit le dossier, `--no-shortcuts` n'ajoute aucun raccourci et `--desktop-shortcut` ajoute le raccourci Bureau. Le code de sortie vaut `0` en cas de succès, `1` sinon. L'installateur reconnaît aussi une installation existante grâce à `Lisere.exe` ou au marqueur `.lisere`, ce qui permet de la mettre à jour sur place.
 
-> L'installateur n'est pas encore signé numériquement : Windows peut afficher un avertissement SmartScreen. L'empreinte SHA-256 publiée avec la release permet de vérifier le fichier.
+> La signature Authenticode est prise en charge par les scripts de publication. Une release signée avec le certificat de FGAMER768 est produite avec `-CertificateThumbprint` ou `-CertificatePath` ; sans certificat, Windows peut afficher un avertissement SmartScreen. L'empreinte SHA-256 publiée avec la release permet de vérifier le fichier.
 
 L'interface propose deux espaces :
 
 - **Image** : pipeline déterministe six paramètres, préréglages, estimation automatique, menu de colorimétrie séparé, export JPEG.
-- **Vidéo** : analyse FFmpeg, aperçu avant/après, rendu image par image, moteurs interchangeables (pipeline local ou modèles ONNX), résolutions FHD/4K, cadence 30/60/120 i/s, interpolation neuronale RIFE ×2, désentrelacement, stabilisation, colorimétrie, file d'attente et export MP4 avec audio.
+- **Vidéo** : analyse FFmpeg, aperçu avant/après, timeline de montage, rendu image par image, moteurs interchangeables (pipeline local ou modèles ONNX), résolutions FHD/4K, cadence 30/60/120 i/s, interpolation neuronale RIFE ×2, désentrelacement, stabilisation, colorimétrie, file d'attente et export MP4 avec audio.
 
 FFmpeg est livré avec l'application et vérifié par SHA-256 au démarrage. Un bouton **Mises à jour** dans la barre de titre vérifie les versions publiées sur GitHub, télécharge le paquet, contrôle son empreinte, puis l'installe au redémarrage.
 
@@ -37,10 +45,11 @@ FFmpeg est livré avec l'application et vérifié par SHA-256 au démarrage. Un 
 
 - Ouverture des images prises en charge par Windows Imaging Component, avec normalisation des cas irréguliers.
 - Comparaison avant/après avec séparateur déplaçable sur toute la hauteur de l'image.
+- Trois modes de comparaison : **Split** (séparateur), **Single** (sortie seule) et **Côte à côte**, choisis par des icônes dans le coin supérieur droit. Les mentions Avant/Après sont retirées du pied de l'aperçu.
 - L'ouverture affiche l'original : l'amélioration n'est calculée qu'au clic sur **Améliorer l'image**.
 - Deux menus de paramètres, **Amélioration (IA)** et **Colorimétrie**, chacun avec son préréglage et ses curseurs.
 - Préréglages d'amélioration Chroma, Auto, Manuel et Auto + relatif moyen.
-- Préréglages de colorimétrie **Ultron CC**, **Matrix CC**, **Infinity CC**, **Nebulus CC** et **Splendida CC**, reproductions de presets After Effects appliquées après l'amélioration (`docs/ULTRON-CC-ANALYSE.md` et `docs/PRESETS-ANALYSE.md`).
+- Préréglages de colorimétrie **Ultron CC**, **Matrix CC**, **Infinity CC**, **Nebulus CC**, **Splendida CC**, reproductions de presets After Effects appliquées après l'amélioration (`docs/ULTRON-CC-ANALYSE.md` et `docs/PRESETS-ANALYSE.md`), et **Manuel (curseurs)** pour régler saturation, luminosité, contraste et vibrance.
 - Réglages de correction de compression, réduction du bruit, netteté, récupération des détails, réduction du halo et lissage des contours.
 - Réglages complémentaires pour les détails d'origine et l'ajout de bruit.
 - **Renforcement des visages** : YuNet (MIT) localise les visages et concentre la micro-texture sur leur peau, sans ajouter de grain au fond ni aux cheveux. Si le modèle est absent, Liseré revient au masque de peau global sans bloquer le rendu.
@@ -56,8 +65,9 @@ FFmpeg est livré avec l'application et vérifié par SHA-256 au démarrage. Un 
 - **FFmpeg intégré** : compilation Windows livrée dans `ffmpeg/`, avec `ffmpeg.exe`, `ffprobe.exe`, les DLL et un manifeste d'empreintes. Le paquet est vérifié au démarrage ; si un fichier manque ou a été modifié, les fonctions vidéo sont désactivées avec une raison explicite.
 - Analyse du fichier avec `ffprobe` : résolution, cadence, durée, codec, présence et codec audio.
 - Aperçu avant/après sur une image extraite à la position choisie ; l'ouverture ne calcule pas l'aperçu, il faut le demander explicitement (`Ctrl+Entrée`).
+- **Timeline de montage** : règle temporelle, graduations, tête de lecture, clic/glisser pour se déplacer, flèches et `Home`/`End` au clavier.
 - Application des six mêmes paramètres à chaque image, avec estimation Auto échantillonnée sur le clip.
-- **Colorimétrie vidéo** : les cinq étalonnages de la page Image (Ultron CC, Matrix CC, Infinity CC, Nebulus CC, Splendida CC) s'appliquent à chaque image, après l'amélioration et avant la courbe Chroma. Le choix est figé dans chaque job de la file.
+- **Colorimétrie vidéo** : les mêmes onglets **Amélioration (IA)** et **Colorimétrie** que la page Image, avec les cinq étalonnages (Ultron CC, Matrix CC, Infinity CC, Nebulus CC, Splendida CC) et **Manuel (curseurs)**. Ils s'appliquent à chaque image, après l'amélioration et avant la courbe Chroma. Le choix est figé dans chaque job de la file.
 - Moteurs interchangeables :
   - **Lisere Classic** : pipeline local déterministe, toujours disponible ;
   - **Super-Resolution CNN ×3** : modèle ONNX local, vérifié par SHA-256, inférence DirectML sur iGPU avec repli CPU.
@@ -75,7 +85,8 @@ FFmpeg est livré avec l'application et vérifié par SHA-256 au démarrage. Un 
 - **Aperçu rendu d'une seconde** : rend le segment réel autour de la position choisie avec les mêmes réglages, puis affiche la frame obtenue.
 - **Export de l'aperçu** : le même segment d'une seconde peut être écrit vers un fichier choisi, sans audio, pour l'inspecter ou le conserver.
 - **Frame en direct** : pendant un rendu, la dernière image produite remplace l'aperçu et reste visible après une annulation.
-- **Zoom synchronisé** : molette, boutons ou touches `+` / `−` / `0` sur la comparaison ; avant et après zooment ensemble, le point sous le curseur reste en place (le centre reste au centre), et un glisser déplace l'image agrandie.
+- **Zoom synchronisé** : molette, boutons ou touches `+` / `−` / `0` sur la comparaison ; avant et après zooment ensemble, le point sous le curseur reste en place (le centre reste au centre), et un glisser déplace l'image agrandie. Les icônes `−` / `+` sont centrées dans leurs boutons.
+- **Trois modes de preview** : split, single (sortie seule) et côte à côte, disponibles avec des icônes sur la comparaison image et vidéo.
 
 ### Commun
 
@@ -309,7 +320,7 @@ Le catalogue `models/catalog.json` décrit chaque modèle (fichier, échelle, en
 
 ## Crédits, sources et licences
 
-Liseré ne redistribue aucun poids, code ou média propriétaire. Les ressources tierces utilisées sont créditées ci-dessous ; les licences complètes des modèles sont fournies dans `models/`.
+Liseré est conçu et développé par **FGAMER768**. Il ne redistribue aucun poids, code ou média propriétaire. Les ressources tierces utilisées sont créditées ci-dessous ; les licences complètes des modèles sont fournies dans `models/`.
 
 ### Modèles et moteurs
 
@@ -358,7 +369,7 @@ dotnet test Lisere.slnx
 
 La solution contient quatre projets de tests xUnit : `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` et `Lisere.App.Tests`.
 
-État actuel : **406 tests** (120 Core, 18 Ai, 52 Video, 216 App), 0 avertissement de build. La suite complète passe en parallèle sur la machine de référence. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model. Le script de désinstallation par utilisateur est couvert par `UninstallServiceTests.cs`.
+État actuel : **424 tests** (125 Core, 18 Ai, 52 Video, 229 App), 0 avertissement de build. La suite complète passe en parallèle sur la machine de référence. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model. Le script de désinstallation par utilisateur est couvert par `UninstallServiceTests.cs`.
 
 Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le rendu, la conservation de l'audio, le désentrelacement, la taille exacte, l'annulation et l'extraction d'aperçu. Ils sont ignorés silencieusement si FFmpeg est introuvable, afin que le reste de la suite reste exécutable sur une machine sans outillage vidéo.
 
@@ -383,13 +394,15 @@ La publication est scriptée pour garder l'application, le paquet de mise à jou
 
    Le script publie en `Release`/`win-x64` self-contained, vérifie `Lisere.exe` et le dossier `ffmpeg/`, puis écrit `Update/Lisere.zip`, `Update/Lisere.zip.sha256` et `Update/version.txt`.
 
+   Pour signer `Lisere.exe` avant de créer l'archive, ajoutez `-CertificateThumbprint <empreinte>` (certificat dans `CurrentUser\My` ou `LocalMachine\My`) ou `-CertificatePath <fichier.pfx>`. Le certificat doit avoir une clé privée et l'usage de signature de code. `scripts/sign-artifacts.ps1` peut aussi être lancé seul sur les artefacts déjà construits.
+
 3. Reconstruisez l'installateur, qui embarque ce ZIP :
 
    ```powershell
    powershell -ExecutionPolicy Bypass -File scripts/build-setup.ps1
    ```
 
-   Sorties : `artifacts/installer/Lisere-Setup.exe` (nom stable), `Lisere-Setup-<version>.exe` et `Lisere-Setup.exe.sha256`. L'installateur doit toujours être reconstruit après `publish-update.ps1`.
+   Sorties : `artifacts/installer/Lisere-Setup.exe` (nom stable), `Lisere-Setup-<version>.exe` et `Lisere-Setup.exe.sha256`. L'installateur doit toujours être reconstruit après `publish-update.ps1`. Ajoutez les mêmes options de certificat pour signer les deux copies de l'installateur avant le calcul des empreintes.
 
 4. Créez une release GitHub avec le tag `v<version>` et joignez les quatre assets : `Lisere-Setup.exe`, `Lisere-Setup.exe.sha256`, `Lisere.zip` et `Lisere.zip.sha256`. La release doit rester la plus récente : l'application utilise `releases/latest`.
 
@@ -435,4 +448,5 @@ scripts/
   fetch-ffmpeg.ps1
   publish-update.ps1
   build-setup.ps1
+  sign-artifacts.ps1
 ```

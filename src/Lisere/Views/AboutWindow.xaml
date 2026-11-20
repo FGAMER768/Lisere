@@ -1,0 +1,144 @@
+<ui:FluentWindow x:Class="Lisere.Views.AboutWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 AutomationProperties.AutomationId="AboutWindow"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="{Binding Strings[aboutWindowTitle]}"
+                 Icon="/Assets/Lisere.ico"
+                 Width="560"
+                 Height="560"
+                 MinWidth="500"
+                 MinHeight="460"
+                 ResizeMode="CanResize"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterOwner"
+                 Background="{ui:ThemeResource ApplicationBackgroundBrush}"
+                 PreviewKeyDown="OnPreviewKeyDown">
+    <ui:FluentWindow.Resources>
+        <DrawingImage x:Key="LisereMarkImage">
+            <DrawingImage.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Brush="#5A544D"
+                                     Geometry="M545.35 520.75c-5.57 29.94-25.07 103.75-31.33 122.55H168.65v-25.76c61.27-4.18 66.84-9.05 66.84-67.54V284.71c0-58.49-6.96-64.06-59.19-68.24v-25.76h217.25v25.76c-54.31 4.87-61.27 9.75-61.27 68.24v270.16c0 38.3 1.39 55.7 39.69 56.4 1.39.7 33.42.7 36.21.7 39.69 0 50.13-8.36 66.84-27.16 13.23-13.93 31.33-43.87 43.87-72.41l26.46 8.36Z" />
+                    <GeometryDrawing Brush="#938A80"
+                                     Geometry="M605.35 520.75c-5.57 29.94-25.07 103.75-31.33 122.55H228.65v-25.76c61.27-4.18 66.84-9.05 66.84-67.54V284.71c0-58.49-6.96-64.06-59.19-68.24v-25.76h217.25v25.76c-54.31 4.87-61.27 9.75-61.27 68.24v270.16c0 38.3 1.39 55.7 39.69 56.4 1.39.7 33.42.7 36.21.7 39.69 0 50.13-8.36 66.84-27.16 13.23-13.93 31.33-43.87 43.87-72.41l26.46 8.36Z" />
+                    <GeometryDrawing Brush="#EDE5D8"
+                                     Geometry="M665.35 520.75c-5.57 29.94-25.07 103.75-31.33 122.55H288.66v-25.76c61.27-4.18 66.84-9.05 66.84-67.54V284.71c0-58.49-6.96-64.06-59.19-68.24v-25.76h217.25v25.76c-54.31 4.87-61.27 9.75-61.27 68.24v270.16c0 38.3 1.39 55.7 39.69 56.4 1.39.7 33.42.7 36.21.7 39.69 0 50.13-8.36 66.84-27.16 13.23-13.93 31.33-43.87 43.87-72.41l26.46 8.36Z" />
+                </DrawingGroup>
+            </DrawingImage.Drawing>
+        </DrawingImage>
+    </ui:FluentWindow.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0"
+                     Title="{Binding Strings[aboutWindowTitle]}"
+                     ShowMaximize="False"
+                     ShowMinimize="False">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon>
+                    <ui:ImageIcon.Source>
+                        <BitmapImage UriSource="pack://application:,,,/Assets/LisereIcon.png" />
+                    </ui:ImageIcon.Source>
+                </ui:ImageIcon>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <ScrollViewer Grid.Row="1"
+                      Padding="0,0,6,0"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="28,8,28,12">
+                <StackPanel Orientation="Horizontal">
+                    <Image Width="56"
+                           Height="56"
+                           VerticalAlignment="Top"
+                           AutomationProperties.AutomationId="AboutProductIcon"
+                           AutomationProperties.Name="Liseré"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           Source="{StaticResource LisereMarkImage}"
+                           Stretch="Uniform" />
+                    <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                        <TextBlock FontSize="28"
+                                   FontWeight="SemiBold"
+                                   Text="Liseré" />
+                        <TextBlock Margin="0,3,0,0"
+                                   FontSize="12"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding VersionText}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Margin="0,18,0,0"
+                           FontSize="14"
+                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                           Text="{Binding Strings[aboutTagline]}"
+                           TextWrapping="Wrap" />
+
+                <Border Margin="0,18,0,0" Style="{StaticResource CardBorder}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Margin="0,1,12,0"
+                                       VerticalAlignment="Top"
+                                       FontSize="20"
+                                       Foreground="{ui:ThemeResource AccentTextFillColorPrimaryBrush}"
+                                       Symbol="Person24" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock FontSize="12"
+                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding Strings[aboutAuthorLabel]}" />
+                            <TextBlock Margin="0,3,0,0"
+                                       FontSize="18"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding Strings[aboutAuthor]}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Margin="0,12,0,0" Style="{StaticResource CardBorder}">
+                    <StackPanel>
+                        <TextBlock FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Text="{Binding Strings[aboutCreditsTitle]}" />
+                        <TextBlock Margin="0,6,0,0"
+                                   FontSize="12"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Strings[aboutCreditsBody]}"
+                                   TextWrapping="Wrap" />
+                        <ui:Button Margin="0,12,0,0"
+                                   HorizontalAlignment="Left"
+                                   Appearance="Secondary"
+                                   Click="OnRepositoryClick"
+                                   Content="{Binding Strings[aboutRepository]}"
+                                   Icon="{ui:SymbolIcon Open24}" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Margin="0,16,0,0"
+                           FontSize="11"
+                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                           Text="{Binding Strings[aboutCopyright]}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <ui:Button x:Name="CloseButton"
+                   Grid.Row="2"
+                   MinWidth="104"
+                   AutomationProperties.AutomationId="AboutCloseButton"
+                   Margin="28,4,28,20"
+                   HorizontalAlignment="Right"
+                   Appearance="Primary"
+                   Click="OnCloseClick"
+                   Content="{Binding Strings[aboutClose]}"
+                   IsDefault="True" />
+    </Grid>
+</ui:FluentWindow>

@@ -45,6 +45,24 @@
                     <ui:Button MinHeight="26"
                                Margin="0,0,8,0"
                                Padding="8,1"
+                               AutomationProperties.AutomationId="AboutButton"
+                               AutomationProperties.HelpText="{Binding Strings[aboutButton]}"
+                               AutomationProperties.Name="{Binding Strings[aboutButton]}"
+                               Click="OnAboutClick"
+                               Content="{Binding Strings[aboutButton]}"
+                               FontSize="12"
+                               Icon="{ui:SymbolIcon Info24}"
+                               ToolTip="{Binding Strings[aboutButton]}">
+                        <ui:Button.Style>
+                            <Style TargetType="{x:Type ui:Button}"
+                                   BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Appearance" Value="Transparent" />
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                    <ui:Button MinHeight="26"
+                               Margin="0,0,8,0"
+                               Padding="8,1"
                                AutomationProperties.HelpText="{Binding Strings[updateButton]}"
                                AutomationProperties.Name="{Binding Strings[updateButton]}"
                                Click="OnUpdateClick"

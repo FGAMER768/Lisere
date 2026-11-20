@@ -80,7 +80,7 @@ public class EnhanceViewModelLanguageTests
         var viewModel = CreateViewModel(localization);
 
         Assert.Equal(
-            new[] { "Aucune", "Ultron CC", "Matrix CC", "Infinity CC", "Nebulus CC", "Splendida CC" },
+            new[] { "Aucune", "Manuel (curseurs)", "Ultron CC", "Matrix CC", "Infinity CC", "Nebulus CC", "Splendida CC" },
             viewModel.ColorPresets.Select(option => option.Label));
         Assert.DoesNotContain(viewModel.Presets, option => option.Label == "Ultron CC");
         Assert.False(viewModel.IsColorGradingActive);
@@ -135,7 +135,8 @@ public class EnhanceViewModelLanguageTests
 
         Assert.Equal("Aucun traitement appliqué.", viewModel.StatusMessage);
 
-        viewModel.SelectedColorPreset = viewModel.ColorPresets[1];
+        viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+            option => option.Preset == ColorPreset.UltronCc);
         await viewModel.EnhanceCommand.ExecuteAsync(null);
 
         Assert.Equal("Colorimétrie seule : Ultron CC.", viewModel.StatusMessage);
@@ -144,6 +145,25 @@ public class EnhanceViewModelLanguageTests
 
         Assert.Equal("No enhancement", none.Label);
         Assert.Equal("Grading only: Ultron CC.", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void ManualColorPresetStartsWithNeutralSliders()
+    {
+        var viewModel = CreateViewModel(new LocalizationService());
+        var manual = Assert.Single(
+            viewModel.ColorPresets,
+            option => option.Preset == ColorPreset.Manual);
+
+        viewModel.SelectedColorPreset = manual;
+
+        Assert.True(viewModel.IsColorGradingActive);
+        Assert.True(viewModel.HasAdjustableColorSettings);
+        Assert.Equal(100, viewModel.ColorSaturation);
+        Assert.Equal(0, viewModel.ColorBrightness);
+        Assert.Equal(0, viewModel.ColorContrast);
+        Assert.Equal(0, viewModel.ColorVibrance);
+        Assert.StartsWith("Quatre curseurs", viewModel.ColorPresetNote, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -172,7 +192,8 @@ public class EnhanceViewModelLanguageTests
         var viewModel = CreateViewModel(localization, orchestrator);
 
         await viewModel.OpenCommand.ExecuteAsync(null);
-        viewModel.SelectedColorPreset = viewModel.ColorPresets[1];
+        viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+            option => option.Preset == ColorPreset.UltronCc);
         await viewModel.EnhanceCommand.ExecuteAsync(null);
 
         Assert.Equal("Chroma appliqué. Colorimétrie : Ultron CC.", viewModel.StatusMessage);
