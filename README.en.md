@@ -12,7 +12,7 @@ Liseré is a Windows desktop application for enhancing **an image or a video**, 
 |:---:|:---:|
 | ![Liseré Image workspace: before/after comparison](assets/screenshots/image-en.png) | ![Liseré Video workspace: timeline and comparison](assets/screenshots/video-en.png) |
 
-Screenshots of the application with the **Chroma** preset, the before/after comparison, the three preview modes and the video timeline.
+Screenshots of the application with the **Chroma** enhancement and **Ultron CC** grading, the before/after comparison, the three preview modes and the video timeline.
 
 ## Installation
 

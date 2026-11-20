@@ -12,7 +12,7 @@ Liseré est une application de bureau Windows pour améliorer **une image ou une
 |:---:|:---:|
 | ![Espace Image de Liseré : comparaison avant/après](assets/screenshots/image-fr.png) | ![Espace Vidéo de Liseré : timeline et comparaison](assets/screenshots/video-fr.png) |
 
-Captures de l'application avec le préréglage **Chroma**, la comparaison avant/après, les trois modes de prévisualisation et la timeline vidéo.
+Captures de l'application avec l'amélioration **Chroma** et l'étalonnage **Ultron CC**, la comparaison avant/après, les trois modes de prévisualisation et la timeline vidéo.
 
 ## Installation
 
