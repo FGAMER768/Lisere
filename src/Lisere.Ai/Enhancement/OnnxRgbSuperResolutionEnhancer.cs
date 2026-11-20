@@ -18,11 +18,7 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
     private readonly CatalogModel _model;
     private readonly int _coreSize;
     private readonly int _overlap;
-    private readonly OnnxExecutionProvider _requestedProvider;
-    private readonly object _sessionGate = new();
-    private InferenceSession? _session;
-    private string? _providerName;
-    private string? _fallbackReason;
+    private readonly OnnxSessionHost _host;
 
     public OnnxRgbSuperResolutionEnhancer(
         CatalogModel model,
@@ -35,13 +31,13 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
         _model = model;
         _coreSize = model.Manifest.TileSize > 0 ? model.Manifest.TileSize : 256;
         _overlap = Math.Min(overlap, _coreSize / 4);
-        _requestedProvider = provider;
+        _host = new OnnxSessionHost(model.FullPath, provider);
     }
 
     /// <summary>Provider actually used once the session has been created.</summary>
-    public string ExecutionProvider => _providerName ?? "non chargé";
+    public string ExecutionProvider => _host.ProviderName;
 
-    public string? ProviderFallbackReason => _fallbackReason;
+    public string? ProviderFallbackReason => _host.FallbackReason;
 
     public string Id => _model.Manifest.Id;
 
@@ -78,7 +74,7 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
             0.0,
             0.0);
 
-        var enhanced = UpscaleRgb(preCleaned, NativeScale, cancellationToken);
+        var enhanced = UpscaleRgb(preCleaned, cancellationToken);
 
         var (targetWidth, targetHeight) = request.ResolveSize(source.Width, source.Height);
         var output = targetWidth == enhanced.Width && targetHeight == enhanced.Height
@@ -103,8 +99,9 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
         return output;
     }
 
-    private RgbImage UpscaleRgb(RgbImage image, int scale, CancellationToken cancellationToken)
+    private RgbImage UpscaleRgb(RgbImage image, CancellationToken cancellationToken)
     {
+        var scale = NativeScale;
         var tiles = TilePlanner.Plan(image.Width, image.Height, _coreSize, _overlap);
         var outputWidth = checked(image.Width * scale);
         var outputHeight = checked(image.Height * scale);
@@ -118,9 +115,9 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
             var inputHeight = tile.Height + tile.ContextTop + tile.ContextBottom;
 
             var input = FillTile(image, tile, inputWidth, inputHeight);
-            var prediction = RunTile(input, inputWidth, inputHeight, scale);
+            var prediction = RunTile(input, inputWidth, inputHeight);
 
-            CopyTile(prediction, scale, tile, inputWidth, inputHeight, destination, outputWidth);
+            CopyTile(prediction, tile, inputWidth, inputHeight, destination, outputWidth);
         }
 
         return new RgbImage(outputWidth, outputHeight, destination);
@@ -156,29 +153,22 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
         return input;
     }
 
-    private float[] RunTile(float[] input, int width, int height, int scale)
+    private float[] RunTile(float[] input, int width, int height)
     {
-        var session = GetSession();
+        var session = _host.Get(ValidateSession);
 
         using var value = OrtValue.CreateTensorValueFromMemory(
             input,
             new long[] { 1, 3, height, width });
         using var runOptions = new RunOptions();
+        using var results = session.Run(
+            runOptions,
+            [_model.Manifest.InputName],
+            [value],
+            [_model.Manifest.OutputName]);
 
-        float[] prediction;
-
-        lock (_sessionGate)
-        {
-            using var results = session.Run(
-                runOptions,
-                [_model.Manifest.InputName],
-                [value],
-                [_model.Manifest.OutputName]);
-
-            prediction = results[0].GetTensorDataAsSpan<float>().ToArray();
-        }
-
-        var expected = checked(3 * width * scale * height * scale);
+        var prediction = results[0].GetTensorDataAsSpan<float>().ToArray();
+        var expected = checked(3 * width * NativeScale * height * NativeScale);
         if (prediction.Length != expected)
         {
             throw new InvalidOperationException(
@@ -192,15 +182,15 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
     /// Copies only the core of the prediction, so the context used by the network
     /// never lands in the destination twice.
     /// </summary>
-    private static void CopyTile(
+    private void CopyTile(
         float[] prediction,
-        int scale,
         TilePlanner.Tile tile,
         int inputWidth,
         int inputHeight,
         byte[] destination,
         int destinationWidth)
     {
+        var scale = NativeScale;
         var predictionWidth = inputWidth * scale;
         var planeSize = predictionWidth * inputHeight * scale;
         var destinationStride = destinationWidth * 3;
@@ -236,33 +226,6 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
             0,
             255);
 
-    private InferenceSession GetSession()
-    {
-        if (_session is not null)
-        {
-            return _session;
-        }
-
-        lock (_sessionGate)
-        {
-            if (_session is not null)
-            {
-                return _session;
-            }
-
-            var result = OnnxSessionFactory.Create(
-                _model.FullPath,
-                _requestedProvider,
-                Math.Clamp(Environment.ProcessorCount, 1, 8));
-
-            _session = result.Session;
-            _providerName = result.ProviderName;
-            _fallbackReason = result.FallbackReason;
-            ValidateSession(_session);
-            return _session;
-        }
-    }
-
     private void ValidateSession(InferenceSession session)
     {
         var manifest = _model.Manifest;
@@ -297,13 +260,5 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
         }
     }
 
-    public void Dispose()
-    {
-        lock (_sessionGate)
-        {
-            _session?.Dispose();
-            _session = null;
-            _providerName = null;
-        }
-    }
+    public void Dispose() => _host.Dispose();
 }

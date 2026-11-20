@@ -8,6 +8,8 @@ using Lisere.Core.Imaging;
 using Lisere.Models;
 using Lisere.Services;
 
+using Lisere.Ai.Enhancement;
+
 namespace Lisere.ViewModels;
 
 public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
@@ -142,13 +144,16 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         IImageCodec imageCodec,
         IEnhancementOrchestrator orchestrator,
         IDialogService dialogService,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        IReadOnlyList<IFrameEnhancer>? engines = null)
     {
         _fileDialogService = fileDialogService;
         _imageCodec = imageCodec;
         _orchestrator = orchestrator;
         _dialogService = dialogService;
         _localization = localization;
+        Engines = engines ?? [];
+        SelectDefaultEngine();
 
         Presets =
         [
@@ -354,7 +359,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             AddNoise,
             SelectedColorPreset?.Preset ?? ColorPreset.None,
             SelectedColorPreset?.Preset is ColorPreset.UltronCc ? CurrentColorSettings : null,
-            RefineFaces: RefineFaces);
+            RefineFaces: RefineFaces,
+            Engine: SelectedEngine);
 
         // Le détail multi-échelles coûte ~2,4 s par mégapixel : sur une grande
         // image, on annonce la durée avant de lancer plutôt que de la subir.
@@ -604,7 +610,12 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         !IsBusy && !_isPresetEstimationPending && !_dialogService.IsAnyDialogOpen;
 
     private bool CanEnhance() =>
-        HasImage && !IsBusy && !_isPresetEstimationPending && !_dialogService.IsAnyDialogOpen;
+        HasImage &&
+        !IsBusy &&
+        !_isPresetEstimationPending &&
+        !_dialogService.IsAnyDialogOpen &&
+        // An engine that cannot load must not be attempted; the note says why.
+        SelectedEngine is not { IsAvailable: false };
 
     private bool CanSave() =>
         HasEnhanced && !IsResultStale && !IsBusy && !_dialogService.IsAnyDialogOpen;
@@ -629,6 +640,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
+        OnPropertyChanged(nameof(EngineNote));
+
         foreach (var preset in Presets)
         {
             preset.Label = Strings[PresetLabelKey(preset.Mode)];

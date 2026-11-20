@@ -14,6 +14,8 @@ découvert automatiquement (dossier de l'application, variable
 | `onnx/LICENSE` | Apache License 2.0 du modèle SRCNN. |
 | `onnx/realesr-general-x4v3.onnx` | Real-ESRGAN général ×4 (SRVGGNetCompact), super-résolution RVB. |
 | `onnx/LICENSE-real-esrgan` | Licence BSD-3-Clause des poids Real-ESRGAN. |
+| `onnx/1xDeNoise_realplksr_otf_fp32.onnx` | Nettoyage 1× RealPLKSR : débruit sans changer la taille. |
+| `onnx/LICENSE-realplksr` | Licence CC-BY-4.0 du modèle RealPLKSR. |
 | `onnx/rife49.onnx` | RIFE 4.9 (Practical-RIFE), interpolation d'images, export ONNX communautaire. |
 | `rife/LICENSE` | Licence MIT de RIFE / Practical-RIFE. |
 | `onnx/face_detection_yunet_2023mar.onnx` | YuNet, détection de visages (Shiqi Yu). |
@@ -59,6 +61,30 @@ rapide pour l'aperçu en direct. Pour une qualité supérieure, `RealESRGAN_x4pl
 même contrat `1×3×H×W → 1×3×4H×4W` : déposer le fichier sous `models/onnx/`,
 ajouter une entrée `plane: "rgb"` dans `catalog.json`, et le moteur RVB s'en sert
 sans changement de code.
+
+## Modèle de nettoyage 1× RealPLKSR
+
+- **Source** : <https://github.com/Phhofm/models/releases/tag/1xDeNoise_realplksr_otf>
+  (`1xDeNoise_realplksr_otf_fp32.onnx`), par Philip Hofmann (« Helaman »),
+  architecture RealPLKSR (projet neosr).
+- **Licence** : CC-BY-4.0 (`onnx/LICENSE-realplksr`), attribution requise :
+  Philip Hofmann, modèle `1xDeNoise_realplksr_otf`, entraîné sur le jeu
+  Nomos-v2 avec le pipeline realesrgan-otf.
+- **Entrée** : `input`, tenseur `1×3×H×W`, RVB planaire dans `[0,1]`, `H` et `W`
+  libres.
+- **Sortie** : `output`, tenseur `1×3×H×W` — la taille ne change pas, d'où
+  l'usage « nettoyage » plutôt qu'« agrandissement ».
+- **SHA-256** : `fa7a85412634b30e078299aafc9a9d4074358f1a5abcd8f17a8355715a258c51`
+- **Taille** : 29,9 Mo environ.
+
+Le réseau retire le bruit de capteur et une partie des artefacts JPEG en
+conservant la texture. Il passe par le même moteur RVB que Real-ESRGAN : tuiles
+de 256 px avec 8 px de contexte, puis recomposition du cœur de chaque prédiction.
+
+Coût mesuré (DirectML, photo 900×900) : **52 s** ; en imposant le CPU, 65 s. Ce
+modèle est donc réservé à un rendu soigné, pas à un enchaînement rapide : pour
+le même pixel, Real-ESRGAN x4v3 prend 3,5 s. Le plan de rendu de la page Image
+annonce encore l'estimation du pipeline classique, sous-estimée pour ce moteur.
 
 ## Modèle d'interpolation RIFE
 
@@ -115,6 +141,7 @@ Pour revérifier manuellement :
 ```powershell
 Get-FileHash models\onnx\super-resolution-10.onnx -Algorithm SHA256
 Get-FileHash models\onnx\realesr-general-x4v3.onnx -Algorithm SHA256
+Get-FileHash models\onnx\1xDeNoise_realplksr_otf_fp32.onnx -Algorithm SHA256
 Get-FileHash models\onnx\rife49.onnx -Algorithm SHA256
 Get-FileHash models\onnx\face_detection_yunet_2023mar.onnx -Algorithm SHA256
 ```

@@ -930,6 +930,12 @@
   <data name="videoPreviewExported" xml:space="preserve">
     <value>Aperçu exporté : {0}.</value>
   </data>
+  <data name="imageSectionEngine" xml:space="preserve">
+    <value>Moteur et modèle</value>
+  </data>
+  <data name="imageLabelEngine" xml:space="preserve">
+    <value>Moteur</value>
+  </data>
   <data name="paramRefineFaces" xml:space="preserve">
     <value>Renforcer les visages</value>
   </data>

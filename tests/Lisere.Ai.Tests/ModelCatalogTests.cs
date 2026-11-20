@@ -32,6 +32,12 @@ public class ModelCatalogTests
         Assert.True(colour.IsVerified, colour.Issue);
         Assert.Equal("rgb", colour.Manifest.Plane);
         Assert.Equal(4, colour.Manifest.Scale);
+
+        var restoration = Assert.Single(
+            catalog.Models,
+            candidate => candidate.Manifest.Id == "realplksr-denoise-1x");
+        Assert.True(restoration.IsVerified, restoration.Issue);
+        Assert.Equal(1, restoration.Manifest.Scale);
     }
 
     [Fact]

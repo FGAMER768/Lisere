@@ -96,6 +96,34 @@ public class OnnxRgbSuperResolutionTests
         }
     }
 
+    // The image page offers this 1x engine first: it must clean without resizing.
+    [Fact]
+    public void TheDenoiseModelKeepsTheFrameSizeAndSoftensTheGrain()
+    {
+        var directory = ModelCatalog.DiscoverDirectory();
+        Assert.NotNull(directory);
+        var model = ModelCatalog.Load(directory).Find("realplksr-denoise-1x");
+        Assert.NotNull(model);
+
+        using var enhancer = new OnnxRgbSuperResolutionEnhancer(model);
+        Assert.True(enhancer.IsAvailable, enhancer.UnavailableReason);
+        Assert.Equal(1, enhancer.NativeScale);
+
+        var source = CreateNoisyGradient(96, 72);
+        var result = enhancer.Enhance(
+            source,
+            new FrameEnhancementRequest(EnhancementParameters.Zero),
+            CancellationToken.None);
+
+        Assert.Equal(96, result.Width);
+        Assert.Equal(72, result.Height);
+        Assert.NotEqual(source.Pixels, result.Pixels);
+
+        // Cleans the grain without repainting: some change, but a modest one.
+        var difference = MeanAbsoluteDifference(source, result);
+        Assert.InRange(difference, 0.5, 25.0);
+    }
+
     [Fact]
     public void AnUnverifiedColourModelRefusesToRun()
     {
@@ -133,6 +161,41 @@ public class OnnxRgbSuperResolutionTests
         Assert.NotNull(model);
 
         return new OnnxRgbSuperResolutionEnhancer(model);
+    }
+
+    private static double MeanAbsoluteDifference(RgbImage first, RgbImage second)
+    {
+        var sum = 0L;
+
+        for (var index = 0; index < first.Pixels.Length; index++)
+        {
+            sum += Math.Abs(first.Pixels[index] - second.Pixels[index]);
+        }
+
+        return (double)sum / first.Pixels.Length;
+    }
+
+    private static RgbImage CreateNoisyGradient(int width, int height)
+    {
+        var image = new RgbImage(width, height);
+        var seed = 12345u;
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                seed = (seed * 1103515245u) + 12345u;
+                var grain = (int)((seed >> 16) % 41) - 20;
+                var value = 40 + (x * 120 / width) + (y * 40 / height);
+                var noisy = (byte)Math.Clamp(value + grain, 0, 255);
+
+                image[x, y, 0] = noisy;
+                image[x, y, 1] = noisy;
+                image[x, y, 2] = noisy;
+            }
+        }
+
+        return image;
     }
 
     private static RgbImage CreateColourCheckerboard(int width, int height)

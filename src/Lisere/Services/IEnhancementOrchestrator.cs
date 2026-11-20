@@ -1,3 +1,4 @@
+using Lisere.Ai.Enhancement;
 using Lisere.Core.Enhancement;
 using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
@@ -14,7 +15,8 @@ public sealed record EnhancementRequest(
     ColorPreset Color = ColorPreset.None,
     UltronCcSettings? ColorSettings = null,
     IProgress<EnhancementProgress>? Progress = null,
-    bool RefineFaces = false);
+    bool RefineFaces = false,
+    IFrameEnhancer? Engine = null);
 
 public sealed record EnhancementResult(
     RgbImage Image,

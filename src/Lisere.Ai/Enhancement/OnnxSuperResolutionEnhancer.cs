@@ -16,11 +16,7 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
     private readonly CatalogModel _model;
     private readonly int _tileSize;
     private readonly int _overlap;
-    private readonly OnnxExecutionProvider _requestedProvider;
-    private readonly object _sessionGate = new();
-    private InferenceSession? _session;
-    private string? _providerName;
-    private string? _fallbackReason;
+    private readonly OnnxSessionHost _host;
 
     public OnnxSuperResolutionEnhancer(
         CatalogModel model,
@@ -33,13 +29,13 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
         _model = model;
         _tileSize = model.Manifest.TileSize > 0 ? model.Manifest.TileSize : 224;
         _overlap = Math.Min(overlap, _tileSize / 4);
-        _requestedProvider = provider;
+        _host = new OnnxSessionHost(model.FullPath, provider);
     }
 
     /// <summary>Provider actually used once the session has been created.</summary>
-    public string ExecutionProvider => _providerName ?? "non chargé";
+    public string ExecutionProvider => _host.ProviderName;
 
-    public string? ProviderFallbackReason => _fallbackReason;
+    public string? ProviderFallbackReason => _host.FallbackReason;
 
     public string Id => _model.Manifest.Id;
 
@@ -199,7 +195,7 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
 
     private float[] RunTile(float[] patch)
     {
-        var session = GetSession();
+        var session = _host.Get(ValidateSession);
 
         using var input = OrtValue.CreateTensorValueFromMemory(
             patch,
@@ -220,33 +216,6 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
         }
 
         return prediction;
-    }
-
-    private InferenceSession GetSession()
-    {
-        if (_session is not null)
-        {
-            return _session;
-        }
-
-        lock (_sessionGate)
-        {
-            if (_session is not null)
-            {
-                return _session;
-            }
-
-            var result = OnnxSessionFactory.Create(
-                _model.FullPath,
-                _requestedProvider,
-                Math.Clamp(Environment.ProcessorCount, 1, 8));
-
-            _session = result.Session;
-            _providerName = result.ProviderName;
-            _fallbackReason = result.FallbackReason;
-            ValidateSession(_session);
-            return _session;
-        }
     }
 
     private void ValidateSession(InferenceSession session)
@@ -277,13 +246,5 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
         }
     }
 
-    public void Dispose()
-    {
-        lock (_sessionGate)
-        {
-            _session?.Dispose();
-            _session = null;
-            _providerName = null;
-        }
-    }
+    public void Dispose() => _host.Dispose();
 }

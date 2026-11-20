@@ -34,6 +34,12 @@ public sealed class FrameLookEnhancer : IFrameEnhancer
 
     public int NativeScale => _inner.NativeScale;
 
+    /// <summary>
+    /// An engine is shown to people: a list box or a screen reader must read the
+    /// model's name, not the type of the wrapper.
+    /// </summary>
+    public override string ToString() => DisplayName;
+
     public RgbImage Enhance(
         RgbImage source,
         FrameEnhancementRequest request,

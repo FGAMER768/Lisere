@@ -32,6 +32,21 @@
       "description": "Real-ESRGAN general x4v3 (SRVGGNetCompact) exécuté en RVB sur des tuiles de taille libre : la couleur est reconstruite par le réseau, pas seulement la luminance. Poids officiels xinntao/Real-ESRGAN (BSD-3-Clause) exportés en ONNX."
     },
     {
+      "id": "realplksr-denoise-1x",
+      "displayName": "Nettoyage photo 1×",
+      "family": "restoration",
+      "file": "onnx/1xDeNoise_realplksr_otf_fp32.onnx",
+      "sha256": "fa7a85412634b30e078299aafc9a9d4074358f1a5abcd8f17a8355715a258c51",
+      "scale": 1,
+      "inputName": "input",
+      "outputName": "output",
+      "tileSize": 256,
+      "plane": "rgb",
+      "license": "CC-BY-4.0",
+      "source": "https://github.com/Phhofm/models/releases/tag/1xDeNoise_realplksr_otf",
+      "description": "RealPLKSR 1× entraîné à retirer le bruit de capteur et une partie des artefacts JPEG sans changer la taille. Contrasté avec la montée en résolution : l'image garde ses dimensions."
+    },
+    {
       "id": "rife-4.9-onnx",
       "displayName": "RIFE 4.9 (interpolation ×2)",
       "family": "frame-interpolation",

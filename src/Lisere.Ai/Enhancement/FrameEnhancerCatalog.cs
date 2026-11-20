@@ -17,11 +17,16 @@ public static class FrameEnhancerCatalog
 
         if (catalog is not null)
         {
-            foreach (var model in catalog.Models.Where(model =>
-                string.Equals(
-                    model.Manifest.Family,
-                    "super-resolution",
-                    StringComparison.OrdinalIgnoreCase)))
+            // A super-resolution model grows the frame, a restoration model
+            // (denoise, deJPEG) returns it at its own size; both are frame
+            // engines and share the same two implementations. Same-size models
+            // come first, then the upscalers by growing factor.
+            var frames = catalog.Models
+                .Where(model => IsFrameEngine(model.Manifest.Family))
+                .OrderBy(model => model.Manifest.Scale > 1 ? 1 : 0)
+                .ThenBy(model => model.Manifest.Scale);
+
+            foreach (var model in frames)
             {
                 // A colour model rebuilds the three planes at once; a luma model
                 // only sharpens the luminance and resamples the chroma.
@@ -38,4 +43,8 @@ public static class FrameEnhancerCatalog
 
         return engines;
     }
+
+    private static bool IsFrameEngine(string family) =>
+        family.Equals("super-resolution", StringComparison.OrdinalIgnoreCase) ||
+        family.Equals("restoration", StringComparison.OrdinalIgnoreCase);
 }

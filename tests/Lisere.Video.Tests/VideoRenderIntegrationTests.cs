@@ -96,27 +96,13 @@ public class VideoRenderIntegrationTests : IDisposable
         var probe = new FfprobeVideoProbe(_toolchain);
         var info = await probe.ProbeAsync(source, CancellationToken.None);
         var service = new VideoRenderService(_toolchain);
-        var extractor = new VideoFrameExtractor(_toolchain);
         var neuralPath = Path.Combine(_directory, "preview-real-esrgan.mp4");
         var classicPath = Path.Combine(_directory, "preview-classic.mp4");
 
-        var result = await service.RenderAsync(
-            new VideoRenderRequest(
-                info,
-                engine,
-                new FrameEnhancementRequest(EnhancementParameters.Zero, OutputScale: 2),
-                new VideoRenderSettings(
-                    neuralPath,
-                    Quality: 30,
-                    EncodingPreset: "ultrafast",
-                    PreviewStartSeconds: 0,
-                    PreviewDurationSeconds: 1)),
-            null,
-            CancellationToken.None);
+        var result = await RenderPreviewAsync(service, info, engine, neuralPath, scale: 2);
 
         var preview = await probe.ProbeAsync(neuralPath, CancellationToken.None);
 
-        Assert.True(File.Exists(neuralPath));
         Assert.False(preview.HasAudio, "a preview carries no audio track");
         Assert.InRange(preview.DurationSeconds, 0.7, 1.3);
         Assert.Equal(128, preview.Width);
@@ -126,20 +112,9 @@ public class VideoRenderIntegrationTests : IDisposable
 
         // The rendered second must carry the neural result, not a silent fallback.
         using var classic = new ClassicFrameEnhancer();
-        await service.RenderAsync(
-            new VideoRenderRequest(
-                info,
-                classic,
-                new FrameEnhancementRequest(EnhancementParameters.Zero, OutputScale: 2),
-                new VideoRenderSettings(
-                    classicPath,
-                    Quality: 30,
-                    EncodingPreset: "ultrafast",
-                    PreviewStartSeconds: 0,
-                    PreviewDurationSeconds: 1)),
-            null,
-            CancellationToken.None);
+        await RenderPreviewAsync(service, info, classic, classicPath, scale: 2);
 
+        var extractor = new VideoFrameExtractor(_toolchain);
         var neural = await extractor.ExtractAsync(preview, 0.4, CancellationToken.None);
         var plain = await extractor.ExtractAsync(
             await probe.ProbeAsync(classicPath, CancellationToken.None),
@@ -703,6 +678,29 @@ public class VideoRenderIntegrationTests : IDisposable
 
         Assert.True(process.ExitCode == 0, error);
         return path;
+    }
+
+    /// <summary>One second through whichever engine, with the settings the page uses.</summary>
+    private async Task<VideoRenderResult> RenderPreviewAsync(
+        VideoRenderService service,
+        VideoInfo info,
+        IFrameEnhancer engine,
+        string output,
+        int scale = 1)
+    {
+        return await service.RenderAsync(
+            new VideoRenderRequest(
+                info,
+                engine,
+                new FrameEnhancementRequest(EnhancementParameters.Zero, OutputScale: scale),
+                new VideoRenderSettings(
+                    output,
+                    Quality: 30,
+                    EncodingPreset: "ultrafast",
+                    PreviewStartSeconds: 0,
+                    PreviewDurationSeconds: 1)),
+            progress: null,
+            CancellationToken.None);
     }
 
     private async Task<string> CreateClipAsync(double durationSeconds = 1)

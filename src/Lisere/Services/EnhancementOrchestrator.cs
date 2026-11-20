@@ -1,3 +1,4 @@
+using Lisere.Ai.Enhancement;
 using Lisere.Core.Enhancement;
 using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
@@ -42,18 +43,21 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                         value.Stage,
                         value.Percent * pipelineShare / 100.0)));
 
-            var faces = DetectFaces(request, cancellationToken);
-            var output = EnhancementPipeline.Enhance(
-                request.Source,
-                parameters,
-                skipsEnhancement ? 0 : request.RecoverOriginalDetail,
-                skipsEnhancement ? 0 : request.AddNoise,
-                pipelineProgress,
-                cancellationToken,
-                // Un motif de pores fixe scintillerait sur une vidéo : la
-                // synthèse est réservée au rendu photo.
-                synthesizeSkinTexture: true,
-                faces: faces);
+            var output = request.Engine is { IsAvailable: true } engine &&
+                !skipsEnhancement &&
+                engine.Family is EnhancementEngineFamily.NeuralSuperResolution
+                ? RunEngine(engine, request, parameters, pipelineProgress, cancellationToken)
+                : EnhancementPipeline.Enhance(
+                    request.Source,
+                    parameters,
+                    skipsEnhancement ? 0 : request.RecoverOriginalDetail,
+                    skipsEnhancement ? 0 : request.AddNoise,
+                    pipelineProgress,
+                    cancellationToken,
+                    // Un motif de pores fixe scintillerait sur une vidéo : la
+                    // synthèse est réservée au rendu photo.
+                    synthesizeSkinTexture: true,
+                    faces: DetectFaces(request, cancellationToken));
 
             // L'étalonnage est un étage distinct : il s'applique après
             // l'amélioration, quel que soit le préréglage IA choisi.
@@ -99,6 +103,31 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                 request.Mode,
                 ParameterValidator.Validate(parameters));
         }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Hands the frame to the selected neural engine. The engine owns the
+    /// pre-clean, the model pass and the resize, exactly as on the video page,
+    /// so one preset produces the same pixels on both pages.
+    /// </summary>
+    private static RgbImage RunEngine(
+        IFrameEnhancer engine,
+        EnhancementRequest request,
+        EnhancementParameters parameters,
+        IProgress<EnhancementProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        progress?.Report(new EnhancementProgress(EnhancementStage.Detail, 0.0));
+
+        var frame = new FrameEnhancementRequest(
+            parameters,
+            request.RecoverOriginalDetail,
+            request.AddNoise);
+
+        var output = engine.Enhance(request.Source, frame, cancellationToken);
+
+        progress?.Report(new EnhancementProgress(EnhancementStage.Detail, 100.0));
+        return output;
     }
 
     private IReadOnlyList<FaceBox>? DetectFaces(

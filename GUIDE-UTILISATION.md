@@ -320,10 +320,13 @@ Le menu **Moteur** propose les moteurs installés :
 | Moteur | Description | Disponibilité |
 |---|---|---|
 | **Lisere Classic** | Pipeline local déterministe, sans modèle externe. | Toujours disponible. |
+| **Nettoyage photo 1×** | Réseau RVB qui retire le bruit et une partie des artefacts JPEG sans changer la taille. Le plus lent des moteurs : environ une minute pour une photo 900×900. | Dépend de la présence et de l'intégrité du modèle. |
 | **Super-Resolution CNN ×3** | Modèle ONNX local vérifié par SHA-256, inférence DirectML sur iGPU compatible avec repli CPU. | Dépend de la présence et de l'intégrité du modèle. |
 | **Real-ESRGAN général ×4** | Réseau RVB : la couleur est reconstruite avec la netteté, sur des tuiles de taille libre, puis ramenée à la résolution de sortie choisie. Plus lent qu'un modèle de luminance. | Dépend de la présence et de l'intégrité du modèle. |
 
 La note sous le menu indique si le moteur est prêt ou pourquoi il est indisponible. Si un moteur neuronal est indisponible, choisissez **Classic** : le reste de l'application continue de fonctionner.
+
+Le même choix est proposé sur la page **Image**, avec **Lisere Classic** par défaut. Un moteur neuronal y remplace le pipeline complet pour toute l'image, à sa taille d'origine, et désactive l'option **Affiner les visages** : cette texture fait partie du pipeline classique.
 
 ### 6.3 Importer un preset vidéo
 

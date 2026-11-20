@@ -118,7 +118,7 @@ The comparison covers sharpness, skin and hair micro-texture, leather rendering 
 - **FFmpeg** ships with published builds in `ffmpeg/`; the Video page verifies its digests at startup. For a fresh checkout, run `scripts/fetch-ffmpeg.ps1`. During development, `LISERE_FFMPEG` and an external installation still take precedence.
 - No database or account is required. The optional update check is the only network action.
 
-Four ONNX models are included in `models/` and copied next to the executable: SRCNN x3 (240 KB, Apache-2.0), Real-ESRGAN general x4 (4.6 MB, BSD-3-Clause), RIFE 4.9 (20.5 MB, MIT) and YuNet (227 KB, MIT). See [models/README.md](models/README.md) and [Credits, sources and licences](#credits-sources-and-licences). DirectML is used automatically for ONNX engines when the iGPU supports it; otherwise Liseré falls back to the CPU and reports it in the engine note.
+Five ONNX models are included in `models/` and copied next to the executable: SRCNN x3 (240 KB, Apache-2.0), Real-ESRGAN general x4 (4.6 MB, BSD-3-Clause), RealPLKSR 1x cleaning (29.9 MB, CC-BY-4.0), RIFE 4.9 (20.5 MB, MIT) and YuNet (227 KB, MIT). The engine choice is offered on both pages: on photos, Classic stays the default and the 1x model cleans the image without changing its size. See [models/README.md](models/README.md) and [Credits, sources and licences](#credits-sources-and-licences). DirectML is used automatically for ONNX engines when the iGPU supports it; otherwise Liseré falls back to the CPU and reports it in the engine note.
 
 ## Running from source
 
@@ -331,6 +331,7 @@ Liseré is designed and developed by **FGAMER768**. It does not redistribute any
 - **YuNet**, face detection: model by Shiqi Yu, distributed by [OpenCV Zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet), MIT licence. Reference: Wu, W., Peng, H., Yu, S. (2023), *YuNet: A Tiny Millisecond-level Face Detector*, Machine Intelligence Research, 20(5), 656-665. Licence: `models/yunet/LICENSE`.
 - **RIFE 4.9** / Practical-RIFE: code and weights under the MIT licence (Copyright (c) Megvii Inc. and hzwer). ONNX export used: [edgetools/rife](https://huggingface.co/edgetools/rife). Licence: `models/rife/LICENSE`.
 - **Sub-pixel SRCNN x3**: model by Shi et al. (2016), distributed by the [ONNX Model Zoo](https://github.com/onnx/models/tree/main/validated/vision/super_resolution/sub_pixel_cnn_2016), Apache-2.0 licence. Licence: `models/onnx/LICENSE`.
+- **RealPLKSR 1x cleaning**: `1xDeNoise_realplksr_otf` model by Philip Hofmann ("Helaman"), [RealPLKSR](https://github.com/muslll/neosr) architecture, CC-BY-4.0 licence, trained on Nomos-v2. Licence: `models/onnx/LICENSE-realplksr`.
 - **Real-ESRGAN general x4**: official `realesr-general-x4v3` weights from [xinntao/Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (Wang, Xie, Dong and Shan, ICCV Workshops 2021), exported to ONNX by [tinier-upscale-models](https://huggingface.co/jonathanst29/tinier-upscale-models), BSD-3-Clause licence. Licence: `models/onnx/LICENSE-real-esrgan`.
 - **ONNX Runtime and DirectML**: Microsoft, MIT licence. Used for local inference of the ONNX models.
 - **FFmpeg**: [ffmpeg.org](https://ffmpeg.org), BtbN build `autobuild-2026-11-18-12-39` (`N-129046-g3a78197c4c`), under GNU GPL v3. The bundled package, provenance and digests are described in `ffmpeg/README.md`; the licence text is in `ffmpeg/LICENSE.txt`. Source code is available from [ffmpeg.org](https://ffmpeg.org/download.html) and the build recipe from [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds).
@@ -376,7 +377,7 @@ dotnet test Lisere.slnx
 
 The solution contains four xUnit test projects: `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` and `Lisere.App.Tests`.
 
-Current state: **434 tests** (125 Core, 22 Ai, 53 Video, 234 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
+Current state: **435 tests** (125 Core, 23 Ai, 53 Video, 234 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
 
 Video integration tests generate a clip with FFmpeg and verify rendering, audio preservation, deinterlacing, exact size, cancellation and preview extraction. They are silently skipped when FFmpeg cannot be found, so the rest of the suite remains runnable on a machine without video tooling.
 
