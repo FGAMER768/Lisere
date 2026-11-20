@@ -12,6 +12,8 @@ découvert automatiquement (dossier de l'application, variable
 | `catalog.json` | Déclaration des modèles : identifiant, fichier, échelle, noms d'entrée/sortie, taille de tuile, licence, source, empreinte SHA-256. |
 | `onnx/super-resolution-10.onnx` | SRCNN sous-pixel ×3 (Shi et al., 2016), ONNX Model Zoo. |
 | `onnx/LICENSE` | Apache License 2.0 du modèle SRCNN. |
+| `onnx/realesr-general-x4v3.onnx` | Real-ESRGAN général ×4 (SRVGGNetCompact), super-résolution RVB. |
+| `onnx/LICENSE-real-esrgan` | Licence BSD-3-Clause des poids Real-ESRGAN. |
 | `onnx/rife49.onnx` | RIFE 4.9 (Practical-RIFE), interpolation d'images, export ONNX communautaire. |
 | `rife/LICENSE` | Licence MIT de RIFE / Practical-RIFE. |
 | `onnx/face_detection_yunet_2023mar.onnx` | YuNet, détection de visages (Shiqi Yu). |
@@ -29,6 +31,34 @@ découvert automatiquement (dossier de l'application, variable
 Liseré applique ce réseau sur le plan de luminance, tuile par tuile, avec un
 contexte de 8 pixels. La chroma est agrandie en bicubique, puis l'image est
 rééchantillonnée vers l'échelle de sortie demandée (1×, 2× ou 4×).
+
+## Modèle de super-résolution RVB Real-ESRGAN
+
+- **Source** : <https://huggingface.co/jonathanst29/tinier-upscale-models>
+  (`realesr-general-x4v3.onnx`), export des poids officiels
+  `realesr-general-x4v3` de <https://github.com/xinntao/Real-ESRGAN>.
+- **Auteur / licence** : Wang, Xie, Dong & Shan (2021), BSD-3-Clause
+  (`onnx/LICENSE-real-esrgan`).
+- **Entrée** : `input`, tenseur `1×3×H×W`, RVB planaire dans `[0,1]`, `H` et `W`
+  libres (l'export n'impose aucune taille).
+- **Sortie** : `output`, tenseur `1×3×4H×4W`, valeurs légèrement hors de `[0,1]`
+  avant bornage.
+- **SHA-256** : `924ebad6532777303582d4ce7811849b88869231a3ae7093e0f21200249df8d5`
+- **Taille** : 4,6 Mo environ.
+
+Liseré découpe l'image en fenêtres de 256 px avec 8 px de contexte, exécute
+chaque tuile à sa taille réelle — aucun remplissage — et ne recompose que le
+cœur de la prédiction. Le réseau reconstruit donc la couleur avec la netteté,
+alors que SRCNN ne traite que la luminance et laisse la chroma au bicubique.
+L'image ×4 native est ensuite ramenée à la résolution de sortie demandée
+(1×, 2× ou 4×).
+
+`realesr-general-x4v3` est un RRDBNet compact (1,2 M de paramètres), assez
+rapide pour l'aperçu en direct. Pour une qualité supérieure, `RealESRGAN_x4plus`
+(RRDBNet de 23 blocs, 16,7 M de paramètres, export fp32 d'environ 64 Mo) suit le
+même contrat `1×3×H×W → 1×3×4H×4W` : déposer le fichier sous `models/onnx/`,
+ajouter une entrée `plane: "rgb"` dans `catalog.json`, et le moteur RVB s'en sert
+sans changement de code.
 
 ## Modèle d'interpolation RIFE
 
@@ -84,6 +114,7 @@ Pour revérifier manuellement :
 
 ```powershell
 Get-FileHash models\onnx\super-resolution-10.onnx -Algorithm SHA256
+Get-FileHash models\onnx\realesr-general-x4v3.onnx -Algorithm SHA256
 Get-FileHash models\onnx\rife49.onnx -Algorithm SHA256
 Get-FileHash models\onnx\face_detection_yunet_2023mar.onnx -Algorithm SHA256
 ```

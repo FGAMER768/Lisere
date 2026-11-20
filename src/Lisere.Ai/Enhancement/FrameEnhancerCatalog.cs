@@ -23,8 +23,16 @@ public static class FrameEnhancerCatalog
                     "super-resolution",
                     StringComparison.OrdinalIgnoreCase)))
             {
-                engines.Add(new FrameLookEnhancer(
-                    new OnnxSuperResolutionEnhancer(model)));
+                // A colour model rebuilds the three planes at once; a luma model
+                // only sharpens the luminance and resamples the chroma.
+                IFrameEnhancer inner = string.Equals(
+                    model.Manifest.Plane,
+                    "rgb",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? new OnnxRgbSuperResolutionEnhancer(model)
+                    : new OnnxSuperResolutionEnhancer(model);
+
+                engines.Add(new FrameLookEnhancer(inner));
             }
         }
 

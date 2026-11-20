@@ -24,6 +24,14 @@ public class ModelCatalogTests
             catalog.Models,
             candidate => candidate.Manifest.Family == "frame-interpolation");
         Assert.True(rife.IsVerified, rife.Issue);
+
+        // The RGB engine only runs when its pinned export matches byte for byte.
+        var colour = Assert.Single(
+            catalog.Models,
+            candidate => candidate.Manifest.Id == "realesr-general-x4v3");
+        Assert.True(colour.IsVerified, colour.Issue);
+        Assert.Equal("rgb", colour.Manifest.Plane);
+        Assert.Equal(4, colour.Manifest.Scale);
     }
 
     [Fact]

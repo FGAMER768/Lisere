@@ -321,6 +321,7 @@ Le menu **Moteur** propose les moteurs installés :
 |---|---|---|
 | **Lisere Classic** | Pipeline local déterministe, sans modèle externe. | Toujours disponible. |
 | **Super-Resolution CNN ×3** | Modèle ONNX local vérifié par SHA-256, inférence DirectML sur iGPU compatible avec repli CPU. | Dépend de la présence et de l'intégrité du modèle. |
+| **Real-ESRGAN général ×4** | Réseau RVB : la couleur est reconstruite avec la netteté, sur des tuiles de taille libre, puis ramenée à la résolution de sortie choisie. Plus lent qu'un modèle de luminance. | Dépend de la présence et de l'intégrité du modèle. |
 
 La note sous le menu indique si le moteur est prêt ou pourquoi il est indisponible. Si un moteur neuronal est indisponible, choisissez **Classic** : le reste de l'application continue de fonctionner.
 

@@ -321,6 +321,7 @@ The **Engine** menu offers the installed engines:
 |---|---|---|
 | **Lisere Classic** | Deterministic local pipeline, no external model. | Always available. |
 | **Super-Resolution CNN x3** | Local ONNX model verified by SHA-256, DirectML inference on a compatible iGPU with CPU fallback. | Depends on the model being present and intact. |
+| **Real-ESRGAN general x4** | Colour network: all three planes are rebuilt with the detail, on free-size tiles, then brought back to the chosen output resolution. Slower than a luma model. | Depends on the model being present and intact. |
 
 The note below the menu indicates whether the engine is ready or why it is unavailable. If a neural engine is unavailable, choose **Classic**: the rest of the application keeps working.
 
