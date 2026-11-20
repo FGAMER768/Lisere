@@ -72,6 +72,85 @@ public class VideoRenderIntegrationTests : IDisposable
         Assert.Contains(progress, item => item.Stage == VideoRenderStage.Rendering);
     }
 
+    /// <summary>
+    /// The colour engine must survive the real pipeline: seek, decode, enhance,
+    /// encode, probe. A stub would prove nothing about the model or the tiling.
+    /// </summary>
+    [Fact]
+    public async Task TheRealEsrganModelRendersOneSecondOfVideo()
+    {
+        if (!_toolchain.IsAvailable)
+        {
+            return;
+        }
+
+        var directory = ModelCatalog.DiscoverDirectory();
+        Assert.NotNull(directory);
+        var model = ModelCatalog.Load(directory).Find("realesr-general-x4v3");
+        Assert.NotNull(model);
+
+        using var engine = new OnnxRgbSuperResolutionEnhancer(model);
+        Assert.True(engine.IsAvailable, engine.UnavailableReason);
+
+        var source = await CreateClipAsync();
+        var probe = new FfprobeVideoProbe(_toolchain);
+        var info = await probe.ProbeAsync(source, CancellationToken.None);
+        var service = new VideoRenderService(_toolchain);
+        var extractor = new VideoFrameExtractor(_toolchain);
+        var neuralPath = Path.Combine(_directory, "preview-real-esrgan.mp4");
+        var classicPath = Path.Combine(_directory, "preview-classic.mp4");
+
+        var result = await service.RenderAsync(
+            new VideoRenderRequest(
+                info,
+                engine,
+                new FrameEnhancementRequest(EnhancementParameters.Zero, OutputScale: 2),
+                new VideoRenderSettings(
+                    neuralPath,
+                    Quality: 30,
+                    EncodingPreset: "ultrafast",
+                    PreviewStartSeconds: 0,
+                    PreviewDurationSeconds: 1)),
+            null,
+            CancellationToken.None);
+
+        var preview = await probe.ProbeAsync(neuralPath, CancellationToken.None);
+
+        Assert.True(File.Exists(neuralPath));
+        Assert.False(preview.HasAudio, "a preview carries no audio track");
+        Assert.InRange(preview.DurationSeconds, 0.7, 1.3);
+        Assert.Equal(128, preview.Width);
+        Assert.Equal(96, preview.Height);
+        Assert.InRange(result.FramesWritten, 8, 12);
+        Assert.Contains(engine.ExecutionProvider, new[] { "DirectML", "CPU" });
+
+        // The rendered second must carry the neural result, not a silent fallback.
+        using var classic = new ClassicFrameEnhancer();
+        await service.RenderAsync(
+            new VideoRenderRequest(
+                info,
+                classic,
+                new FrameEnhancementRequest(EnhancementParameters.Zero, OutputScale: 2),
+                new VideoRenderSettings(
+                    classicPath,
+                    Quality: 30,
+                    EncodingPreset: "ultrafast",
+                    PreviewStartSeconds: 0,
+                    PreviewDurationSeconds: 1)),
+            null,
+            CancellationToken.None);
+
+        var neural = await extractor.ExtractAsync(preview, 0.4, CancellationToken.None);
+        var plain = await extractor.ExtractAsync(
+            await probe.ProbeAsync(classicPath, CancellationToken.None),
+            0.4,
+            CancellationToken.None);
+
+        Assert.True(
+            MeanAbsoluteDifference(plain, neural) > 1.0,
+            "le rendu Real-ESRGAN doit différer du rendu Classic");
+    }
+
     private sealed class SynchronousProgress<T>(Action<T> report) : IProgress<T>
     {
         public void Report(T value) => report(value);
