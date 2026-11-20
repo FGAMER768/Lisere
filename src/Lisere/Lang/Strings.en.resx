@@ -248,6 +248,30 @@
   <data name="videoTimelineHelp" xml:space="preserve">
     <value>Hover to aim, click or drag to move the playhead.</value>
   </data>
+  <data name="videoTransportTitle" xml:space="preserve">
+    <value>Playback controls</value>
+  </data>
+  <data name="videoTransportStart" xml:space="preserve">
+    <value>Jump to the start</value>
+  </data>
+  <data name="videoTransportPreviousFrame" xml:space="preserve">
+    <value>Previous frame (Ctrl+Left)</value>
+  </data>
+  <data name="videoTransportPlay" xml:space="preserve">
+    <value>Play (Space)</value>
+  </data>
+  <data name="videoTransportPause" xml:space="preserve">
+    <value>Pause (Space)</value>
+  </data>
+  <data name="videoTransportNextFrame" xml:space="preserve">
+    <value>Next frame (Ctrl+Right)</value>
+  </data>
+  <data name="videoTransportEnd" xml:space="preserve">
+    <value>Jump to the end</value>
+  </data>
+  <data name="videoTransportHelp" xml:space="preserve">
+    <value>Space plays or pauses, Ctrl with the arrows changes frame, Home and End jump to the ends of the clip.</value>
+  </data>
   <data name="beforeAfterBefore" xml:space="preserve">
     <value>Before</value>
   </data>

@@ -268,6 +268,12 @@ public partial class VideoTimeline : UserControl
 
     private void OnTimelineKeyDown(object sender, KeyEventArgs e)
     {
+        // Ctrl-modified arrows belong to the page (frame stepping), not the ruler.
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            return;
+        }
+
         var step = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? 5.0 : 1.0;
 
         switch (e.Key)

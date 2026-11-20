@@ -356,6 +356,10 @@ Une sortie 4K est nettement plus lente et plus volumineuse. Pour un test, préf�
 
 La **timeline** sous l'aperçu affiche la durée et permet de choisir la position : cliquez ou faites glisser la tête de lecture, ou utilisez les flèches et `Début` / `Fin` lorsque la timeline a le focus. La position reste limitée à 95 % pour que la dernière frame soit décodable.
 
+L'image suit le déplacement : la frame source est rechargée à chaque nouvelle position et, dès qu'un aperçu existe déjà, l'image après est recalculée au même endroit. Une demande encore en cours est annulée par la suivante : seul le dernier arrêt compte.
+
+Les cinq boutons au-dessus de la timeline forment le transport : **début**, **image précédente**, **lecture/pause** (`Espace`), **image suivante** (`Ctrl` et les flèches) et **fin**. La lecture avance d'une frame à la fois, au rythme où le fichier se décode, et s'arrête à la fin du clip ; l'image après suit la lecture aussi vite que le moteur le permet, puis se recalcule complètement à la pause.
+
 - **Rafraîchir l'aperçu** (`Ctrl+Entrée`) extrait la frame à la position choisie et applique les réglages courants.
 - **Rendre 1 seconde** exécute le vrai pipeline sur un segment autour de la position, puis affiche la frame du milieu. Le fichier est temporaire et sans audio.
 - **Exporter l'aperçu (1 s)** écrit ce segment vers un fichier choisi, sans audio, pour l'inspecter ou le conserver.

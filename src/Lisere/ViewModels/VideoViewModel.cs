@@ -424,18 +424,33 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     partial void OnIsBusyChanged(bool value)
     {
+        if (value)
+        {
+            StopLiveWork();
+        }
+
         OnPropertyChanged(nameof(IsCancellableBusy));
         NotifyCommandStates();
     }
 
     partial void OnIsRenderingChanged(bool value)
     {
+        if (value)
+        {
+            StopLiveWork();
+        }
+
         OnPropertyChanged(nameof(IsCancellableBusy));
         NotifyCommandStates();
     }
 
     partial void OnIsQueueRunningChanged(bool value)
     {
+        if (value)
+        {
+            StopLiveWork();
+        }
+
         OnPropertyChanged(nameof(IsCancellableBusy));
         NotifyCommandStates();
     }
@@ -465,6 +480,11 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         ExportPreviewCommand.NotifyCanExecuteChanged();
         CancelRenderCommand.NotifyCanExecuteChanged();
         CancelBusyCommand.NotifyCanExecuteChanged();
+        TogglePlaybackCommand.NotifyCanExecuteChanged();
+        StepBackwardCommand.NotifyCanExecuteChanged();
+        StepForwardCommand.NotifyCanExecuteChanged();
+        GoToStartCommand.NotifyCanExecuteChanged();
+        GoToEndCommand.NotifyCanExecuteChanged();
     }
 
     private void OnDialogOpenStateChanged(object? sender, EventArgs e) => NotifyCommandStates();
@@ -564,7 +584,15 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     partial void OnAddNoiseChanged(double value) => OnParameterChanged();
 
-    partial void OnPreviewPositionPercentChanged(double value) => UpdatePendingStatus();
+    partial void OnPreviewPositionPercentChanged(double value)
+    {
+        // The playback loop decodes its own frames; a second pipeline would
+        // compete with it and cancel every frame before it is shown.
+        if (!IsPlaying)
+        {
+            QueueLivePreview();
+        }
+    }
 
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
@@ -822,6 +850,8 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         _queueCancellation?.Dispose();
         _queueCancellation = null;
         Queue.CollectionChanged -= OnQueueChanged;
+        // Both pipelines dispose their own source when they observe the cancel.
+        StopLiveWork();
         _presetCancellation?.Cancel();
         _presetCancellation?.Dispose();
         _presetCancellation = null;

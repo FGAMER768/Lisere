@@ -248,6 +248,30 @@
   <data name="videoTimelineHelp" xml:space="preserve">
     <value>Survolez pour viser, cliquez ou glissez pour déplacer le curseur.</value>
   </data>
+  <data name="videoTransportTitle" xml:space="preserve">
+    <value>Contrôles de lecture</value>
+  </data>
+  <data name="videoTransportStart" xml:space="preserve">
+    <value>Début de la vidéo</value>
+  </data>
+  <data name="videoTransportPreviousFrame" xml:space="preserve">
+    <value>Image précédente (Ctrl+flèche gauche)</value>
+  </data>
+  <data name="videoTransportPlay" xml:space="preserve">
+    <value>Lecture (Espace)</value>
+  </data>
+  <data name="videoTransportPause" xml:space="preserve">
+    <value>Pause (Espace)</value>
+  </data>
+  <data name="videoTransportNextFrame" xml:space="preserve">
+    <value>Image suivante (Ctrl+flèche droite)</value>
+  </data>
+  <data name="videoTransportEnd" xml:space="preserve">
+    <value>Fin de la vidéo</value>
+  </data>
+  <data name="videoTransportHelp" xml:space="preserve">
+    <value>Espace lit ou met en pause, Ctrl et les flèches changent d'image, Début et Fin vont aux extrémités du clip.</value>
+  </data>
   <data name="beforeAfterBefore" xml:space="preserve">
     <value>Avant</value>
   </data>

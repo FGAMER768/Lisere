@@ -4,6 +4,18 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:views="clr-namespace:Lisere.Views">
 
+    <!-- Declared on the page, so they only answer while the video workspace has
+         focus. The timeline lets Ctrl-modified arrows through for these. -->
+    <UserControl.InputBindings>
+        <KeyBinding Key="Space" Command="{Binding TogglePlaybackCommand}" />
+        <KeyBinding Key="Left"
+                    Modifiers="Control"
+                    Command="{Binding StepBackwardCommand}" />
+        <KeyBinding Key="Right"
+                    Modifiers="Control"
+                    Command="{Binding StepForwardCommand}" />
+    </UserControl.InputBindings>
+
     <Grid Margin="20">
         <Grid>
             <Grid.ColumnDefinitions>
@@ -89,12 +101,22 @@
                                                Localization="{Binding Strings}"
                                                Visibility="{Binding HasVideo, Converter={StaticResource BooleanToVisibility}}">
                             <views:BeforeAfterView.Footer>
-                                <views:VideoTimeline AutomationProperties.AutomationId="VideoTimeline"
-                                                     AutomationProperties.HelpText="{Binding Strings[videoTimelineHelp]}"
-                                                     AutomationProperties.Name="{Binding Strings[videoLabelPreviewPosition]}"
-                                                     DurationSeconds="{Binding DurationSeconds}"
-                                                     MaximumPercent="95"
-                                                     PositionPercent="{Binding PreviewPositionPercent, Mode=TwoWay}" />
+                                <StackPanel>
+                                    <views:VideoTransport EndCommand="{Binding GoToEndCommand}"
+                                                          IsPlaying="{Binding IsPlaying}"
+                                                          Localization="{Binding Strings}"
+                                                          NextFrameCommand="{Binding StepForwardCommand}"
+                                                          PreviousFrameCommand="{Binding StepBackwardCommand}"
+                                                          StartCommand="{Binding GoToStartCommand}"
+                                                          TogglePlaybackCommand="{Binding TogglePlaybackCommand}" />
+
+                                    <views:VideoTimeline AutomationProperties.AutomationId="VideoTimeline"
+                                                         AutomationProperties.HelpText="{Binding Strings[videoTimelineHelp]}"
+                                                         AutomationProperties.Name="{Binding Strings[videoLabelPreviewPosition]}"
+                                                         DurationSeconds="{Binding DurationSeconds}"
+                                                         MaximumPercent="{Binding MaximumPreviewPosition}"
+                                                         PositionPercent="{Binding PreviewPositionPercent, Mode=TwoWay}" />
+                                </StackPanel>
                             </views:BeforeAfterView.Footer>
                         </views:BeforeAfterView>
 

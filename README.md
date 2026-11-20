@@ -66,6 +66,8 @@ FFmpeg est livré avec l'application et vérifié par SHA-256 au démarrage. Un 
 - Analyse du fichier avec `ffprobe` : résolution, cadence, durée, codec, présence et codec audio.
 - Aperçu avant/après sur une image extraite à la position choisie ; l'ouverture ne calcule pas l'aperçu, il faut le demander explicitement (`Ctrl+Entrée`).
 - **Timeline de montage** : règle temporelle, graduations, tête de lecture, clic/glisser pour se déplacer, flèches et `Home`/`End` au clavier.
+- **Aperçu en direct** : déplacer la tête de lecture recharge la frame source à la nouvelle position ; dès qu'un aperçu existe, l'image après est recalculée au même endroit, au rythme du moteur. Une nouvelle demande annule celle qui n'a pas encore abouti.
+- **Transport** : début, image précédente, lecture/pause, image suivante et fin de la vidéo. La lecture avance image par image au rythme du décodage et s'arrête à la fin du clip.
 - Application des six mêmes paramètres à chaque image, avec estimation Auto échantillonnée sur le clip.
 - **Colorimétrie vidéo** : les mêmes onglets **Amélioration (IA)** et **Colorimétrie** que la page Image, avec les cinq étalonnages (Ultron CC, Matrix CC, Infinity CC, Nebulus CC, Splendida CC) et **Manuel (curseurs)**. Ils s'appliquent à chaque image, après l'amélioration et avant la courbe Chroma. Le choix est figé dans chaque job de la file.
 - Moteurs interchangeables :
@@ -263,6 +265,8 @@ Le modèle mentionné est affiché à titre informatif. **Aucun poids propriéta
 | `Ctrl+O` | Ouvrir une image | Ouvrir une vidéo |
 | `Ctrl+Entrée` | Lancer l'amélioration | Rafraîchir l'aperçu |
 | `Ctrl+S` | Exporter en JPEG | Exporter la vidéo |
+| `Espace` | — | Lecture / pause |
+| `Ctrl+←` / `Ctrl+→` | — | Image précédente / suivante |
 
 ### Langue
 
@@ -359,6 +363,7 @@ Liseré est conçu et développé par **FGAMER768**. Il ne redistribue aucun poi
 - [GUIDE-UTILISATION.md](GUIDE-UTILISATION.md) : guide complet en français.
 - [GUIDE-UTILISATION.en.md](GUIDE-UTILISATION.en.md) : complete English user guide.
 - [models/README.md](models/README.md) : provenance, licence et vérification des modèles.
+- [docs/MODELES-CANDIDATS.md](docs/MODELES-CANDIDATS.md) : projets libres comparables et modèles candidats pour de nouveaux moteurs.
 - `tests/Lisere.App.Tests/TestData/README.md` : provenance des images de test.
 
 ## Tests
@@ -369,7 +374,7 @@ dotnet test Lisere.slnx
 
 La solution contient quatre projets de tests xUnit : `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` et `Lisere.App.Tests`.
 
-État actuel : **424 tests** (125 Core, 18 Ai, 52 Video, 229 App), 0 avertissement de build. La suite complète passe en parallèle sur la machine de référence. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model. Le script de désinstallation par utilisateur est couvert par `UninstallServiceTests.cs`.
+État actuel : **429 tests** (125 Core, 18 Ai, 52 Video, 234 App), 0 avertissement de build. La suite complète passe en parallèle sur la machine de référence. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model. Le script de désinstallation par utilisateur est couvert par `UninstallServiceTests.cs`.
 
 Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le rendu, la conservation de l'audio, le désentrelacement, la taille exacte, l'annulation et l'extraction d'aperçu. Ils sont ignorés silencieusement si FFmpeg est introuvable, afin que le reste de la suite reste exécutable sur une machine sans outillage vidéo.
 

@@ -1,0 +1,85 @@
+<UserControl x:Class="Lisere.Views.VideoTransport"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             x:Name="Root"
+             AutomationProperties.Name="{Binding Localization[videoTransportTitle], ElementName=Root}">
+    <UserControl.Resources>
+        <!-- One square icon button for the whole strip: the size and the flat
+             appearance are the only thing each button would otherwise repeat. -->
+        <Style x:Key="TransportButton"
+               TargetType="{x:Type ui:Button}"
+               BasedOn="{StaticResource {x:Type ui:Button}}">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Appearance" Value="Transparent" />
+            <Setter Property="ToolTipService.Placement" Value="Top" />
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+        <ui:Button AutomationProperties.Name="{Binding Localization[videoTransportStart], ElementName=Root}"
+                   Command="{Binding StartCommand, ElementName=Root}"
+                   Icon="{ui:SymbolIcon Previous24}"
+                   Style="{StaticResource TransportButton}"
+                   ToolTip="{Binding Localization[videoTransportStart], ElementName=Root}" />
+
+        <ui:Button AutomationProperties.Name="{Binding Localization[videoTransportPreviousFrame], ElementName=Root}"
+                   Command="{Binding PreviousFrameCommand, ElementName=Root}"
+                   Icon="{ui:SymbolIcon ChevronLeft24}"
+                   Style="{StaticResource TransportButton}"
+                   ToolTip="{Binding Localization[videoTransportPreviousFrame], ElementName=Root}" />
+
+        <!-- One cell, two buttons: the visible one is the action the next press
+             performs, so the strip never widens while playing. -->
+        <Grid Margin="2,0">
+            <ui:Button AutomationProperties.HelpText="{Binding Localization[videoTransportHelp], ElementName=Root}"
+                       AutomationProperties.Name="{Binding Localization[videoTransportPlay], ElementName=Root}"
+                       Command="{Binding TogglePlaybackCommand, ElementName=Root}"
+                       Icon="{ui:SymbolIcon Play24}"
+                       ToolTip="{Binding Localization[videoTransportPlay], ElementName=Root}">
+                <ui:Button.Style>
+                    <Style BasedOn="{StaticResource TransportButton}" TargetType="{x:Type ui:Button}">
+                        <Setter Property="Margin" Value="0" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPlaying, ElementName=Root}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ui:Button.Style>
+            </ui:Button>
+            <ui:Button AutomationProperties.HelpText="{Binding Localization[videoTransportHelp], ElementName=Root}"
+                       AutomationProperties.Name="{Binding Localization[videoTransportPause], ElementName=Root}"
+                       Command="{Binding TogglePlaybackCommand, ElementName=Root}"
+                       Icon="{ui:SymbolIcon Pause24}"
+                       ToolTip="{Binding Localization[videoTransportPause], ElementName=Root}">
+                <ui:Button.Style>
+                    <Style BasedOn="{StaticResource TransportButton}" TargetType="{x:Type ui:Button}">
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPlaying, ElementName=Root}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ui:Button.Style>
+            </ui:Button>
+        </Grid>
+
+        <ui:Button AutomationProperties.Name="{Binding Localization[videoTransportNextFrame], ElementName=Root}"
+                   Command="{Binding NextFrameCommand, ElementName=Root}"
+                   Icon="{ui:SymbolIcon ChevronRight24}"
+                   Style="{StaticResource TransportButton}"
+                   ToolTip="{Binding Localization[videoTransportNextFrame], ElementName=Root}" />
+
+        <ui:Button AutomationProperties.Name="{Binding Localization[videoTransportEnd], ElementName=Root}"
+                   Command="{Binding EndCommand, ElementName=Root}"
+                   Icon="{ui:SymbolIcon Next24}"
+                   Style="{StaticResource TransportButton}"
+                   ToolTip="{Binding Localization[videoTransportEnd], ElementName=Root}" />
+    </StackPanel>
+</UserControl>

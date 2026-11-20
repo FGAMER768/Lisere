@@ -797,6 +797,105 @@ public class VideoViewModelTests
         Assert.Contains("annulé", viewModel.ProgressText, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task MovingThePlayheadReloadsTheSourceFrame()
+    {
+        var extractor = new RecordingFrameExtractor();
+        var viewModel = CreateViewModel(extractor: extractor);
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        viewModel.PreviewPositionPercent = 60;
+
+        await WaitForAsync(
+            () => extractor.Positions.Count >= 2,
+            "moving the playhead should decode another frame");
+
+        Assert.Equal(0.6, extractor.Positions[^1], 3);
+        Assert.False(viewModel.IsBusy);
+    }
+
+    [Fact]
+    public async Task TransportStepsExactlyOneSourceFrame()
+    {
+        var viewModel = CreateViewModel();
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        viewModel.PreviewPositionPercent = 0;
+
+        viewModel.StepForwardCommand.Execute(null);
+        Assert.Equal(10, viewModel.PreviewPositionPercent, 3);
+
+        viewModel.StepForwardCommand.Execute(null);
+        Assert.Equal(20, viewModel.PreviewPositionPercent, 3);
+
+        viewModel.StepBackwardCommand.Execute(null);
+        Assert.Equal(10, viewModel.PreviewPositionPercent, 3);
+    }
+
+    [Fact]
+    public async Task TransportJumpsToTheEndsOfTheSeekRange()
+    {
+        var viewModel = CreateViewModel();
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        viewModel.PreviewPositionPercent = 50;
+
+        viewModel.GoToEndCommand.Execute(null);
+        Assert.Equal(viewModel.MaximumPreviewPosition, viewModel.PreviewPositionPercent, 3);
+
+        viewModel.GoToStartCommand.Execute(null);
+        Assert.Equal(0, viewModel.PreviewPositionPercent, 3);
+    }
+
+    [Fact]
+    public async Task PlaybackWalksTheClipAndStopsAtTheEnd()
+    {
+        var extractor = new RecordingFrameExtractor();
+        var viewModel = CreateViewModel(extractor: extractor);
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        viewModel.PreviewPositionPercent = 0;
+
+        // A fake extractor answers instantly, so the whole run can complete inside
+        // the command call; the end state is what matters here.
+        viewModel.TogglePlaybackCommand.Execute(null);
+        await WaitForAsync(() => !viewModel.IsPlaying, "playback should stop at the end");
+
+        // The seek ceiling keeps the last frame decodable: 95 % of 10 frames.
+        Assert.Equal(90, viewModel.PreviewPositionPercent, 1);
+        Assert.True(extractor.Positions.Count >= 5);
+    }
+
+    [Fact]
+    public async Task ScrubbingEnhancesTheFrameOnlyWhenAPreviewExists()
+    {
+        var engine = new FakeEngine(unavailable: false);
+        var viewModel = CreateViewModel(engine: engine);
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        viewModel.PreviewPositionPercent = 40;
+        await Task.Delay(300);
+        Assert.Equal(0, engine.EnhanceCount);
+
+        await viewModel.RefreshPreviewCommand.ExecuteAsync(null);
+        Assert.Equal(1, engine.EnhanceCount);
+
+        viewModel.PreviewPositionPercent = 70;
+        await WaitForAsync(
+            () => engine.EnhanceCount >= 2,
+            "a live preview should enhance the frame under the playhead");
+        Assert.True(viewModel.HasPreview);
+    }
+
+    /// <summary>Polling wait: the live preview is debounced and asynchronous.</summary>
+    private static async Task WaitForAsync(Func<bool> condition, string because)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+        while (!condition() && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(20);
+        }
+
+        Assert.True(condition(), because);
+    }
+
     private static VideoViewModel CreateViewModel(
         FakeDialogService? dialogs = null,
         FakeVideoRenderer? renderer = null,
@@ -857,6 +956,8 @@ public class VideoViewModelTests
 
         public FrameEnhancementRequest? LastRequest { get; private set; }
 
+        public int EnhanceCount { get; private set; }
+
         public string Id => "fake";
 
         public string DisplayName => "Moteur de test";
@@ -877,6 +978,7 @@ public class VideoViewModelTests
             CancellationToken cancellationToken)
         {
             LastRequest = request;
+            EnhanceCount++;
             return source.Clone();
         }
 
@@ -916,6 +1018,21 @@ public class VideoViewModelTests
             double positionSeconds,
             CancellationToken cancellationToken) =>
             Task.FromResult(new RgbImage(64, 36));
+    }
+
+    /// <summary>Keeps the requested timestamps, so a test can see the playhead move.</summary>
+    private sealed class RecordingFrameExtractor : IVideoFrameExtractor
+    {
+        public List<double> Positions { get; } = [];
+
+        public Task<RgbImage> ExtractAsync(
+            VideoInfo info,
+            double positionSeconds,
+            CancellationToken cancellationToken)
+        {
+            Positions.Add(positionSeconds);
+            return Task.FromResult(new RgbImage(64, 36));
+        }
     }
 
     /// <summary>Gives the Auto preset a window wide enough to be cancelled.</summary>
