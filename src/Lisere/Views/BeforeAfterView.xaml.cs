@@ -52,6 +52,16 @@ public partial class BeforeAfterView : UserControl
         typeof(BeforeAfterView),
         new PropertyMetadata(null));
 
+    /// <summary>
+    /// Optional content in the bottom row. The video page puts its preview
+    /// timeline here, in place of the former comparison slider.
+    /// </summary>
+    public static readonly DependencyProperty FooterProperty = DependencyProperty.Register(
+        nameof(Footer),
+        typeof(object),
+        typeof(BeforeAfterView),
+        new PropertyMetadata(null));
+
     public static readonly DependencyProperty ZoomProperty = DependencyProperty.Register(
         nameof(Zoom),
         typeof(double),
@@ -101,6 +111,12 @@ public partial class BeforeAfterView : UserControl
     {
         get => (ILocalizationService?)GetValue(LocalizationProperty);
         set => SetValue(LocalizationProperty, value);
+    }
+
+    public object? Footer
+    {
+        get => GetValue(FooterProperty);
+        set => SetValue(FooterProperty, value);
     }
 
     /// <summary>1 means fitted to the stage; both layers share this value.</summary>
@@ -530,8 +546,7 @@ public partial class BeforeAfterView : UserControl
         if (ImageLayer is null ||
             BeforeLayer is null ||
             Divider is null ||
-            DividerThumb is null ||
-            ComparisonSlider is null)
+            DividerThumb is null)
         {
             return;
         }
@@ -548,7 +563,6 @@ public partial class BeforeAfterView : UserControl
             : Visibility.Visible;
 
         var hasBoth = BeforeImage is not null && AfterImage is not null;
-        ComparisonSlider.IsEnabled = hasBoth;
 
         if (!hasBoth)
         {

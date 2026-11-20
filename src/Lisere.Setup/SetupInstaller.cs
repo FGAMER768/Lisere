@@ -478,7 +478,7 @@ namespace Lisere.Setup
                 key.SetValue(
                     "DisplayVersion",
                     version is null
-                        ? "1.0.1"
+                        ? "1.0.2"
                         : $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}",
                     RegistryValueKind.String);
                 key.SetValue("DisplayIcon", $"\"{exe}\"", RegistryValueKind.String);

@@ -45,7 +45,10 @@ public sealed class FrameLookEnhancer : IFrameEnhancer
 
         if (request.Grading is not ColorPreset.None)
         {
-            enhanced = ColorGrading.Apply(enhanced, request.Grading);
+            enhanced = ColorGrading.Apply(
+                enhanced,
+                request.Grading,
+                request.GradingSettings);
         }
 
         return request.ApplyChromaTone

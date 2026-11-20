@@ -87,7 +87,29 @@
                                                BeforeImage="{Binding BeforeImage}"
                                                ComparisonPosition="{Binding ComparisonPosition, Mode=TwoWay}"
                                                Localization="{Binding Strings}"
-                                               Visibility="{Binding HasVideo, Converter={StaticResource BooleanToVisibility}}" />
+                                               Visibility="{Binding HasVideo, Converter={StaticResource BooleanToVisibility}}">
+                            <views:BeforeAfterView.Footer>
+                                <Grid VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="52" />
+                                    </Grid.ColumnDefinitions>
+                                    <Slider AutomationProperties.Name="{Binding Strings[videoLabelPreviewPosition]}"
+                                            IsSnapToTickEnabled="True"
+                                            Maximum="95"
+                                            Minimum="0"
+                                            Style="{StaticResource ParameterSlider}"
+                                            TickFrequency="1"
+                                            Value="{Binding PreviewPositionPercent, Mode=TwoWay}" />
+                                    <TextBlock Grid.Column="1"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"
+                                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding PreviewPositionPercent, StringFormat={}{0:0}%}" />
+                                </Grid>
+                            </views:BeforeAfterView.Footer>
+                        </views:BeforeAfterView>
 
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                             <StackPanel.Style>
@@ -194,26 +216,6 @@
                                               SelectedItem="{Binding SelectedOutput, Mode=TwoWay}" />
                                 </Grid>
 
-                                <Grid Margin="0,8,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="120" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Style="{StaticResource ParameterLabel}" Text="{Binding Strings[videoLabelPreviewPosition]}" />
-                                    <TextBlock Grid.Column="1"
-                                               HorizontalAlignment="Right"
-                                               VerticalAlignment="Center"
-                                               FontSize="12"
-                                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                               Text="{Binding PreviewPositionPercent, StringFormat={}{0:0}%}" />
-                                </Grid>
-                                <Slider AutomationProperties.Name="{Binding Strings[videoLabelPreviewPosition]}"
-                                        IsSnapToTickEnabled="True"
-                                        Maximum="95"
-                                        Minimum="0"
-                                        Style="{StaticResource ParameterSlider}"
-                                        TickFrequency="1"
-                                        Value="{Binding PreviewPositionPercent, Mode=TwoWay}" />
                                 <ui:Button Margin="0,8,0,0"
                                            HorizontalAlignment="Stretch"
                                            HorizontalContentAlignment="Center"
@@ -245,13 +247,6 @@
                             </StackPanel>
                         </Border>
 
-                        <ui:InfoBar Margin="0,12,0,0"
-                                    AutomationProperties.LiveSetting="Assertive"
-                                    IsClosable="False"
-                                    IsOpen="{Binding HasError, Mode=OneWay}"
-                                    Message="{Binding ErrorMessage}"
-                                    Severity="Error"
-                                    Title="{Binding Strings[errorBarTitle]}" />
 
                         <ui:InfoBar Margin="0,12,0,0"
                                     IsClosable="False"
@@ -467,6 +462,106 @@
                                            Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                            Text="{Binding Strings[videoColorNote]}"
                                            TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Margin="0,12,0,0"
+                                Style="{StaticResource SettingsCardBorder}"
+                                Visibility="{Binding IsColorGradingActive, Converter={StaticResource BooleanToVisibility}}">
+                            <StackPanel IsEnabled="{Binding HasAdjustableColorSettings}">
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[colorSectionSettings]}" />
+
+                                <Grid Margin="0" Style="{StaticResource ParameterGroup}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="104" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource ParameterLabel}" Text="{Binding Strings[paramColorSaturation]}" />
+                                    <ui:NumberBox Grid.Column="1"
+                                                  Style="{StaticResource ParameterNumberBox}"
+                                                  AutomationProperties.Name="{Binding Strings[paramColorSaturation]}"
+                                                  AcceptsExpression="False"
+                                                  MaxDecimalPlaces="3"
+                                                  Maximum="{Binding ColorSaturationMaximum}"
+                                                  Minimum="{Binding ColorSaturationMinimum}"
+                                                  SmallChange="1"
+                                                  Value="{Binding ColorSaturation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </Grid>
+                                <Slider AutomationProperties.Name="{Binding Strings[paramColorSaturation]}"
+                                        Maximum="{Binding ColorSaturationMaximum}"
+                                        Minimum="{Binding ColorSaturationMinimum}"
+                                        Style="{StaticResource ParameterSlider}"
+                                        TickFrequency="1"
+                                        Value="{Binding ColorSaturation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                <Grid Style="{StaticResource ParameterGroup}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="104" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource ParameterLabel}" Text="{Binding Strings[paramColorBrightness]}" />
+                                    <ui:NumberBox Grid.Column="1"
+                                                  Style="{StaticResource ParameterNumberBox}"
+                                                  AutomationProperties.Name="{Binding Strings[paramColorBrightness]}"
+                                                  AcceptsExpression="False"
+                                                  MaxDecimalPlaces="1"
+                                                  Maximum="{Binding ColorBrightnessMaximum}"
+                                                  Minimum="{Binding ColorBrightnessMinimum}"
+                                                  SmallChange="1"
+                                                  Value="{Binding ColorBrightness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </Grid>
+                                <Slider AutomationProperties.Name="{Binding Strings[paramColorBrightness]}"
+                                        Maximum="{Binding ColorBrightnessMaximum}"
+                                        Minimum="{Binding ColorBrightnessMinimum}"
+                                        Style="{StaticResource ParameterSlider}"
+                                        TickFrequency="1"
+                                        Value="{Binding ColorBrightness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                <Grid Style="{StaticResource ParameterGroup}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="104" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource ParameterLabel}" Text="{Binding Strings[paramColorContrast]}" />
+                                    <ui:NumberBox Grid.Column="1"
+                                                  Style="{StaticResource ParameterNumberBox}"
+                                                  AutomationProperties.Name="{Binding Strings[paramColorContrast]}"
+                                                  AcceptsExpression="False"
+                                                  MaxDecimalPlaces="1"
+                                                  Maximum="{Binding ColorContrastMaximum}"
+                                                  Minimum="{Binding ColorContrastMinimum}"
+                                                  SmallChange="1"
+                                                  Value="{Binding ColorContrast, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </Grid>
+                                <Slider AutomationProperties.Name="{Binding Strings[paramColorContrast]}"
+                                        Maximum="{Binding ColorContrastMaximum}"
+                                        Minimum="{Binding ColorContrastMinimum}"
+                                        Style="{StaticResource ParameterSlider}"
+                                        TickFrequency="1"
+                                        Value="{Binding ColorContrast, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                <Grid Style="{StaticResource ParameterGroup}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="104" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource ParameterLabel}" Text="{Binding Strings[paramColorVibrance]}" />
+                                    <ui:NumberBox Grid.Column="1"
+                                                  Style="{StaticResource ParameterNumberBox}"
+                                                  AutomationProperties.Name="{Binding Strings[paramColorVibrance]}"
+                                                  AcceptsExpression="False"
+                                                  MaxDecimalPlaces="1"
+                                                  Maximum="{Binding ColorVibranceMaximum}"
+                                                  Minimum="{Binding ColorVibranceMinimum}"
+                                                  SmallChange="1"
+                                                  Value="{Binding ColorVibrance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </Grid>
+                                <Slider AutomationProperties.Name="{Binding Strings[paramColorVibrance]}"
+                                        Maximum="{Binding ColorVibranceMaximum}"
+                                        Minimum="{Binding ColorVibranceMinimum}"
+                                        Style="{StaticResource ParameterSlider}"
+                                        TickFrequency="1"
+                                        Value="{Binding ColorVibrance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </StackPanel>
                         </Border>
 

@@ -1,3 +1,4 @@
+using System.IO;
 using Microsoft.Win32;
 
 namespace Lisere.Services;
@@ -20,6 +21,18 @@ public sealed class FileDialogService : IFileDialogService
 
     internal const string VideoExtensions =
         "*.mp4;*.mov;*.mkv;*.avi;*.webm;*.m4v;*.mts;*.m2ts;*.wmv;*.mpg;*.mpeg";
+
+    private static readonly string[] VideoExtensionPatterns =
+        VideoExtensions.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+    /// <summary>
+    /// The image picker also accepts "all files"; detect a video before handing
+    /// it to the image decoder, which would only report an unreadable image.
+    /// </summary>
+    public static bool IsVideoPath(string path) =>
+        VideoExtensionPatterns.Contains(
+            "*" + Path.GetExtension(path),
+            StringComparer.OrdinalIgnoreCase);
 
     internal string VideoFilter =>
         $"{_localization["fileFilterVideos"]}|{VideoExtensions}|{_localization["fileFilterAll"]}|*.*";

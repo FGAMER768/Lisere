@@ -225,13 +225,6 @@
                         </StackPanel>
                     </Border>
 
-                    <ui:InfoBar Margin="0,12,0,0"
-                                AutomationProperties.LiveSetting="Assertive"
-                                IsClosable="False"
-                                IsOpen="{Binding HasError, Mode=OneWay}"
-                                Message="{Binding ErrorMessage}"
-                                Severity="Error"
-                                Title="{Binding Strings[errorBarTitle]}" />
 
                     <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
                         <StackPanel IsEnabled="{Binding IsEnhancementActive}">

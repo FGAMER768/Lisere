@@ -129,6 +129,18 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private ColorPresetOption? _selectedColorPreset;
 
     [ObservableProperty]
+    private double _colorSaturation = UltronCcSettings.FromPreset.SaturationPercent;
+
+    [ObservableProperty]
+    private double _colorBrightness = UltronCcSettings.FromPreset.Brightness;
+
+    [ObservableProperty]
+    private double _colorContrast = UltronCcSettings.FromPreset.Contrast;
+
+    [ObservableProperty]
+    private double _colorVibrance = UltronCcSettings.FromPreset.Vibrance;
+
+    [ObservableProperty]
     private VideoEngineOption? _selectedEngine;
 
     [ObservableProperty]
@@ -241,6 +253,34 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     public IReadOnlyList<PresetOption> Presets { get; }
 
     public IReadOnlyList<ColorPresetOption> ColorPresets { get; }
+
+    /// <summary>Un étalonnage autre que « Aucune » est sélectionné.</summary>
+    public bool IsColorGradingActive => SelectedColorPreset is { Preset: not ColorPreset.None };
+
+    /// <summary>Seul Ultron expose des curseurs ; les autres presets gardent les valeurs du fichier.</summary>
+    public bool HasAdjustableColorSettings => SelectedColorPreset?.Preset is ColorPreset.UltronCc;
+
+    public UltronCcSettings CurrentColorSettings => new(
+        ColorSaturation,
+        ColorBrightness,
+        ColorContrast,
+        ColorVibrance);
+
+    public double ColorSaturationMinimum => UltronCcSettings.SaturationMinimum;
+
+    public double ColorSaturationMaximum => UltronCcSettings.SaturationMaximum;
+
+    public double ColorBrightnessMinimum => UltronCcSettings.BrightnessMinimum;
+
+    public double ColorBrightnessMaximum => UltronCcSettings.BrightnessMaximum;
+
+    public double ColorContrastMinimum => UltronCcSettings.ContrastMinimum;
+
+    public double ColorContrastMaximum => UltronCcSettings.ContrastMaximum;
+
+    public double ColorVibranceMinimum => UltronCcSettings.VibranceMinimum;
+
+    public double ColorVibranceMaximum => UltronCcSettings.VibranceMaximum;
 
     public IReadOnlyList<VideoEngineOption> Engines { get; }
 
@@ -441,8 +481,21 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         _ = ApplyPresetInBackgroundAsync(value.Mode);
     }
 
-    partial void OnSelectedColorPresetChanged(ColorPresetOption? value) =>
+    partial void OnSelectedColorPresetChanged(ColorPresetOption? value)
+    {
+        ApplyColorDefaults(value?.Preset ?? ColorPreset.None);
+        OnPropertyChanged(nameof(IsColorGradingActive));
+        OnPropertyChanged(nameof(HasAdjustableColorSettings));
         UpdatePendingStatus();
+    }
+
+    partial void OnColorSaturationChanged(double value) => UpdatePendingStatus();
+
+    partial void OnColorBrightnessChanged(double value) => UpdatePendingStatus();
+
+    partial void OnColorContrastChanged(double value) => UpdatePendingStatus();
+
+    partial void OnColorVibranceChanged(double value) => UpdatePendingStatus();
 
     partial void OnSelectedOutputChanged(OutputOption? value) => UpdatePendingStatus();
 
@@ -586,6 +639,20 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         }
 
         UpdatePendingStatus();
+    }
+
+    private void ApplyColorDefaults(ColorPreset preset)
+    {
+        if (preset is not ColorPreset.UltronCc)
+        {
+            return;
+        }
+
+        var settings = UltronCcSettings.FromPreset;
+        ColorSaturation = settings.SaturationPercent;
+        ColorBrightness = settings.Brightness;
+        ColorContrast = settings.Contrast;
+        ColorVibrance = settings.Vibrance;
     }
 
     private void UpdatePendingStatus()

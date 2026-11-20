@@ -47,7 +47,7 @@ de l'exécutable autonome et du bundle FFmpeg.
 
 ## Publier une version
 
-1. Modifiez `<Version>` dans `src/Lisere/Lisere.csproj`, par exemple `1.0.1`.
+1. Modifiez `<Version>` dans `src/Lisere/Lisere.csproj`, par exemple `1.0.2`.
 2. Publiez le paquet de mise à jour :
 
    ```powershell
@@ -76,7 +76,7 @@ de l'exécutable autonome et du bundle FFmpeg.
    `publish-update.ps1`.
 
 4. Créez une release GitHub dont le tag correspond à la version (par exemple
-   `v1.0.1`) et joignez les quatre assets :
+   `v1.0.2`) et joignez les quatre assets :
 
    - `Lisere-Setup.exe` ;
    - `Lisere-Setup.exe.sha256` ;

@@ -433,7 +433,8 @@ public sealed partial class VideoViewModel
             width,
             height,
             ApplyChromaTone: chromaTone,
-            Grading: SelectedColorPreset?.Preset ?? ColorPreset.None);
+            Grading: SelectedColorPreset?.Preset ?? ColorPreset.None,
+            GradingSettings: HasAdjustableColorSettings ? CurrentColorSettings : null);
     }
 
     /// <summary>

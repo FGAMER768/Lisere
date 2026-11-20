@@ -182,6 +182,27 @@ public class EnhanceViewModelDialogTests
     }
 
     [Fact]
+    public async Task OpeningAVideoInTheImageTabShowsADialogWithoutDecodingIt()
+    {
+        var dialogs = new FakeDialogService();
+        var codec = new FakeImageCodec();
+        var files = new FakeFileDialogService { ImagePath = "clip.MP4" };
+        var viewModel = CreateViewModel(dialogs, codec, new FakeOrchestrator(), files);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, codec.LoadCalls);
+        Assert.False(viewModel.HasImage);
+        Assert.Contains(
+            dialogs.Events,
+            entry => entry.StartsWith("message:Error:", StringComparison.Ordinal) &&
+                entry.Contains("onglet Vidéo", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            dialogs.Events,
+            entry => entry.StartsWith("wait:", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task LoadingShowsAndHidesTheWaitDialog()
     {
         var dialogs = new FakeDialogService();
@@ -534,10 +555,15 @@ public class EnhanceViewModelDialogTests
 
         public int SaveCalls { get; private set; }
 
-        public Task<RgbImage> LoadAsync(string path, CancellationToken cancellationToken) =>
-            LoadException is null
+        public int LoadCalls { get; private set; }
+
+        public Task<RgbImage> LoadAsync(string path, CancellationToken cancellationToken)
+        {
+            LoadCalls++;
+            return LoadException is null
                 ? Task.FromResult(new RgbImage(Width, Height))
                 : Task.FromException<RgbImage>(LoadException);
+        }
 
         public Task SaveJpegAsync(RgbImage image, string path, CancellationToken cancellationToken)
         {

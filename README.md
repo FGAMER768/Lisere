@@ -36,7 +36,7 @@ FFmpeg est livré avec l'application et vérifié par SHA-256 au démarrage. Un 
 ### Image
 
 - Ouverture des images prises en charge par Windows Imaging Component, avec normalisation des cas irréguliers.
-- Comparaison avant/après avec séparateur déplaçable sur toute la hauteur de l'image et curseur de position.
+- Comparaison avant/après avec séparateur déplaçable sur toute la hauteur de l'image.
 - L'ouverture affiche l'original : l'amélioration n'est calculée qu'au clic sur **Améliorer l'image**.
 - Deux menus de paramètres, **Amélioration (IA)** et **Colorimétrie**, chacun avec son préréglage et ses curseurs.
 - Préréglages d'amélioration Chroma, Auto, Manuel et Auto + relatif moyen.
@@ -149,7 +149,7 @@ dotnet build Lisere.slnx
 
 1. Ouvrez l'onglet **Vidéo**, puis cliquez sur **Ouvrir** (`Ctrl+O`).
 2. Liseré analyse le fichier et affiche la frame source située à la position choisie, sans calculer l'après.
-3. Choisissez le moteur, le préréglage et la résolution ; ajustez les réglages, la colorimétrie, la cadence, le désentrelacement et la stabilisation.
+3. Choisissez le moteur, le préréglage et la résolution ; ajustez les réglages, la colorimétrie (dont les quatre curseurs Ultron), la cadence, le désentrelacement et la stabilisation.
 4. **Rafraîchir l'aperçu** (`Ctrl+Entrée`) calcule l'image de comparaison ; rien n'est rendu avant cette action.
 5. **Exporter la vidéo** (`Ctrl+S`) demande la destination puis rend le fichier avec progression et annulation.
 6. Pour plusieurs clips, utilisez **Ajouter à la file** puis **Lancer la file** : chaque ajout fige les réglages courants et demande sa destination.
@@ -170,7 +170,7 @@ Les mises à jour sont publiées comme assets de la dernière release GitHub (`L
 
 | Préréglage | Comportement |
 |---|---|
-| Chroma | Préréglage de référence, avec les valeurs de départ recommandées ; l'étage de détail reconstruit les échelles 1, 2,5 et 5 px, borné aux extrêmes locaux de l'image non accentuée à ±6 niveaux, avec un gain adapté à l'acutance déjà présente. Les unsharp de netteté et d'antialias sont bornés de la même façon. Le préréglage applique en dernier la courbe de tons relevée sur la référence Topaz (Base.png → UltronCCReel.png), qui relève les tons moyens sans écraser les hautes lumières. La page Vidéo applique la même courbe après le moteur ; l'étalonnage Ultron reste propre à la page Image, donc seule la courbe est partagée entre les deux espaces. |
+| Chroma | Préréglage de référence, avec les valeurs de départ recommandées ; l'étage de détail reconstruit les échelles 1, 2,5 et 5 px, borné aux extrêmes locaux de l'image non accentuée à ±6 niveaux, avec un gain adapté à l'acutance déjà présente. Les unsharp de netteté et d'antialias sont bornés de la même façon. Le préréglage applique en dernier la courbe de tons relevée sur la référence Topaz (Base.png → UltronCCReel.png), qui relève les tons moyens sans écraser les hautes lumières. La page Vidéo applique la même courbe après le moteur ; l'étalonnage et ses réglages Ultron sont partagés par les deux espaces. |
 | Auto (estimation locale) | Analyse l'image ou plusieurs frames du clip et estime les paramètres automatiquement. |
 | Manuel (curseurs) | Applique directement les valeurs saisies. |
 | Auto + relatif moyen | Combine l'estimation automatique et un ajustement relatif moyen. |
@@ -178,7 +178,7 @@ Les mises à jour sont publiées comme assets de la dernière release GitHub (`L
 
 ### Colorimétrie
 
-Le menu **Colorimétrie** de la page Image est indépendant des préréglages d'amélioration ; l'étalonnage s'applique après l'amélioration.
+Le menu **Colorimétrie** est indépendant des préréglages d'amélioration ; l'étalonnage s'applique après l'amélioration, sur la page Image comme sur la page Vidéo. Le look Ultron expose les mêmes quatre curseurs dans les deux espaces.
 
 | Préréglage | Comportement |
 |---|---|
@@ -358,7 +358,7 @@ dotnet test Lisere.slnx
 
 La solution contient quatre projets de tests xUnit : `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` et `Lisere.App.Tests`.
 
-État actuel : **402 tests** (120 Core, 17 Ai, 52 Video, 213 App), 0 avertissement de build. La suite complète passe en parallèle sur la machine de référence. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model. Le script de désinstallation par utilisateur est couvert par `UninstallServiceTests.cs`.
+État actuel : **406 tests** (120 Core, 18 Ai, 52 Video, 216 App), 0 avertissement de build. La suite complète passe en parallèle sur la machine de référence. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model. Le script de désinstallation par utilisateur est couvert par `UninstallServiceTests.cs`.
 
 Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le rendu, la conservation de l'audio, le désentrelacement, la taille exacte, l'annulation et l'extraction d'aperçu. Ils sont ignorés silencieusement si FFmpeg est introuvable, afin que le reste de la suite reste exécutable sur une machine sans outillage vidéo.
 
@@ -374,7 +374,7 @@ RIFE est testé à trois niveaux : inférence réelle sur deux images, rendu vid
 
 La publication est scriptée pour garder l'application, le paquet de mise à jour et l'installateur cohérents.
 
-1. Modifiez `<Version>` dans `src/Lisere/Lisere.csproj`, par exemple `1.0.1`.
+1. Modifiez `<Version>` dans `src/Lisere/Lisere.csproj`, par exemple `1.0.2`.
 2. Générez le paquet de mise à jour :
 
    ```powershell

@@ -140,21 +140,46 @@ public class VideoViewModelTests
         await viewModel.OpenCommand.ExecuteAsync(null);
         viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
             option => option.Preset == ColorPreset.UltronCc);
+        viewModel.ColorSaturation = 160;
+        viewModel.ColorBrightness = 12;
+        viewModel.ColorContrast = 8;
+        viewModel.ColorVibrance = 44;
+        var settings = new UltronCcSettings(160, 12, 8, 44);
 
         await viewModel.RefreshPreviewCommand.ExecuteAsync(null);
         Assert.Equal(ColorPreset.UltronCc, engine.LastRequest!.Grading);
+        Assert.Equal(settings, engine.LastRequest.GradingSettings);
 
         await viewModel.RenderPreviewCommand.ExecuteAsync(null);
         Assert.Equal(ColorPreset.UltronCc, renderer.Request!.Frame.Grading);
+        Assert.Equal(settings, renderer.Request.Frame.GradingSettings);
         Assert.True(renderer.Request.Settings.IsPreview);
 
         await viewModel.ExportPreviewCommand.ExecuteAsync(null);
         Assert.Equal(ColorPreset.UltronCc, renderer.Request!.Frame.Grading);
+        Assert.Equal(settings, renderer.Request.Frame.GradingSettings);
         Assert.True(renderer.Request.Settings.IsPreview);
 
         await viewModel.RenderCommand.ExecuteAsync(null);
         Assert.Equal(ColorPreset.UltronCc, renderer.Request!.Frame.Grading);
+        Assert.Equal(settings, renderer.Request.Frame.GradingSettings);
         Assert.False(renderer.Request.Settings.IsPreview);
+    }
+
+    [Fact]
+    public async Task SelectingUltronExposesItsSlidersAtThePresetDefaults()
+    {
+        var viewModel = CreateViewModel();
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.HasAdjustableColorSettings);
+
+        viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+            option => option.Preset == ColorPreset.UltronCc);
+
+        Assert.True(viewModel.IsColorGradingActive);
+        Assert.True(viewModel.HasAdjustableColorSettings);
+        Assert.Equal(UltronCcSettings.FromPreset, viewModel.CurrentColorSettings);
     }
 
     [Fact]
@@ -184,6 +209,34 @@ public class VideoViewModelTests
 
         Assert.Equal(ColorPreset.UltronCc, renderer.Requests[0].Frame.Grading);
         Assert.Equal(ColorPreset.Matrix, renderer.Requests[1].Frame.Grading);
+    }
+
+    [Fact]
+    public async Task QueuedJobsFreezeTheUltronSlidersChosenAtEnqueueTime()
+    {
+        var renderer = new FakeVideoRenderer();
+        var files = new FakeFileDialogService
+        {
+            VideoPath = "clip.mp4",
+            VideoTargets = ["first.mp4", "second.mp4"]
+        };
+        var viewModel = CreateViewModel(files: files, renderer: renderer);
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+            option => option.Preset == ColorPreset.UltronCc);
+
+        viewModel.ColorSaturation = 160;
+        viewModel.AddToQueueCommand.Execute(null);
+        viewModel.ColorSaturation = 70;
+        viewModel.AddToQueueCommand.Execute(null);
+
+        Assert.Equal(160, viewModel.Queue[0].Request.Frame.GradingSettings!.SaturationPercent);
+        Assert.Equal(70, viewModel.Queue[1].Request.Frame.GradingSettings!.SaturationPercent);
+
+        await viewModel.RunQueueCommand.ExecuteAsync(null);
+
+        Assert.Equal(160, renderer.Requests[0].Frame.GradingSettings!.SaturationPercent);
+        Assert.Equal(70, renderer.Requests[1].Frame.GradingSettings!.SaturationPercent);
     }
 
     [Fact]

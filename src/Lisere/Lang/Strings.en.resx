@@ -378,6 +378,9 @@
   <data name="errorLoad" xml:space="preserve">
     <value>Could not load the image.</value>
   </data>
+  <data name="errorImageVideoFile" xml:space="preserve">
+    <value>This file is a video. Open it in the Video tab.</value>
+  </data>
   <data name="errorEnhance" xml:space="preserve">
     <value>Processing failed.</value>
   </data>
@@ -457,7 +460,7 @@
     <value>Color grading</value>
   </data>
   <data name="videoColorNote" xml:space="preserve">
-    <value>Grading is applied after enhancement, in both the preview and the export. Ultron CC uses its recorded values.</value>
+    <value>Grading is applied after enhancement, in both the preview and the export. Ultron CC lets you adjust its values.</value>
   </data>
   <data name="videoLabelEngine" xml:space="preserve">
     <value>Engine</value>

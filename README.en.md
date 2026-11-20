@@ -36,7 +36,7 @@ FFmpeg ships with the application and is verified by SHA-256 at startup. An **Up
 ### Image
 
 - Opens the image formats supported by Windows Imaging Component, with normalisation of irregular cases.
-- Before/after comparison with a divider that moves across the full image height and a position slider.
+- Before/after comparison with a divider that moves across the full image height.
 - Opening shows the original: the enhancement is only computed when **Enhance image** is clicked.
 - Two parameter menus, **Enhancement (AI)** and **Colour grading**, each with its own preset and sliders.
 - Enhancement presets: Chroma, Auto, Manual and Auto + relative medium.
@@ -149,7 +149,7 @@ dotnet build Lisere.slnx
 
 1. Open the **Video** tab, then click **Open** (`Ctrl+O`).
 2. Liseré analyses the file and shows the source frame at the chosen position without computing the after view.
-3. Choose the engine, preset and resolution; adjust the settings, colour grading, frame rate, deinterlacing and stabilisation.
+3. Choose the engine, preset and resolution; adjust the settings, colour grading (including the four Ultron sliders), frame rate, deinterlacing and stabilisation.
 4. **Refresh preview** (`Ctrl+Enter`) computes the comparison image; nothing is rendered before this action.
 5. **Export video** (`Ctrl+S`) asks for the destination, then renders the file with progress and cancellation.
 6. For multiple clips, use **Add to queue**, then **Start queue**: each addition freezes the current settings and asks for its destination.
@@ -170,7 +170,7 @@ The update is published as an asset of the latest GitHub release (`Lisere.zip` a
 
 | Preset | Behaviour |
 |---|---|
-| Chroma | Reference preset with the recommended starting values; the detail stage reconstructs the 1, 2.5 and 5 px scales, bounded to the local extrema of the unsharpened image at +/-6 levels, with a gain adapted to the acutance already present. The sharpness and antialias unsharp masks are bounded the same way. The preset finally applies the tone curve measured on the Topaz reference (Base.png to UltronCCReel.png), which lifts the midtones without clipping the highlights. The Video page applies the same curve after the engine; Ultron grading remains specific to the Image page, so only the curve is shared between both workspaces. |
+| Chroma | Reference preset with the recommended starting values; the detail stage reconstructs the 1, 2.5 and 5 px scales, bounded to the local extrema of the unsharpened image at +/-6 levels, with a gain adapted to the acutance already present. The sharpness and antialias unsharp masks are bounded the same way. The preset finally applies the tone curve measured on the Topaz reference (Base.png to UltronCCReel.png), which lifts the midtones without clipping the highlights. The Video page applies the same curve after the engine; the grading and its Ultron settings are shared by both workspaces. |
 | Auto (local estimation) | Analyses the image or several frames of the clip and estimates the parameters automatically. |
 | Manual (sliders) | Applies the entered values directly. |
 | Auto + relative medium | Combines automatic estimation and a moderate relative adjustment. |
@@ -178,7 +178,7 @@ The update is published as an asset of the latest GitHub release (`Lisere.zip` a
 
 ### Colour grading
 
-The **Colour grading** menu on the Image page is independent of the enhancement presets; grading applies after enhancement.
+The **Colour grading** menu is independent of the enhancement presets; grading applies after enhancement on both the Image and Video pages. The Ultron look exposes the same four sliders in both workspaces.
 
 | Preset | Behaviour |
 |---|---|
@@ -359,7 +359,7 @@ dotnet test Lisere.slnx
 
 The solution contains four xUnit test projects: `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` and `Lisere.App.Tests`.
 
-Current state: **402 tests** (120 Core, 17 Ai, 52 Video, 213 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
+Current state: **406 tests** (120 Core, 18 Ai, 52 Video, 216 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
 
 Video integration tests generate a clip with FFmpeg and verify rendering, audio preservation, deinterlacing, exact size, cancellation and preview extraction. They are silently skipped when FFmpeg cannot be found, so the rest of the suite remains runnable on a machine without video tooling.
 
@@ -375,7 +375,7 @@ RIFE is tested at three levels: real inference on two images, video rendering wi
 
 Publishing is scripted so the application, update package and installer stay consistent.
 
-1. Change `<Version>` in `src/Lisere/Lisere.csproj`, for example `1.0.1`.
+1. Change `<Version>` in `src/Lisere/Lisere.csproj`, for example `1.0.2`.
 2. Generate the update package:
 
    ```powershell

@@ -15,7 +15,8 @@ public sealed record FrameEnhancementRequest(
     int? TargetWidth = null,
     int? TargetHeight = null,
     bool ApplyChromaTone = false,
-    ColorPreset Grading = ColorPreset.None)
+    ColorPreset Grading = ColorPreset.None,
+    UltronCcSettings? GradingSettings = null)
 {
     public EnhancementParameters ClampedParameters => Parameters.Clamp();
 

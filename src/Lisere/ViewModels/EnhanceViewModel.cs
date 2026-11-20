@@ -242,6 +242,14 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             return;
         }
 
+        if (FileDialogService.IsVideoPath(path))
+        {
+            await _dialogService.ShowMessageAsync(
+                Strings["errorImageVideoFile"],
+                DialogKind.Error);
+            return;
+        }
+
         CancelPresetEstimation();
         // Cancel only: the running operation disposes its own source. Disposing
         // it here made a pending estimation use an already-disposed token.

@@ -378,6 +378,9 @@
   <data name="errorLoad" xml:space="preserve">
     <value>Impossible de charger l'image.</value>
   </data>
+  <data name="errorImageVideoFile" xml:space="preserve">
+    <value>Ce fichier est une vidéo. Ouvrez-le dans l'onglet Vidéo.</value>
+  </data>
   <data name="errorEnhance" xml:space="preserve">
     <value>Le traitement a échoué.</value>
   </data>
@@ -457,7 +460,7 @@
     <value>Colorimétrie</value>
   </data>
   <data name="videoColorNote" xml:space="preserve">
-    <value>L'étalonnage s'applique après l'amélioration, sur l'aperçu comme à l'export. Ultron CC utilise ses valeurs enregistrées.</value>
+    <value>L'étalonnage s'applique après l'amélioration, sur l'aperçu comme à l'export. Ultron CC permet d'ajuster ses valeurs.</value>
   </data>
   <data name="videoLabelEngine" xml:space="preserve">
     <value>Moteur</value>

@@ -234,16 +234,10 @@
                        FontSize="12"
                        Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                        Text="{Binding Localization[beforeAfterBefore], ElementName=Root}" />
-            <Slider x:Name="ComparisonSlider"
-                    Grid.Column="1"
-                    Margin="10,0"
-                    AutomationProperties.Name="{Binding Localization[beforeAfterComparisonPosition], ElementName=Root}"
-                    IsSnapToTickEnabled="True"
-                    Maximum="100"
-                    Minimum="0"
-                    Style="{StaticResource ParameterSlider}"
-                    TickFrequency="1"
-                    Value="{Binding ComparisonPosition, ElementName=Root, Mode=TwoWay}" />
+            <ContentPresenter Grid.Column="1"
+                              Margin="10,0"
+                              VerticalAlignment="Center"
+                              Content="{Binding Footer, ElementName=Root}" />
             <TextBlock Grid.Column="2"
                        VerticalAlignment="Center"
                        FontSize="12"

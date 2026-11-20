@@ -65,6 +65,35 @@ public class FrameLookEnhancerTests
         Assert.Equal(ChromaTone.Apply(expected).Pixels, toned.Pixels);
     }
 
+    [Fact]
+    public void CustomUltronSettingsReachTheLook()
+    {
+        var source = CreateGradient(16, 16);
+        using var engine = new ClassicFrameEnhancer();
+        using var enhancer = new FrameLookEnhancer(engine);
+        var request = new FrameEnhancementRequest(
+            EnhancementParameters.Zero,
+            Grading: ColorPreset.UltronCc);
+        var settings = new UltronCcSettings(70, -20, 30, 10);
+
+        var standard = enhancer.Enhance(source, request, CancellationToken.None);
+        var custom = enhancer.Enhance(
+            source,
+            request with { GradingSettings = settings },
+            CancellationToken.None);
+
+        var expected = ColorGrading.Apply(
+            engine.Enhance(
+                source,
+                new FrameEnhancementRequest(EnhancementParameters.Zero),
+                CancellationToken.None),
+            ColorPreset.UltronCc,
+            settings);
+
+        Assert.NotEqual(standard.Pixels, custom.Pixels);
+        Assert.Equal(expected.Pixels, custom.Pixels);
+    }
+
     private static RgbImage CreateGradient(int width, int height)
     {
         var image = new RgbImage(width, height);
