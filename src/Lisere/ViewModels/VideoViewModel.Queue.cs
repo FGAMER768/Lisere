@@ -72,7 +72,7 @@ public sealed partial class VideoViewModel
             return;
         }
 
-        _queueCancellation?.Dispose();
+        _queueCancellation?.Cancel();
         var cancellation = new CancellationTokenSource();
         _queueCancellation = cancellation;
 
@@ -111,8 +111,8 @@ public sealed partial class VideoViewModel
     [RelayCommand(CanExecute = nameof(CanStopQueue))]
     private void StopQueue()
     {
-        _queueCancellation?.Cancel();
         SetStatus("videoStatusQueueStopping");
+        _queueCancellation?.Cancel();
     }
 
     [RelayCommand(CanExecute = nameof(CanClearQueue))]

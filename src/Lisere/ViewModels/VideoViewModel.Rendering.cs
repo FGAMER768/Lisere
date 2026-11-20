@@ -125,7 +125,6 @@ public sealed partial class VideoViewModel
     {
         var isPreview = purpose != RenderPurpose.FullVideo;
         _renderCancellation?.Cancel();
-        _renderCancellation?.Dispose();
         var cancellation = new CancellationTokenSource();
         _renderCancellation = cancellation;
 
@@ -164,6 +163,12 @@ public sealed partial class VideoViewModel
                 if (purpose == RenderPurpose.PreviewExport)
                 {
                     SetStatus("videoPreviewExported", Path.GetFileName(result.OutputPath));
+                }
+                else if (purpose == RenderPurpose.Preview)
+                {
+                    // The render just used the current settings: the stale
+                    // "settings changed" status would be wrong.
+                    SetStatus("videoStatusPreviewReady");
                 }
             }
             else
@@ -289,8 +294,8 @@ public sealed partial class VideoViewModel
     [RelayCommand(CanExecute = nameof(CanCancelRender))]
     private void CancelRender()
     {
-        _renderCancellation?.Cancel();
         SetStatus("videoStatusCanceling");
+        _renderCancellation?.Cancel();
     }
 
     private void OnRenderProgress(VideoRenderProgress progress)

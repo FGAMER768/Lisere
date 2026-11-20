@@ -1,6 +1,7 @@
 using Lisere.Ai.Enhancement;
 using Lisere.Ai.Models;
 using Lisere.Core.Enhancement;
+using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 
 namespace Lisere.Ai.Tests;
@@ -38,6 +39,28 @@ public class OnnxSuperResolutionTests
 
         Assert.Equal(48, result.Width);
         Assert.Equal(48, result.Height);
+    }
+
+    [Fact]
+    public void TheNeuralEngineGoesThroughTheSameColorGrading()
+    {
+        using var enhancer = new FrameLookEnhancer(CreateEnhancer());
+        Assert.True(enhancer.IsAvailable, enhancer.UnavailableReason);
+
+        var source = CreateCheckerboard(48, 32);
+        var request = new FrameEnhancementRequest(EnhancementParameters.Zero, OutputScale: 3);
+
+        var plain = enhancer.Enhance(source, request, CancellationToken.None);
+        var graded = enhancer.Enhance(
+            source,
+            request with { Grading = ColorPreset.Matrix },
+            CancellationToken.None);
+
+        Assert.Equal(plain.Width, graded.Width);
+        Assert.Equal(plain.Height, graded.Height);
+        Assert.True(
+            MeanDifference(plain, graded) > 2,
+            "le moteur neuronal doit recevoir le même étalonnage que le classique");
     }
 
     [Fact]
@@ -83,6 +106,18 @@ public class OnnxSuperResolutionTests
 
         Assert.Equal(64, result.Width);
         Assert.Equal(48, result.Height);
+    }
+
+    private static double MeanDifference(RgbImage first, RgbImage second)
+    {
+        var sum = 0L;
+
+        for (var i = 0; i < first.Pixels.Length; i++)
+        {
+            sum += Math.Abs(first.Pixels[i] - second.Pixels[i]);
+        }
+
+        return (double)sum / first.Pixels.Length;
     }
 
     private static OnnxSuperResolutionEnhancer CreateEnhancer()

@@ -87,4 +87,82 @@ public class FfprobeParserTests
 
         Assert.Throws<VideoProbeException>(() => FfprobeParser.Parse(json, "audio.m4a"));
     }
+
+    [Fact]
+    public void RefusesAStillImageOpenedAsAVideo()
+    {
+        // ffprobe reports a JPEG as one 25 fps mjpeg stream in an image2
+        // container: without this guard the video page opens it as a 0.04 s
+        // clip and renders a broken one-frame export.
+        var json = """
+        {
+          "streams": [
+            {
+              "codec_type": "video",
+              "codec_name": "mjpeg",
+              "width": 640,
+              "height": 360,
+              "pix_fmt": "yuvj420p",
+              "avg_frame_rate": "25/1",
+              "r_frame_rate": "25/1",
+              "duration": "0.040000"
+            }
+          ],
+          "format": {
+            "duration": "0.040000",
+            "format_name": "image2"
+          }
+        }
+        """;
+
+        var exception = Assert.Throws<VideoStillImageException>(
+            () => FfprobeParser.Parse(json, "photo.jpg"));
+        Assert.Contains("image fixe", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RefusesACoverArtAttachedToAnAudioFile()
+    {
+        var json = """
+        {
+          "streams": [
+            {
+              "codec_type": "video",
+              "codec_name": "mjpeg",
+              "width": 500,
+              "height": 500,
+              "avg_frame_rate": "90000/1",
+              "disposition": { "attached_pic": 1 }
+            },
+            { "codec_type": "audio", "codec_name": "mp3" }
+          ],
+          "format": { "duration": "180", "format_name": "mp3" }
+        }
+        """;
+
+        Assert.Throws<VideoStillImageException>(
+            () => FfprobeParser.Parse(json, "track.mp3"));
+    }
+
+    [Fact]
+    public void ARealContainerIsNotMistakenForAStillImage()
+    {
+        var json = """
+        {
+          "streams": [
+            {
+              "codec_type": "video",
+              "codec_name": "h264",
+              "width": 640,
+              "height": 360,
+              "avg_frame_rate": "25/1"
+            }
+          ],
+          "format": { "duration": "4", "format_name": "mov,mp4,m4a,3gp,3g2,mj2" }
+        }
+        """;
+
+        var info = FfprobeParser.Parse(json, "clip.mp4");
+        Assert.Equal(640, info.Width);
+    }
 }

@@ -55,12 +55,19 @@ public sealed class VideoPasses
         string destination,
         IProgress<VideoRenderProgress>? progress,
         string encodingPreset,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        double? startSeconds = null,
+        double? durationSeconds = null)
     {
         var tools = _toolchain.RequireTools();
-        var transformsPath = Path.Combine(
-            Path.GetDirectoryName(destination)!,
-            $"transforms-{Guid.NewGuid():N}.trf");
+        var workingDirectory = Path.GetDirectoryName(Path.GetFullPath(destination))!;
+        Directory.CreateDirectory(workingDirectory);
+
+        // The vidstab filter takes the transform file as a filter option, and a
+        // Windows path (drive colon, backslashes) breaks the filter graph. Run
+        // the pass from the file's folder and hand it a plain file name.
+        const string transformsFileName = "transforms.trf";
+        var transformsPath = Path.Combine(workingDirectory, transformsFileName);
 
         try
         {
@@ -74,8 +81,13 @@ public sealed class VideoPasses
 
             var detection = await FfmpegRunner.RunAsync(
                 tools.FfmpegPath,
-                VideoCommandBuilder.BuildStabilizeDetectArguments(source.Path, transformsPath),
-                cancellationToken).ConfigureAwait(false);
+                VideoCommandBuilder.BuildStabilizeDetectArguments(
+                    source.Path,
+                    transformsFileName,
+                    startSeconds,
+                    durationSeconds),
+                cancellationToken,
+                workingDirectory).ConfigureAwait(false);
 
             if (!detection.Succeeded)
             {
@@ -87,11 +99,21 @@ public sealed class VideoPasses
                 tools.FfmpegPath,
                 VideoCommandBuilder.BuildStabilizeTransformArguments(
                     source.Path,
-                    transformsPath,
+                    transformsFileName,
                     destination,
-                    encodingPreset),
-                value => Report(progress, VideoRenderStage.Stabilizing, source, value, 20, 95),
-                cancellationToken).ConfigureAwait(false);
+                    encodingPreset,
+                    startSeconds,
+                    durationSeconds),
+                value => Report(
+                    progress,
+                    VideoRenderStage.Stabilizing,
+                    source,
+                    value,
+                    20,
+                    95,
+                    durationSeconds),
+                cancellationToken,
+                workingDirectory).ConfigureAwait(false);
 
             if (!transform.Succeeded)
             {
@@ -154,9 +176,10 @@ public sealed class VideoPasses
         VideoInfo source,
         FfmpegProgress value,
         double floor,
-        double ceiling)
+        double ceiling,
+        double? durationSeconds = null)
     {
-        var total = source.DurationSeconds;
+        var total = durationSeconds is > 0 ? durationSeconds.Value : source.DurationSeconds;
         var percent = total > 0
             ? Math.Clamp(floor + ((ceiling - floor) * (value.OutTimeSeconds / total)), floor, ceiling)
             : floor;

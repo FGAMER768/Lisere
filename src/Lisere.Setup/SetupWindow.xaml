@@ -30,7 +30,7 @@
                            Height="46"
                            HorizontalAlignment="Left"
                            VerticalAlignment="Top"
-                           Source="/Assets/Lisere.ico"
+                           Source="/Assets/LisereIcon.png"
                            Stretch="Uniform" />
                     <StackPanel Grid.Column="1" Margin="14,1,16,0">
                         <TextBlock x:Name="HeadingText"

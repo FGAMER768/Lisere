@@ -453,6 +453,12 @@
   <data name="videoSectionModel" xml:space="preserve">
     <value>Moteur et modèle</value>
   </data>
+  <data name="videoSectionColor" xml:space="preserve">
+    <value>Colorimétrie</value>
+  </data>
+  <data name="videoColorNote" xml:space="preserve">
+    <value>L'étalonnage s'applique après l'amélioration, sur l'aperçu comme à l'export. Ultron CC utilise ses valeurs enregistrées.</value>
+  </data>
   <data name="videoLabelEngine" xml:space="preserve">
     <value>Moteur</value>
   </data>
@@ -653,6 +659,9 @@
   </data>
   <data name="videoErrorUnreadable" xml:space="preserve">
     <value>La vidéo est illisible ou son format n'est pas pris en charge.</value>
+  </data>
+  <data name="videoErrorStillImage" xml:space="preserve">
+    <value>Ce fichier est une image fixe. Ouvrez-la dans la page Image.</value>
   </data>
   <data name="videoErrorPresetInvalid" xml:space="preserve">
     <value>Le preset vidéo n'est pas un fichier JSON valide.</value>

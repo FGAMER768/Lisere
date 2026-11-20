@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using Lisere.Ai.Enhancement;
 using Lisere.Ai.Interpolation;
 using Lisere.Core.Enhancement;
+using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 using Lisere.Models;
 using Lisere.Services;
@@ -125,6 +126,9 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private PresetOption? _selectedPreset;
 
     [ObservableProperty]
+    private ColorPresetOption? _selectedColorPreset;
+
+    [ObservableProperty]
     private VideoEngineOption? _selectedEngine;
 
     [ObservableProperty]
@@ -206,6 +210,8 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
             CreatePreset(EnhancementMode.AutoRelativeMedium)
         ];
 
+        ColorPresets = ColorPresetCatalog.Create(Strings);
+
         Engines = engines
             .Select(enhancer => new VideoEngineOption(
                 enhancer,
@@ -219,6 +225,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         RebuildFrameRates();
 
         SelectedPreset = Presets[0];
+        SelectedColorPreset = ColorPresets[0];
         SelectedEngine = Engines.FirstOrDefault(engine => engine.IsAvailable) ?? Engines.FirstOrDefault();
 
         Queue.CollectionChanged += OnQueueChanged;
@@ -232,6 +239,8 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     }
 
     public IReadOnlyList<PresetOption> Presets { get; }
+
+    public IReadOnlyList<ColorPresetOption> ColorPresets { get; }
 
     public IReadOnlyList<VideoEngineOption> Engines { get; }
 
@@ -432,6 +441,9 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         _ = ApplyPresetInBackgroundAsync(value.Mode);
     }
 
+    partial void OnSelectedColorPresetChanged(ColorPresetOption? value) =>
+        UpdatePendingStatus();
+
     partial void OnSelectedOutputChanged(OutputOption? value) => UpdatePendingStatus();
 
     partial void OnSelectedFrameRateChanged(FrameRateOption? value) => UpdatePendingStatus();
@@ -474,6 +486,11 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         foreach (var preset in Presets)
         {
             preset.Label = Strings[PresetLabelKey(preset.Mode)];
+        }
+
+        foreach (var color in ColorPresets)
+        {
+            color.Label = Strings[ColorPresetCatalog.LabelKey(color.Preset)];
         }
 
         RebuildCodecs();
@@ -648,6 +665,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private Exception LocalizeOpenError(Exception exception) => exception switch
     {
         FileNotFoundException => new UserMessageException(Strings["videoErrorFileMissing"]),
+        VideoStillImageException => new UserMessageException(Strings["videoErrorStillImage"]),
         VideoProbeException => new UserMessageException(Strings["videoErrorUnreadable"]),
         _ => exception
     };

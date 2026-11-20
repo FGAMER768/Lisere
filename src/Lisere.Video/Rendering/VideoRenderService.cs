@@ -28,6 +28,11 @@ public sealed class VideoRenderService : IVideoRenderService
 {
     private static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(1);
 
+    // A one-second preview with stabilisation must not analyse the whole clip:
+    // a short lead-in gives vidstab enough context and keeps the preview quick.
+    private const double PreviewStabilizationLeadSeconds = 1.0;
+    private const double PreviewStabilizationTailSeconds = 1.0;
+
     private readonly VideoToolchain _toolchain;
     private readonly VideoPasses _passes;
 
@@ -87,6 +92,7 @@ public sealed class VideoRenderService : IVideoRenderService
             progress?.Report(VideoRenderProgress.Start(VideoRenderStage.Preparing));
 
             var workingPath = source.Path;
+            double? stabilizationStart = null;
 
             if (settings.Deinterlace)
             {
@@ -102,16 +108,35 @@ public sealed class VideoRenderService : IVideoRenderService
             if (settings.Stabilize)
             {
                 var stabilizedPath = Path.Combine(temporaryDirectory, "stabilized.mp4");
+                (double StartSeconds, double DurationSeconds)? window =
+                    settings.IsPreview
+                        ? PreviewStabilizationWindow(source, settings)
+                        : null;
+
                 await _passes.StabilizeAsync(
                     source with { Path = workingPath },
                     stabilizedPath,
                     progress,
                     settings.EncodingPreset,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    window?.StartSeconds,
+                    window?.DurationSeconds).ConfigureAwait(false);
                 workingPath = stabilizedPath;
+                stabilizationStart = window?.StartSeconds;
             }
 
             var working = source with { Path = workingPath };
+
+            // The preview now seeks inside the stabilised window instead of the
+            // whole clip, so its position is rebased on the window start.
+            var renderSettings = stabilizationStart is double windowStart
+                ? settings with
+                {
+                    PreviewStartSeconds = Math.Max(
+                        0,
+                        (settings.PreviewStartSeconds ?? 0) - windowStart)
+                }
+                : settings;
             var (outputWidth, outputHeight) = request.Frame.ResolveSize(
                 source.Width,
                 source.Height);
@@ -124,7 +149,7 @@ public sealed class VideoRenderService : IVideoRenderService
                     working,
                     request.Engine,
                     request.Frame,
-                    settings,
+                    renderSettings,
                     request.Interpolator,
                     outputWidth,
                     outputHeight,
@@ -184,6 +209,22 @@ public sealed class VideoRenderService : IVideoRenderService
         {
             TryDeleteDirectory(temporaryDirectory);
         }
+    }
+
+    private static (double StartSeconds, double DurationSeconds) PreviewStabilizationWindow(
+        VideoInfo source,
+        VideoRenderSettings settings)
+    {
+        var previewStart = Math.Max(0, settings.PreviewStartSeconds ?? 0);
+        var previewDuration = Math.Max(0.1, settings.PreviewDurationSeconds ?? 1);
+        var start = Math.Max(0, previewStart - PreviewStabilizationLeadSeconds);
+        var end = previewStart + previewDuration + PreviewStabilizationTailSeconds;
+        var sourceDuration = source.DurationSeconds > 0
+            ? source.DurationSeconds
+            : end;
+
+        end = Math.Min(sourceDuration, end);
+        return (start, Math.Max(0.1, end - start));
     }
 
     private static int RenderFrames(

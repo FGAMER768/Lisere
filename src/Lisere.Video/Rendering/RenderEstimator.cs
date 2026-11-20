@@ -1,4 +1,5 @@
 using Lisere.Ai.Enhancement;
+using Lisere.Core.Grading;
 
 namespace Lisere.Video.Rendering;
 
@@ -27,6 +28,10 @@ public static class RenderEstimator
     private const double RifeMillisecondsPerMegapixel = 400;
     private const double DeinterlaceFactor = 1.25;
     private const double StabilizeFactor = 1.6;
+
+    // The image path measures grading at about a quarter of a 5K pipeline; the
+    // same per-pixel work runs on every video frame, so it gets a similar share.
+    private const double GradingFactor = 1.25;
 
     public static RenderEstimate Estimate(
         VideoRenderRequest request,
@@ -61,6 +66,11 @@ public static class RenderEstimator
         if (settings.UsesRife)
         {
             perFrameMilliseconds += RifeMillisecondsPerMegapixel * outputMegapixels;
+        }
+
+        if (request.Frame.Grading is not ColorPreset.None)
+        {
+            perFrameMilliseconds *= GradingFactor;
         }
 
         if (settings.Deinterlace)

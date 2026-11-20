@@ -1,5 +1,6 @@
 using Lisere.Ai.Enhancement;
 using Lisere.Core.Enhancement;
+using Lisere.Core.Grading;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
 
@@ -75,6 +76,20 @@ public class RenderEstimatorTests
             new VideoRenderSettings("out.mp4", Stabilize: true, Deinterlace: true)));
 
         Assert.True(stabilized.EstimatedTime > plain.EstimatedTime);
+    }
+
+    [Fact]
+    public void ColorGradingLengthensTheEstimate()
+    {
+        using var engine = new ClassicFrameEnhancer();
+        var plain = RenderEstimator.Estimate(Request(engine));
+        var graded = RenderEstimator.Estimate(Request(
+            engine,
+            frame: new FrameEnhancementRequest(
+                EnhancementParameters.Zero,
+                Grading: ColorPreset.Matrix)));
+
+        Assert.True(graded.EstimatedTime > plain.EstimatedTime);
     }
 
     [Fact]

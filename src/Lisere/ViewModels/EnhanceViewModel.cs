@@ -159,15 +159,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             CreatePreset(EnhancementMode.None)
         ];
 
-        ColorPresets =
-        [
-            CreateColorPreset(ColorPreset.None),
-            CreateColorPreset(ColorPreset.UltronCc),
-            CreateColorPreset(ColorPreset.Matrix),
-            CreateColorPreset(ColorPreset.Infinity),
-            CreateColorPreset(ColorPreset.Nebulus),
-            CreateColorPreset(ColorPreset.Splendida)
-        ];
+        ColorPresets = ColorPresetCatalog.Create(Strings);
 
         SelectedPreset = Presets[0];
         SelectedColorPreset = ColorPresets[0];
@@ -251,8 +243,9 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         }
 
         CancelPresetEstimation();
+        // Cancel only: the running operation disposes its own source. Disposing
+        // it here made a pending estimation use an already-disposed token.
         _loadCancellation?.Cancel();
-        _loadCancellation?.Dispose();
 
         var cancellation = new CancellationTokenSource();
         _loadCancellation = cancellation;
@@ -373,7 +366,6 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         }
 
         _enhanceCancellation?.Cancel();
-        _enhanceCancellation?.Dispose();
 
         var cancellation = new CancellationTokenSource();
         _enhanceCancellation = cancellation;
@@ -487,7 +479,6 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         }
 
         _saveCancellation?.Cancel();
-        _saveCancellation?.Dispose();
 
         var cancellation = new CancellationTokenSource();
         _saveCancellation = cancellation;
@@ -637,7 +628,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
         foreach (var preset in ColorPresets)
         {
-            preset.Label = Strings[ColorPresetLabelKey(preset.Preset)];
+            preset.Label = Strings[ColorPresetCatalog.LabelKey(preset.Preset)];
         }
 
         UpdatePresetNote();
@@ -772,8 +763,9 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     private async Task ApplyPresetAsync(EnhancementMode mode)
     {
+        // The previous estimation owns and disposes its own source; disposing it
+        // here is what made preset changes surface an error dialog.
         _presetCancellation?.Cancel();
-        _presetCancellation?.Dispose();
 
         var cancellation = new CancellationTokenSource();
         _presetCancellation = cancellation;
@@ -1081,19 +1073,6 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     private PresetOption CreatePreset(EnhancementMode mode) =>
         new(Strings[PresetLabelKey(mode)], mode);
-
-    private ColorPresetOption CreateColorPreset(ColorPreset preset) =>
-        new(Strings[ColorPresetLabelKey(preset)], preset);
-
-    private static string ColorPresetLabelKey(ColorPreset preset) => preset switch
-    {
-        ColorPreset.UltronCc => "colorUltron",
-        ColorPreset.Matrix => "colorMatrix",
-        ColorPreset.Infinity => "colorInfinity",
-        ColorPreset.Nebulus => "colorNebulus",
-        ColorPreset.Splendida => "colorSplendida",
-        _ => "colorNone"
-    };
 
     private static string ColorPresetNoteKey(ColorPreset preset) => preset switch
     {

@@ -126,29 +126,35 @@ public static class VideoCommandBuilder
         outputPath
     ];
 
+    /// <summary>
+    /// vidstab takes the transform file as a bare filter option: a colon or a
+    /// backslash in the value breaks the filter graph. The caller runs FFmpeg
+    /// with the file's directory as working directory and passes its plain name.
+    /// An optional window restricts the pass to the segment around a preview.
+    /// </summary>
     public static IReadOnlyList<string> BuildStabilizeDetectArguments(
         string sourcePath,
-        string transformsPath) =>
+        string transformsFileName,
+        double? startSeconds = null,
+        double? durationSeconds = null) =>
     [
-        "-v", "error",
-        "-y",
-        "-i", sourcePath,
-        "-vf", $"vidstabdetect=shakiness=6:accuracy=15:result={transformsPath}",
+        .. StartArguments(sourcePath, startSeconds, durationSeconds),
+        "-vf", $"vidstabdetect=shakiness=6:accuracy=15:result={transformsFileName}",
         "-f", "null",
         "-"
     ];
 
     public static IReadOnlyList<string> BuildStabilizeTransformArguments(
         string sourcePath,
-        string transformsPath,
+        string transformsFileName,
         string outputPath,
-        string encodingPreset) =>
+        string encodingPreset,
+        double? startSeconds = null,
+        double? durationSeconds = null) =>
     [
-        "-v", "error",
-        "-y",
-        "-i", sourcePath,
+        .. StartArguments(sourcePath, startSeconds, durationSeconds),
         "-vf",
-        $"vidstabtransform=input={transformsPath}:smoothing=10:zoom=0:optzoom=1:interpol=bicubic," +
+        $"vidstabtransform=input={transformsFileName}:smoothing=10:zoom=0:optzoom=1:interpol=bicubic," +
         "unsharp=5:5:0.4",
         "-c:v", "libx264",
         "-preset", encodingPreset,
@@ -171,7 +177,11 @@ public static class VideoCommandBuilder
         "-y",
         "-i", sourcePath,
         "-vf",
-        $"minterpolate=fps={Format(targetFrameRate)}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1",
+        // minterpolate stops at the last source frame, so its output is a few
+        // frames short. The trailing fps pass pads that tail with the last frame
+        // and makes the stream constant-rate, keeping the source duration.
+        $"minterpolate=fps={Format(targetFrameRate)}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1," +
+        $"fps={Format(targetFrameRate)}",
         "-c:v", "libx264",
         "-preset", encodingPreset,
         "-crf", "18",
@@ -195,6 +205,28 @@ public static class VideoCommandBuilder
         "-pix_fmt", "rgb24",
         "pipe:1"
     ];
+
+    private static IReadOnlyList<string> StartArguments(
+        string sourcePath,
+        double? startSeconds,
+        double? durationSeconds)
+    {
+        var arguments = new List<string> { "-v", "error", "-y" };
+
+        if (startSeconds is > 0)
+        {
+            arguments.AddRange(["-ss", Format(startSeconds.Value)]);
+        }
+
+        arguments.AddRange(["-i", sourcePath]);
+
+        if (durationSeconds is > 0)
+        {
+            arguments.AddRange(["-t", Format(durationSeconds.Value)]);
+        }
+
+        return arguments;
+    }
 
     private static string Format(double value) =>
         value.ToString("0.######", CultureInfo.InvariantCulture);

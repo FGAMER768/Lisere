@@ -27,7 +27,7 @@ For an unattended deployment, for example in a script or on a workstation image:
 The interface has two workspaces:
 
 - **Image**: deterministic six-parameter pipeline, presets, automatic estimation, a separate colour-grading menu and JPEG export.
-- **Video**: FFmpeg analysis, before/after preview, frame-by-frame rendering, interchangeable engines (local pipeline or ONNX models), FHD/4K resolutions, 30/60/120 fps, RIFE x2 neural interpolation, deinterlacing, stabilisation, a queue and MP4 export with audio.
+- **Video**: FFmpeg analysis, before/after preview, frame-by-frame rendering, interchangeable engines (local pipeline or ONNX models), FHD/4K resolutions, 30/60/120 fps, RIFE x2 neural interpolation, deinterlacing, stabilisation, colour grading, a queue and MP4 export with audio.
 
 FFmpeg ships with the application and is verified by SHA-256 at startup. An **Updates** button in the title bar checks published GitHub versions, downloads the package, verifies its digest, then installs it on restart.
 
@@ -57,6 +57,7 @@ FFmpeg ships with the application and is verified by SHA-256 at startup. An **Up
 - File analysis with `ffprobe`: resolution, frame rate, duration, codec, audio presence and codec.
 - Before/after preview on a frame extracted at the chosen position; opening does not compute the preview, it must be requested explicitly (`Ctrl+Enter`).
 - Applies the same six parameters to each frame, with Auto estimation sampled across the clip.
+- **Video colour grading**: the five looks from the Image page (Ultron CC, Matrix CC, Infinity CC, Nebulus CC, Splendida CC) are applied to every frame, after enhancement and before the Chroma tone curve. Each queue job freezes the choice.
 - Interchangeable engines:
   - **Lisere Classic**: deterministic local pipeline, always available;
   - **Super-Resolution CNN x3**: local ONNX model, SHA-256 verified, DirectML inference on the iGPU with CPU fallback.
@@ -148,7 +149,7 @@ dotnet build Lisere.slnx
 
 1. Open the **Video** tab, then click **Open** (`Ctrl+O`).
 2. Liseré analyses the file and shows the source frame at the chosen position without computing the after view.
-3. Choose the engine, preset and resolution; adjust the settings, frame rate, deinterlacing and stabilisation.
+3. Choose the engine, preset and resolution; adjust the settings, colour grading, frame rate, deinterlacing and stabilisation.
 4. **Refresh preview** (`Ctrl+Enter`) computes the comparison image; nothing is rendered before this action.
 5. **Export video** (`Ctrl+S`) asks for the destination, then renders the file with progress and cancellation.
 6. For multiple clips, use **Add to queue**, then **Start queue**: each addition freezes the current settings and asks for its destination.
@@ -328,7 +329,7 @@ Liseré does not redistribute any proprietary weights, code or media. The third-
 
 ### Visual identity
 
-- The Liseré icon (`assets/LisereIcon.svg`, rendered as `assets/Lisere.ico` at 16 to 256 px) was created for the project.
+- The Liseré icon (`assets/LisereIcon.svg`, rendered as `assets/Lisere.ico` at 16 to 256 px and as `assets/LisereIcon.png` at 512 px for the interface) was created for the project.
 
 ### Analysis references and trademarks
 
@@ -358,7 +359,7 @@ dotnet test Lisere.slnx
 
 The solution contains four xUnit test projects: `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` and `Lisere.App.Tests`.
 
-Current state: **383 tests** (120 Core, 15 Ai, 40 Video, 208 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
+Current state: **402 tests** (120 Core, 17 Ai, 52 Video, 213 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
 
 Video integration tests generate a clip with FFmpeg and verify rendering, audio preservation, deinterlacing, exact size, cancellation and preview extraction. They are silently skipped when FFmpeg cannot be found, so the rest of the suite remains runnable on a machine without video tooling.
 
@@ -406,6 +407,7 @@ Lisere.slnx
 assets/
   Lisere.ico
   LisereIcon.svg
+  LisereIcon.png
   FluentSystemIcons-Regular.ttf
   comparisons/
 src/

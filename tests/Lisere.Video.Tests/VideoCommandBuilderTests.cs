@@ -109,6 +109,52 @@ public class VideoCommandBuilderTests
     }
 
     [Fact]
+    public void TheStabilisationFilterOnlySeesABareTransformFileName()
+    {
+        // A Windows path inside the filter value breaks the filter graph on
+        // the drive colon; the pass runs from the file's folder instead.
+        var transform = VideoCommandBuilder.BuildStabilizeTransformArguments(
+            "in.mp4",
+            "transforms.trf",
+            "out.mp4",
+            "fast");
+        var filter = transform[transform.ToList().IndexOf("-vf") + 1];
+
+        Assert.Contains("input=transforms.trf", filter, StringComparison.Ordinal);
+        Assert.DoesNotContain(":\\", filter);
+    }
+
+    [Fact]
+    public void StabilisationCanBeLimitedToAPreviewWindow()
+    {
+        var detect = VideoCommandBuilder.BuildStabilizeDetectArguments(
+            "in.mp4",
+            "transforms.trf",
+            startSeconds: 2,
+            durationSeconds: 3);
+        var transform = VideoCommandBuilder.BuildStabilizeTransformArguments(
+            "in.mp4",
+            "transforms.trf",
+            "out.mp4",
+            "fast",
+            startSeconds: 2,
+            durationSeconds: 3);
+
+        foreach (var arguments in new[] { detect, transform })
+        {
+            var list = arguments.ToList();
+            var seek = list.IndexOf("-ss");
+            var input = list.IndexOf("-i");
+            var duration = list.IndexOf("-t");
+
+            Assert.True(seek >= 0 && seek < input, "the seek must precede -i");
+            Assert.Equal("2", list[seek + 1]);
+            Assert.True(duration > input);
+            Assert.Equal("3", list[duration + 1]);
+        }
+    }
+
+    [Fact]
     public void InterpolationTargetsTheRequestedRate()
     {
         var arguments = VideoCommandBuilder.BuildInterpolationArguments(
@@ -118,6 +164,21 @@ public class VideoCommandBuilderTests
             "fast");
 
         Assert.Contains(arguments, argument => argument.StartsWith("minterpolate=fps=50", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void InterpolationPadsTheTailToKeepTheSourceDuration()
+    {
+        var arguments = VideoCommandBuilder.BuildInterpolationArguments(
+            "in.mp4",
+            "out.mp4",
+            60,
+            "fast");
+        var filter = arguments[arguments.ToList().IndexOf("-vf") + 1];
+
+        // minterpolate alone ends early because it cannot interpolate past the
+        // last source frame; the trailing fps pass fills that tail.
+        Assert.EndsWith(",fps=60", filter, StringComparison.Ordinal);
     }
 
     [Fact]

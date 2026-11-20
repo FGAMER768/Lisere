@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using Lisere.Ai.Enhancement;
 using Lisere.Ai.Interpolation;
 using Lisere.Core.Enhancement;
+using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 using Lisere.Models;
 using Lisere.Services;
@@ -36,8 +37,10 @@ public sealed partial class VideoViewModel
             return;
         }
 
+        // Cancel only: the previous operation still owns its source and disposes
+        // it itself. Disposing it here made a pending preset or preview throw
+        // ObjectDisposedException when it next read its token.
         _busyCancellation?.Cancel();
-        _busyCancellation?.Dispose();
 
         var cancellation = new CancellationTokenSource();
         _busyCancellation = cancellation;
@@ -208,8 +211,10 @@ public sealed partial class VideoViewModel
             return;
         }
 
+        // Cancel only: the previous operation still owns its source and disposes
+        // it itself. Disposing it here made a pending preset or preview throw
+        // ObjectDisposedException when it next read its token.
         _busyCancellation?.Cancel();
-        _busyCancellation?.Dispose();
 
         var cancellation = new CancellationTokenSource();
         _busyCancellation = cancellation;
@@ -259,9 +264,11 @@ public sealed partial class VideoViewModel
     [RelayCommand(CanExecute = nameof(CanCancelBusy))]
     private void CancelBusy()
     {
+        // Publish the transient status first: cancelling may complete the
+        // operation on another thread, and its final "canceled" status must win.
+        SetStatus("statusCanceling");
         _busyCancellation?.Cancel();
         _presetCancellation?.Cancel();
-        SetStatus("statusCanceling");
     }
 
     private async Task ApplyPresetInBackgroundAsync(EnhancementMode mode)
@@ -281,8 +288,9 @@ public sealed partial class VideoViewModel
 
     private async Task ApplyPresetAsync(EnhancementMode mode)
     {
+        // The previous estimation owns and disposes its own source; disposing it
+        // here is what made preset changes surface an error dialog.
         _presetCancellation?.Cancel();
-        _presetCancellation?.Dispose();
 
         var cancellation = new CancellationTokenSource();
         _presetCancellation = cancellation;
@@ -424,7 +432,8 @@ public sealed partial class VideoViewModel
             SelectedOutput?.Scale ?? 1,
             width,
             height,
-            ApplyChromaTone: chromaTone);
+            ApplyChromaTone: chromaTone,
+            Grading: SelectedColorPreset?.Preset ?? ColorPreset.None);
     }
 
     /// <summary>

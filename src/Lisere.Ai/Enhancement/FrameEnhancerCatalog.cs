@@ -12,7 +12,7 @@ public static class FrameEnhancerCatalog
     {
         var engines = new List<IFrameEnhancer>
         {
-            new ChromaToneFrameEnhancer(new ClassicFrameEnhancer())
+            new FrameLookEnhancer(new ClassicFrameEnhancer())
         };
 
         if (catalog is not null)
@@ -23,7 +23,7 @@ public static class FrameEnhancerCatalog
                     "super-resolution",
                     StringComparison.OrdinalIgnoreCase)))
             {
-                engines.Add(new ChromaToneFrameEnhancer(
+                engines.Add(new FrameLookEnhancer(
                     new OnnxSuperResolutionEnhancer(model)));
             }
         }

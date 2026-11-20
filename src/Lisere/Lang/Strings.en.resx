@@ -453,6 +453,12 @@
   <data name="videoSectionModel" xml:space="preserve">
     <value>Engine and model</value>
   </data>
+  <data name="videoSectionColor" xml:space="preserve">
+    <value>Color grading</value>
+  </data>
+  <data name="videoColorNote" xml:space="preserve">
+    <value>Grading is applied after enhancement, in both the preview and the export. Ultron CC uses its recorded values.</value>
+  </data>
   <data name="videoLabelEngine" xml:space="preserve">
     <value>Engine</value>
   </data>
@@ -653,6 +659,9 @@
   </data>
   <data name="videoErrorUnreadable" xml:space="preserve">
     <value>The video is unreadable or its format is not supported.</value>
+  </data>
+  <data name="videoErrorStillImage" xml:space="preserve">
+    <value>That file is a still image. Open it in the Image page.</value>
   </data>
   <data name="videoErrorPresetInvalid" xml:space="preserve">
     <value>The video preset is not a valid JSON file.</value>

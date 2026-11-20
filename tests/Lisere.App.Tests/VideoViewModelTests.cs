@@ -3,6 +3,7 @@ using System.Windows.Media;
 using Lisere.Ai.Enhancement;
 using Lisere.Ai.Interpolation;
 using Lisere.Core.Enhancement;
+using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 using Lisere.Models;
 using Lisere.Services;
@@ -131,6 +132,76 @@ public class VideoViewModelTests
     }
 
     [Fact]
+    public async Task TheSelectedColorGradeReachesThePreviewAndTheRender()
+    {
+        var engine = new FakeEngine(unavailable: false);
+        var renderer = new FakeVideoRenderer();
+        var viewModel = CreateViewModel(renderer: renderer, engine: engine);
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+            option => option.Preset == ColorPreset.UltronCc);
+
+        await viewModel.RefreshPreviewCommand.ExecuteAsync(null);
+        Assert.Equal(ColorPreset.UltronCc, engine.LastRequest!.Grading);
+
+        await viewModel.RenderPreviewCommand.ExecuteAsync(null);
+        Assert.Equal(ColorPreset.UltronCc, renderer.Request!.Frame.Grading);
+        Assert.True(renderer.Request.Settings.IsPreview);
+
+        await viewModel.ExportPreviewCommand.ExecuteAsync(null);
+        Assert.Equal(ColorPreset.UltronCc, renderer.Request!.Frame.Grading);
+        Assert.True(renderer.Request.Settings.IsPreview);
+
+        await viewModel.RenderCommand.ExecuteAsync(null);
+        Assert.Equal(ColorPreset.UltronCc, renderer.Request!.Frame.Grading);
+        Assert.False(renderer.Request.Settings.IsPreview);
+    }
+
+    [Fact]
+    public async Task QueuedJobsFreezeTheColorGradeChosenAtEnqueueTime()
+    {
+        var renderer = new FakeVideoRenderer();
+        var files = new FakeFileDialogService
+        {
+            VideoPath = "clip.mp4",
+            VideoTargets = ["first.mp4", "second.mp4"]
+        };
+        var viewModel = CreateViewModel(files: files, renderer: renderer);
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+            option => option.Preset == ColorPreset.UltronCc);
+        viewModel.AddToQueueCommand.Execute(null);
+
+        viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+            option => option.Preset == ColorPreset.Matrix);
+        viewModel.AddToQueueCommand.Execute(null);
+
+        Assert.Equal(ColorPreset.UltronCc, viewModel.Queue[0].Request.Frame.Grading);
+        Assert.Equal(ColorPreset.Matrix, viewModel.Queue[1].Request.Frame.Grading);
+
+        await viewModel.RunQueueCommand.ExecuteAsync(null);
+
+        Assert.Equal(ColorPreset.UltronCc, renderer.Requests[0].Frame.Grading);
+        Assert.Equal(ColorPreset.Matrix, renderer.Requests[1].Frame.Grading);
+    }
+
+    [Fact]
+    public async Task ARenderedPreviewClearsTheDirtyStatus()
+    {
+        var renderer = new FakeVideoRenderer();
+        var viewModel = CreateViewModel(renderer: renderer);
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        viewModel.Stabilize = true;
+        Assert.Equal("Réglages modifiés. Rafraîchissez l'aperçu ou exportez.", viewModel.StatusMessage);
+
+        await viewModel.RenderPreviewCommand.ExecuteAsync(null);
+
+        Assert.Equal("Aperçu à jour.", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public async Task AManualSliderSwitchesThePresetToManual()
     {
         var viewModel = CreateViewModel();
@@ -140,6 +211,56 @@ public class VideoViewModelTests
 
         Assert.Equal(EnhancementMode.Manual, viewModel.SelectedPreset?.Mode);
         Assert.Equal(12, viewModel.FixCompression);
+    }
+
+    [Fact]
+    public async Task SwitchingPresetsWhileAnEstimateRunsNeverShowsAnError()
+    {
+        var dialogs = new FakeDialogService();
+        var viewModel = CreateViewModel(
+            dialogs: dialogs,
+            extractor: new SlowFrameExtractor());
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        // Auto starts a background estimation that takes about 150 ms. The next
+        // preset cancels it while it still holds its cancellation source: it
+        // must end silently instead of reporting an estimation error.
+        viewModel.SelectedPreset = viewModel.Presets.First(
+            option => option.Mode == EnhancementMode.Auto);
+        await Task.Delay(30);
+        viewModel.SelectedPreset = viewModel.Presets.First(
+            option => option.Mode == EnhancementMode.ChromaEnhanceMain);
+
+        await Task.Delay(700);
+
+        Assert.False(viewModel.HasError);
+        Assert.Null(viewModel.ErrorMessage);
+        Assert.DoesNotContain(
+            dialogs.Events,
+            entry => entry.StartsWith("message:Error:", StringComparison.Ordinal));
+        Assert.Equal(EnhancementMode.ChromaEnhanceMain, viewModel.SelectedPreset?.Mode);
+        Assert.Equal(60, viewModel.FixCompression);
+    }
+
+    [Fact]
+    public async Task AStillImageIsRefusedByTheVideoPage()
+    {
+        var dialogs = new FakeDialogService();
+        var probe = new FakeVideoProbe
+        {
+            Handler = (_, _) => Task.FromException<VideoInfo>(
+                new VideoStillImageException("Le fichier est une image fixe."))
+        };
+        var viewModel = CreateViewModel(probe: probe, dialogs: dialogs);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.HasVideo);
+        Assert.True(viewModel.HasError);
+        Assert.Contains("image fixe", viewModel.ErrorMessage!, StringComparison.Ordinal);
+        Assert.Contains(
+            dialogs.Events,
+            entry => entry.StartsWith("message:Error:", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -576,17 +697,19 @@ public class VideoViewModelTests
         bool toolchainAvailable = true,
         FakeFileDialogService? files = null,
         FakeInterpolator? rife = null,
-        FakeVideoProbe? probe = null)
+        FakeVideoProbe? probe = null,
+        IVideoFrameExtractor? extractor = null,
+        FakeEngine? engine = null)
     {
         var engines = new List<IFrameEnhancer>
         {
-            new FakeEngine(unavailableEngine)
+            engine ?? new FakeEngine(unavailableEngine)
         };
 
         return new VideoViewModel(
             files ?? new FakeFileDialogService { VideoPath = "clip.mp4", VideoTarget = "export.mp4" },
             probe ?? new FakeVideoProbe { IsAvailable = toolchainAvailable },
-            new FakeFrameExtractor(),
+            extractor ?? new FakeFrameExtractor(),
             renderer ?? new FakeVideoRenderer(),
             new FakeImageCodec(),
             dialogs ?? new FakeDialogService(),
@@ -625,6 +748,8 @@ public class VideoViewModelTests
 
         public FakeEngine(bool unavailable) => _unavailable = unavailable;
 
+        public FrameEnhancementRequest? LastRequest { get; private set; }
+
         public string Id => "fake";
 
         public string DisplayName => "Moteur de test";
@@ -642,8 +767,11 @@ public class VideoViewModelTests
         public RgbImage Enhance(
             RgbImage source,
             FrameEnhancementRequest request,
-            CancellationToken cancellationToken) =>
-            source.Clone();
+            CancellationToken cancellationToken)
+        {
+            LastRequest = request;
+            return source.Clone();
+        }
 
         public void Dispose()
         {
@@ -681,6 +809,19 @@ public class VideoViewModelTests
             double positionSeconds,
             CancellationToken cancellationToken) =>
             Task.FromResult(new RgbImage(64, 36));
+    }
+
+    /// <summary>Gives the Auto preset a window wide enough to be cancelled.</summary>
+    private sealed class SlowFrameExtractor : IVideoFrameExtractor
+    {
+        public async Task<RgbImage> ExtractAsync(
+            VideoInfo info,
+            double positionSeconds,
+            CancellationToken cancellationToken)
+        {
+            await Task.Delay(50, cancellationToken);
+            return new RgbImage(64, 36);
+        }
     }
 
     private sealed class FakeVideoRenderer : IVideoRenderService

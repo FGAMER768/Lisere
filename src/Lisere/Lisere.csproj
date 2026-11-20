@@ -9,7 +9,7 @@
     <AssemblyName>Lisere</AssemblyName>
     <RootNamespace>Lisere</RootNamespace>
     <ApplicationIcon>..\..\assets\Lisere.ico</ApplicationIcon>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <Resource Include="..\..\assets\Lisere.ico" Link="Assets\Lisere.ico" />
+    <Resource Include="..\..\assets\LisereIcon.png" Link="Assets\LisereIcon.png" />
   </ItemGroup>
 
   <ItemGroup>

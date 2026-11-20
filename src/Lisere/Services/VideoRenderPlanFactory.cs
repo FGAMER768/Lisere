@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Windows.Media;
+using Lisere.Core.Grading;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
 
@@ -45,6 +46,11 @@ public static class VideoRenderPlanFactory
         if (settings.UsesRife)
         {
             effects.Add(strings["videoRife"]);
+        }
+
+        if (request.Frame.Grading is not ColorPreset.None)
+        {
+            effects.Add(strings[ColorPresetCatalog.LabelKey(request.Frame.Grading)]);
         }
 
         var settingsText = string.Join(

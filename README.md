@@ -27,7 +27,7 @@ Pour un déploiement silencieux, par exemple dans un script ou sur une image de 
 L'interface propose deux espaces :
 
 - **Image** : pipeline déterministe six paramètres, préréglages, estimation automatique, menu de colorimétrie séparé, export JPEG.
-- **Vidéo** : analyse FFmpeg, aperçu avant/après, rendu image par image, moteurs interchangeables (pipeline local ou modèles ONNX), résolutions FHD/4K, cadence 30/60/120 i/s, interpolation neuronale RIFE ×2, désentrelacement, stabilisation, file d'attente et export MP4 avec audio.
+- **Vidéo** : analyse FFmpeg, aperçu avant/après, rendu image par image, moteurs interchangeables (pipeline local ou modèles ONNX), résolutions FHD/4K, cadence 30/60/120 i/s, interpolation neuronale RIFE ×2, désentrelacement, stabilisation, colorimétrie, file d'attente et export MP4 avec audio.
 
 FFmpeg est livré avec l'application et vérifié par SHA-256 au démarrage. Un bouton **Mises à jour** dans la barre de titre vérifie les versions publiées sur GitHub, télécharge le paquet, contrôle son empreinte, puis l'installe au redémarrage.
 
@@ -57,6 +57,7 @@ FFmpeg est livré avec l'application et vérifié par SHA-256 au démarrage. Un 
 - Analyse du fichier avec `ffprobe` : résolution, cadence, durée, codec, présence et codec audio.
 - Aperçu avant/après sur une image extraite à la position choisie ; l'ouverture ne calcule pas l'aperçu, il faut le demander explicitement (`Ctrl+Entrée`).
 - Application des six mêmes paramètres à chaque image, avec estimation Auto échantillonnée sur le clip.
+- **Colorimétrie vidéo** : les cinq étalonnages de la page Image (Ultron CC, Matrix CC, Infinity CC, Nebulus CC, Splendida CC) s'appliquent à chaque image, après l'amélioration et avant la courbe Chroma. Le choix est figé dans chaque job de la file.
 - Moteurs interchangeables :
   - **Lisere Classic** : pipeline local déterministe, toujours disponible ;
   - **Super-Resolution CNN ×3** : modèle ONNX local, vérifié par SHA-256, inférence DirectML sur iGPU avec repli CPU.
@@ -148,7 +149,7 @@ dotnet build Lisere.slnx
 
 1. Ouvrez l'onglet **Vidéo**, puis cliquez sur **Ouvrir** (`Ctrl+O`).
 2. Liseré analyse le fichier et affiche la frame source située à la position choisie, sans calculer l'après.
-3. Choisissez le moteur, le préréglage et la résolution ; ajustez les réglages, la cadence, le désentrelacement et la stabilisation.
+3. Choisissez le moteur, le préréglage et la résolution ; ajustez les réglages, la colorimétrie, la cadence, le désentrelacement et la stabilisation.
 4. **Rafraîchir l'aperçu** (`Ctrl+Entrée`) calcule l'image de comparaison ; rien n'est rendu avant cette action.
 5. **Exporter la vidéo** (`Ctrl+S`) demande la destination puis rend le fichier avec progression et annulation.
 6. Pour plusieurs clips, utilisez **Ajouter à la file** puis **Lancer la file** : chaque ajout fige les réglages courants et demande sa destination.
@@ -328,7 +329,7 @@ Liseré ne redistribue aucun poids, code ou média propriétaire. Les ressources
 
 ### Identité visuelle
 
-- L'icône de Liseré (`assets/LisereIcon.svg`, déclinée en `assets/Lisere.ico` de 16 à 256 px) a été créée pour le projet.
+- L'icône de Liseré (`assets/LisereIcon.svg`, déclinée en `assets/Lisere.ico` de 16 à 256 px et en `assets/LisereIcon.png` de 512 px pour l'interface) a été créée pour le projet.
 
 ### Références d'analyse et marques
 
@@ -357,7 +358,7 @@ dotnet test Lisere.slnx
 
 La solution contient quatre projets de tests xUnit : `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` et `Lisere.App.Tests`.
 
-État actuel : **383 tests** (120 Core, 15 Ai, 40 Video, 208 App), 0 avertissement de build. La suite complète passe en parallèle sur la machine de référence. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model. Le script de désinstallation par utilisateur est couvert par `UninstallServiceTests.cs`.
+État actuel : **402 tests** (120 Core, 17 Ai, 52 Video, 213 App), 0 avertissement de build. La suite complète passe en parallèle sur la machine de référence. Le rendu d'un aperçu d'une seconde est couvert par un test d'intégration FFmpeg qui vérifie sa durée et l'absence de piste audio ; l'export de ce segment est couvert par un test du view model. Le script de désinstallation par utilisateur est couvert par `UninstallServiceTests.cs`.
 
 Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le rendu, la conservation de l'audio, le désentrelacement, la taille exacte, l'annulation et l'extraction d'aperçu. Ils sont ignorés silencieusement si FFmpeg est introuvable, afin que le reste de la suite reste exécutable sur une machine sans outillage vidéo.
 
@@ -405,6 +406,7 @@ Lisere.slnx
 assets/
   Lisere.ico
   LisereIcon.svg
+  LisereIcon.png
   FluentSystemIcons-Regular.ttf
   comparisons/
 src/

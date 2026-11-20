@@ -17,9 +17,14 @@ public static class FfmpegRunner
     public static async Task<FfmpegResult> RunAsync(
         string executable,
         IEnumerable<string> arguments,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? workingDirectory = null)
     {
-        using var process = Start(executable, arguments, redirectStandardInput: false);
+        using var process = Start(
+            executable,
+            arguments,
+            redirectStandardInput: false,
+            workingDirectory);
 
         var standardOutput = process.StandardOutput.ReadToEndAsync();
         var standardError = process.StandardError.ReadToEndAsync();
@@ -45,9 +50,14 @@ public static class FfmpegRunner
         string executable,
         IEnumerable<string> arguments,
         Action<FfmpegProgress>? onProgress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? workingDirectory = null)
     {
-        using var process = Start(executable, arguments, redirectStandardInput: false);
+        using var process = Start(
+            executable,
+            arguments,
+            redirectStandardInput: false,
+            workingDirectory);
 
         var standardError = new StringBuilder();
         var errorTask = Task.Run(async () =>
@@ -115,12 +125,14 @@ public static class FfmpegRunner
     public static Process Start(
         string executable,
         IEnumerable<string> arguments,
-        bool redirectStandardInput)
+        bool redirectStandardInput,
+        string? workingDirectory = null)
     {
         var startInfo = new ProcessStartInfo(executable)
         {
             UseShellExecute = false,
             CreateNoWindow = true,
+            WorkingDirectory = workingDirectory ?? string.Empty,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             RedirectStandardInput = redirectStandardInput,

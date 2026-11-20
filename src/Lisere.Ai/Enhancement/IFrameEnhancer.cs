@@ -1,4 +1,5 @@
 using Lisere.Core.Enhancement;
+using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 
 namespace Lisere.Ai.Enhancement;
@@ -13,7 +14,8 @@ public sealed record FrameEnhancementRequest(
     int OutputScale = 1,
     int? TargetWidth = null,
     int? TargetHeight = null,
-    bool ApplyChromaTone = false)
+    bool ApplyChromaTone = false,
+    ColorPreset Grading = ColorPreset.None)
 {
     public EnhancementParameters ClampedParameters => Parameters.Clamp();
 

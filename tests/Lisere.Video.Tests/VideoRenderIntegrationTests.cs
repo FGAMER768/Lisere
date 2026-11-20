@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Globalization;
 using Lisere.Ai.Enhancement;
 using Lisere.Ai.Interpolation;
 using Lisere.Ai.Models;
 using Lisere.Core.Enhancement;
+using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 using Lisere.Video.Ffmpeg;
 using Lisere.Video.Preview;
@@ -137,6 +139,65 @@ public class VideoRenderIntegrationTests : IDisposable
             "la courbe doit relever la luminance moyenne du clip");
     }
 
+    [Theory]
+    [InlineData(1, ColorPreset.Matrix)]
+    [InlineData(2, ColorPreset.UltronCc)]
+    [InlineData(4, ColorPreset.Splendida)]
+    public async Task TheSelectedGradeReachesTheFramesAtEveryScale(
+        int scale,
+        ColorPreset grading)
+    {
+        if (!_toolchain.IsAvailable)
+        {
+            return;
+        }
+
+        var source = await CreateClipAsync();
+        var probe = new FfprobeVideoProbe(_toolchain);
+        var info = await probe.ProbeAsync(source, CancellationToken.None);
+        var extractor = new VideoFrameExtractor(_toolchain);
+        var service = new VideoRenderService(_toolchain);
+
+        // The catalog wraps every engine in the shared look stage, so this is the
+        // same path used by the preview, the one-second render, the export and
+        // the queue.
+        using var engine = FrameEnhancerCatalog.Create(null)[0];
+
+        async Task<RgbImage> RenderFirstFrameAsync(ColorPreset preset, string name)
+        {
+            var output = Path.Combine(_directory, name);
+            await service.RenderAsync(
+                new VideoRenderRequest(
+                    info,
+                    engine,
+                    new FrameEnhancementRequest(
+                        EnhancementParameters.Zero,
+                        OutputScale: scale,
+                        Grading: preset),
+                    new VideoRenderSettings(
+                        output,
+                        Quality: 30,
+                        EncodingPreset: "ultrafast",
+                        PreviewDurationSeconds: 1)),
+                progress: null,
+                CancellationToken.None);
+
+            return await extractor.ExtractAsync(
+                await probe.ProbeAsync(output, CancellationToken.None),
+                0.4,
+                CancellationToken.None);
+        }
+
+        var plain = await RenderFirstFrameAsync(ColorPreset.None, $"plain-{scale}.mp4");
+        var graded = await RenderFirstFrameAsync(grading, $"graded-{scale}.mp4");
+
+        Assert.Equal(64 * scale, graded.Width);
+        Assert.Equal(48 * scale, graded.Height);
+        Assert.True(
+            MeanAbsoluteDifference(plain, graded) > 2,
+            $"{grading} doit modifier les images rendues en {scale}x");
+    }
+
     [Fact]
     public async Task PreviewRendersOneSecondWithoutAudio()
     {
@@ -175,6 +236,72 @@ public class VideoRenderIntegrationTests : IDisposable
         Assert.Equal(64, preview.Width);
         Assert.Equal(48, preview.Height);
         Assert.InRange(result.FramesWritten, 8, 12);
+    }
+
+    [Fact]
+    public async Task AStabilizedPreviewAppliesThePassAndStaysOneSecond()
+    {
+        if (!_toolchain.IsAvailable)
+        {
+            return;
+        }
+
+        var source = await CreateShakyClipAsync();
+        var probe = new FfprobeVideoProbe(_toolchain);
+        var info = await probe.ProbeAsync(source, CancellationToken.None);
+        var extractor = new VideoFrameExtractor(_toolchain);
+        var service = new VideoRenderService(_toolchain);
+        using var engine = new ClassicFrameEnhancer();
+
+        async Task<string> RenderPreviewAsync(bool stabilize, string name)
+        {
+            var output = Path.Combine(_directory, name);
+            var progress = new List<VideoRenderProgress>();
+
+            await service.RenderAsync(
+                new VideoRenderRequest(
+                    info,
+                    engine,
+                    new FrameEnhancementRequest(EnhancementParameters.Zero),
+                    new VideoRenderSettings(
+                        output,
+                        Quality: 30,
+                        Stabilize: stabilize,
+                        EncodingPreset: "ultrafast",
+                        PreviewStartSeconds: 0.5,
+                        PreviewDurationSeconds: 1)),
+                new SynchronousProgress<VideoRenderProgress>(progress.Add),
+                CancellationToken.None);
+
+            if (stabilize)
+            {
+                Assert.Contains(progress, item => item.Stage == VideoRenderStage.Stabilizing);
+            }
+            else
+            {
+                Assert.DoesNotContain(progress, item => item.Stage == VideoRenderStage.Stabilizing);
+            }
+
+            return output;
+        }
+
+        var plainPath = await RenderPreviewAsync(false, "preview-plain.mp4");
+        var stablePath = await RenderPreviewAsync(true, "preview-stable.mp4");
+
+        var plainInfo = await probe.ProbeAsync(plainPath, CancellationToken.None);
+        var stableInfo = await probe.ProbeAsync(stablePath, CancellationToken.None);
+
+        Assert.InRange(stableInfo.DurationSeconds, 0.7, 1.3);
+        Assert.False(stableInfo.HasAudio, "a preview carries no audio track");
+        Assert.Equal(info.Width, stableInfo.Width);
+        Assert.Equal(info.Height, stableInfo.Height);
+
+        var plain = await extractor.ExtractAsync(plainInfo, 0.25, CancellationToken.None);
+        var stable = await extractor.ExtractAsync(stableInfo, 0.25, CancellationToken.None);
+
+        Assert.True(
+            MeanAbsoluteDifference(plain, stable) > 0.5,
+            "the stabilized preview must not be pixel-identical to the plain one");
     }
 
     [Fact]
@@ -217,6 +344,39 @@ public class VideoRenderIntegrationTests : IDisposable
             .ProbeAsync(output, CancellationToken.None);
         Assert.Equal(128, rendered.Width);
         Assert.Equal(96, rendered.Height);
+    }
+
+    [Fact]
+    public async Task FrameRateConversionKeepsTheClipDuration()
+    {
+        if (!_toolchain.IsAvailable)
+        {
+            return;
+        }
+
+        var source = await CreateClipAsync(durationSeconds: 2);
+        var probe = new FfprobeVideoProbe(_toolchain);
+        var info = await probe.ProbeAsync(source, CancellationToken.None);
+        var output = Path.Combine(_directory, "converted.mp4");
+        using var engine = new ClassicFrameEnhancer();
+        var service = new VideoRenderService(_toolchain);
+
+        await service.RenderAsync(
+            new VideoRenderRequest(
+                info,
+                engine,
+                new FrameEnhancementRequest(EnhancementParameters.Zero),
+                new VideoRenderSettings(
+                    output,
+                    Quality: 30,
+                    TargetFrameRate: 60,
+                    EncodingPreset: "ultrafast")),
+            progress: null,
+            CancellationToken.None);
+
+        var rendered = await probe.ProbeAsync(output, CancellationToken.None);
+        Assert.Equal(60, rendered.FrameRate, 1);
+        Assert.InRange(rendered.DurationSeconds, 1.9, 2.1);
     }
 
     [Fact]
@@ -426,7 +586,7 @@ public class VideoRenderIntegrationTests : IDisposable
         return sum / (image.Pixels.Length / 3.0);
     }
 
-    private async Task<string> CreateClipAsync()
+    private async Task<string> CreateShakyClipAsync()
     {
         if (!_toolchain.IsAvailable)
         {
@@ -434,6 +594,47 @@ public class VideoRenderIntegrationTests : IDisposable
         }
 
         var tools = _toolchain.RequireTools();
+        var path = Path.Combine(_directory, "shaky.mp4");
+        var startInfo = new ProcessStartInfo(tools.FfmpegPath)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardError = true,
+            RedirectStandardOutput = true
+        };
+
+        foreach (var argument in new[]
+        {
+            "-v", "error", "-y",
+            "-f", "lavfi", "-i", "testsrc2=size=400x250:rate=25:duration=2.5",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=2.5",
+            "-vf", "crop=320:180:x='40+20*sin(n*1.7)':y='35+20*cos(n*1.3)'",
+            "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-shortest",
+            path
+        })
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Cannot start ffmpeg.");
+        var error = await process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        Assert.True(process.ExitCode == 0, error);
+        return path;
+    }
+
+    private async Task<string> CreateClipAsync(double durationSeconds = 1)
+    {
+        if (!_toolchain.IsAvailable)
+        {
+            throw new InvalidOperationException("FFmpeg is required to create the test clip.");
+        }
+
+        var tools = _toolchain.RequireTools();
+        var duration = durationSeconds.ToString("0.###", CultureInfo.InvariantCulture);
         var path = Path.Combine(_directory, "source.mp4");
         var startInfo = new ProcessStartInfo(tools.FfmpegPath)
         {
@@ -446,8 +647,8 @@ public class VideoRenderIntegrationTests : IDisposable
         foreach (var argument in new[]
         {
             "-v", "error", "-y",
-            "-f", "lavfi", "-i", "testsrc2=size=64x48:rate=10:duration=1",
-            "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+            "-f", "lavfi", "-i", $"testsrc2=size=64x48:rate=10:duration={duration}",
+            "-f", "lavfi", "-i", $"sine=frequency=440:duration={duration}",
             "-c:v", "libx264", "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-shortest",
             path

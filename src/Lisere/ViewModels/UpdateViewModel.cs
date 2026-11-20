@@ -8,6 +8,9 @@ public sealed partial class UpdateViewModel : ObservableObject, IDisposable
 {
     private readonly IUpdateService _updateService;
     private readonly ILocalizationService _localization;
+    // Progress<T> may deliver a report on another thread after the install
+    // finished; the final state and the progress bar must still end correctly.
+    private readonly object _progressGate = new();
     private CancellationTokenSource? _operation;
     private UpdateInfo? _availableUpdate;
     private string? _statusKey;
@@ -161,8 +164,13 @@ public sealed partial class UpdateViewModel : ObservableObject, IDisposable
                 new Progress<UpdateProgress>(OnProgress),
                 operation.Token);
 
-            _installCompleted = true;
-            SetStatus("updateInstallScheduled", "updateInstallScheduledDetail");
+            lock (_progressGate)
+            {
+                _installCompleted = true;
+                ProgressPercent = 100;
+                SetStatus("updateInstallScheduled", "updateInstallScheduledDetail");
+            }
+
             InstallScheduled?.Invoke(this, EventArgs.Empty);
         }
         catch (OperationCanceledException)
@@ -196,24 +204,30 @@ public sealed partial class UpdateViewModel : ObservableObject, IDisposable
 
     private void OnProgress(UpdateProgress progress)
     {
-        ProgressPercent = Math.Clamp(progress.Percent, 0, 100);
+        var percent = Math.Clamp(progress.Percent, 0, 100);
 
-        // Progress<T> delivers its callbacks through the dispatcher: a report
-        // queued before completion can arrive after the final status. It may
-        // finish the bar, but it must not replace the final message.
-        if (_installCompleted)
+        lock (_progressGate)
         {
-            return;
+            // A report queued before completion can arrive after the final
+            // status. It may finish the bar, but it must not move it back or
+            // replace the final message.
+            if (_installCompleted)
+            {
+                ProgressPercent = Math.Max(ProgressPercent, percent);
+                return;
+            }
+
+            ProgressPercent = percent;
+
+            var (titleKey, detailKey) = progress.Stage switch
+            {
+                UpdateStage.Verifying => ("updateVerifying", "updateVerifyingDetail"),
+                UpdateStage.Extracting => ("updateExtracting", "updateExtractingDetail"),
+                UpdateStage.Applying => ("updateApplying", "updateApplyingDetail"),
+                _ => ("updateDownloading", "updateDownloadingDetail")
+            };
+            SetStatus(titleKey, detailKey);
         }
-
-        var (titleKey, detailKey) = progress.Stage switch
-        {
-            UpdateStage.Verifying => ("updateVerifying", "updateVerifyingDetail"),
-            UpdateStage.Extracting => ("updateExtracting", "updateExtractingDetail"),
-            UpdateStage.Applying => ("updateApplying", "updateApplyingDetail"),
-            _ => ("updateDownloading", "updateDownloadingDetail")
-        };
-        SetStatus(titleKey, detailKey);
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e)

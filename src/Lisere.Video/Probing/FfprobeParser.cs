@@ -44,6 +44,16 @@ public static class FfprobeParser
             throw new VideoProbeException("Le fichier ne contient aucun flux vidéo.");
         }
 
+        // A still image is a valid FFmpeg "video" stream (one frame, image
+        // demuxer) and a cover art is an attached picture. Neither is a clip,
+        // so the video page must refuse them instead of opening a 0.04 s file.
+        if (IsAttachedPicture(video.Value) ||
+            IsStillImageContainer(GetString(root, "format", "format_name")))
+        {
+            throw new VideoStillImageException(
+                "Le fichier est une image fixe, pas une vidéo.");
+        }
+
         var width = GetInt(video.Value, "width") ?? 0;
         var height = GetInt(video.Value, "height") ?? 0;
 
@@ -83,6 +93,30 @@ public static class FfprobeParser
             frameCount is > 0 ? frameCount : null,
             audio is not null,
             audio is null ? null : GetString(audio.Value, "codec_name"));
+    }
+
+    private static bool IsAttachedPicture(JsonElement video) =>
+        video.TryGetProperty("disposition", out var disposition) &&
+        disposition.ValueKind == JsonValueKind.Object &&
+        disposition.TryGetProperty("attached_pic", out var attachedPic) &&
+        attachedPic.ValueKind == JsonValueKind.Number &&
+        attachedPic.TryGetInt32(out var value) &&
+        value == 1;
+
+    private static bool IsStillImageContainer(string? formatName)
+    {
+        if (string.IsNullOrWhiteSpace(formatName))
+        {
+            return false;
+        }
+
+        var parts = formatName.Split(
+            ',',
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return parts.Length > 0 && parts.All(part =>
+            string.Equals(part, "image2", StringComparison.Ordinal) ||
+            part.EndsWith("_pipe", StringComparison.Ordinal));
     }
 
     internal static double ParseRatio(string? value)
@@ -172,9 +206,18 @@ public static class FfprobeParser
     }
 }
 
-public sealed class VideoProbeException : Exception
+public class VideoProbeException : Exception
 {
     public VideoProbeException(string message)
+        : base(message)
+    {
+    }
+}
+
+/// <summary>The selected file is a still image or a cover art, not a clip.</summary>
+public sealed class VideoStillImageException : VideoProbeException
+{
+    public VideoStillImageException(string message)
         : base(message)
     {
     }
