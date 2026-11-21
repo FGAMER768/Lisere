@@ -44,8 +44,6 @@ des moteurs qui tournent en local et des exports prêts à garder.
 - **Des presets complets.** Un seul fichier JSON réunit les curseurs, la colorimétrie,
   le moteur utilisé et le renforcement des visages.
 
-<img src="assets/screenshots/video-fr.png" alt="Espace Vidéo de Liseré : timeline, transport et comparaison avant/après">
-
 <a id="installation"></a>
 ## 📥 Installation
 

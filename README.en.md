@@ -44,8 +44,6 @@ engines that run locally, and exports ready to keep.
 - **Complete presets.** One JSON file holds the sliders, the colour grading, the
   engine used and face refinement.
 
-<img src="assets/screenshots/video-en.png" alt="Liseré Video space: timeline, transport and before/after comparison">
-
 <a id="installation"></a>
 ## 📥 Installation
 
