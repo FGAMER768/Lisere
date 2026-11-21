@@ -365,13 +365,14 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             Engine: SelectedEngine);
 
         // Le détail multi-échelles coûte ~2,4 s par mégapixel : sur une grande
-        // image, on annonce la durée avant de lancer plutôt que de la subir.
-        var estimate = ImageRenderEstimator.Estimate(
+        // image, on annonce la durée avant de lancer plutôt que de la subir, en
+        // disant si elle vient d'une mesure d'ici ou du catalogue.
+        var estimate = ImageRenderEstimator.Explain(
             _source,
             request.Mode,
             SelectedEngine,
             _calibration);
-        var isLongRender = estimate >= ImageRenderEstimator.ConfirmationThreshold;
+        var isLongRender = estimate.Duration >= ImageRenderEstimator.ConfirmationThreshold;
         if (isLongRender &&
             !await _dialogService.ConfirmRenderAsync(ImageRenderPlanFactory.Create(
                 _localization,
@@ -379,10 +380,11 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
                 _sourceName,
                 SelectedPreset?.Label ?? string.Empty,
                 SelectedColorPreset?.Label ?? string.Empty,
-                estimate,
+                estimate.Duration,
                 BeforeImage,
                 SelectedEngine,
-                SelectedEngine is { } engine ? _calibration.ProviderFor(engine.Id) : null)))
+                SelectedEngine is { } engine ? _calibration.ProviderFor(engine.Id) : null,
+                estimate.Basis)))
         {
             return;
         }
@@ -398,13 +400,13 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             isLongRender
                 ? _localization.Format(
                     "imageWaitPreparing",
-                    VideoRenderPlanFactory.FormatDuration(estimate))
+                    VideoRenderPlanFactory.FormatDuration(estimate.Duration))
                 : StatusMessage,
             cancellation.Cancel);
         var progress = isLongRender
             ? new DirectProgress<EnhancementProgress>(value =>
                 _dialogService.UpdateWait(
-                    RenderReassurance.DescribeImage(_localization, value),
+                    RenderReassurance.Reassure(_localization, value.Percent),
                     value.Percent))
             : null;
         Exception? error = null;
@@ -1107,11 +1109,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     }
 
     private void ReportPreview(double percent) =>
-        _dialogService.UpdateWait(
-            RenderReassurance.DescribeImage(
-                _localization,
-                new EnhancementProgress(EnhancementStage.Preview, percent)),
-            percent);
+        _dialogService.UpdateWait(RenderReassurance.Reassure(_localization, percent), percent);
 
     private PresetOption CreatePreset(EnhancementMode mode) =>
         new(Strings[PresetLabelKey(mode)], mode);

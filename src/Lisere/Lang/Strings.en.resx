@@ -1134,4 +1134,19 @@
   <data name="uninstallError" xml:space="preserve">
     <value>The uninstall could not be started.</value>
   </data>
+  <data name="imageEstimateSource" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="imageEstimateMeasured" xml:space="preserve">
+    <value>Measured on this PC</value>
+  </data>
+  <data name="imageEstimateCatalogSeed" xml:space="preserve">
+    <value>Catalog seed, refined by the first render here</value>
+  </data>
+  <data name="imageEstimateDefault" xml:space="preserve">
+    <value>Default estimate, refined by the first render here</value>
+  </data>
+  <data name="renderReassuranceQuiet" xml:space="preserve">
+    <value>The render is running quietly. You can cancel at any time.</value>
+  </data>
 </root>

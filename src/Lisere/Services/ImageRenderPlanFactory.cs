@@ -21,7 +21,8 @@ public static class ImageRenderPlanFactory
         TimeSpan estimate,
         ImageSource? beforeImage,
         IFrameEnhancer? engine = null,
-        string? knownProvider = null)
+        string? knownProvider = null,
+        EstimationBasis? basis = null)
     {
         ArgumentNullException.ThrowIfNull(strings);
         ArgumentNullException.ThrowIfNull(source);
@@ -45,7 +46,8 @@ public static class ImageRenderPlanFactory
                     strings.Format(
                         "imageEstimateText",
                         VideoRenderPlanFactory.FormatDuration(estimate),
-                        megapixels))
+                        megapixels)),
+                .. ProvenanceLines(strings, engine, basis)
             ],
             strings["imagePlanDestination"],
             strings["imagePlanDestinationValue"],
@@ -54,6 +56,30 @@ public static class ImageRenderPlanFactory
             strings.Format(
                 "imagePlanReassurance",
                 VideoRenderPlanFactory.FormatDuration(estimate)));
+    }
+
+    /// <summary>
+    /// D'où vient le chiffre : un rendu précédent sur cette machine ou la graine
+    /// du catalogue. Sans moteur neuronal, il n'y a rien à distinguer.
+    /// </summary>
+    private static IEnumerable<RenderPlanLine> ProvenanceLines(
+        ILocalizationService strings,
+        IFrameEnhancer? engine,
+        EstimationBasis? basis)
+    {
+        if (!EnhancementRequest.IsNeuralEngine(engine) || basis is not { } value)
+        {
+            yield break;
+        }
+
+        yield return new RenderPlanLine(
+            strings["imageEstimateSource"],
+            strings[value switch
+            {
+                EstimationBasis.Measured => "imageEstimateMeasured",
+                EstimationBasis.CatalogSeed => "imageEstimateCatalogSeed",
+                _ => "imageEstimateDefault"
+            }]);
     }
 
     /// <summary>

@@ -1134,4 +1134,19 @@
   <data name="uninstallError" xml:space="preserve">
     <value>La désinstallation n'a pas pu démarrer.</value>
   </data>
+  <data name="imageEstimateSource" xml:space="preserve">
+    <value>Provenance</value>
+  </data>
+  <data name="imageEstimateMeasured" xml:space="preserve">
+    <value>Mesurée sur ce PC</value>
+  </data>
+  <data name="imageEstimateCatalogSeed" xml:space="preserve">
+    <value>Graine du catalogue, affinée au premier rendu ici</value>
+  </data>
+  <data name="imageEstimateDefault" xml:space="preserve">
+    <value>Estimation par défaut, affinée au premier rendu ici</value>
+  </data>
+  <data name="renderReassuranceQuiet" xml:space="preserve">
+    <value>Le rendu se déroule tranquillement. Vous pouvez annuler à tout moment.</value>
+  </data>
 </root>

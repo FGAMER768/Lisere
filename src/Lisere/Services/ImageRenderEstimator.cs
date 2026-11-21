@@ -6,12 +6,9 @@ namespace Lisere.Services;
 
 /// <summary>
 /// Estime la durée d'une amélioration à partir de la surface de l'image et du
-/// moteur choisi. Le détail multi-échelles du pipeline classique domine son coût
-/// (~2,4 s par mégapixel mesuré sur le préréglage Chroma) ; un moteur neuronal
-/// coûte bien davantage et déclare son propre chiffre, relevé sur une machine de
-/// référence — donc faux ailleurs, et c'est mesuré sur place qu'il deviendra
-/// juste (voir la calibration à prévoir). Le seuil de confirmation évite une
-/// attente subie sur les grandes images sans interrompre les petites.
+/// moteur choisi, en disant sur quoi repose le chiffre : pente du pipeline
+/// classique, graine du catalogue ou mesure faite ici. Le seuil de confirmation
+/// évite une attente subie sur les grandes images sans interrompre les petites.
 /// </summary>
 public static class ImageRenderEstimator
 {
@@ -30,6 +27,14 @@ public static class ImageRenderEstimator
         RgbImage source,
         EnhancementMode mode,
         IFrameEnhancer? engine = null,
+        EngineCalibrationStore? calibration = null) =>
+        Explain(source, mode, engine, calibration).Duration;
+
+    /// <summary>La durée et sa provenance, pour l'afficher sans ambiguïté.</summary>
+    public static ImageRenderEstimate Explain(
+        RgbImage source,
+        EnhancementMode mode,
+        IFrameEnhancer? engine = null,
         EngineCalibrationStore? calibration = null)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -38,40 +43,54 @@ public static class ImageRenderEstimator
 
         if (mode is EnhancementMode.None)
         {
-            return TimeSpan.FromSeconds(
-                FixedOverheadSeconds + (megapixels * SecondsPerMegapixelWithoutEnhancement));
+            return new ImageRenderEstimate(
+                TimeSpan.FromSeconds(
+                    FixedOverheadSeconds + (megapixels * SecondsPerMegapixelWithoutEnhancement)),
+                EstimationBasis.Pipeline);
         }
 
         var startup = EnhancementRequest.IsNeuralEngine(engine) && engine!.ActiveProvider is null
             ? SessionStartupSeconds
             : 0.0;
+        var (cost, basis) = Cost(engine, calibration);
 
-        return TimeSpan.FromSeconds(
-            FixedOverheadSeconds + startup + (megapixels * EngineCost(engine, calibration)));
+        return new ImageRenderEstimate(
+            TimeSpan.FromSeconds(FixedOverheadSeconds + startup + (megapixels * cost)),
+            basis);
     }
 
     /// <summary>
     /// Le coût mesuré sur cette machine d'abord, puis la graine du catalogue,
     /// puis le pipeline classique — une borne basse, jamais un chiffre inventé.
     /// </summary>
-    private static double EngineCost(
+    private static (double Cost, EstimationBasis Basis) Cost(
         IFrameEnhancer? engine,
         EngineCalibrationStore? calibration)
     {
         if (engine is null || !EnhancementRequest.IsNeuralEngine(engine))
         {
-            return SecondsPerMegapixel;
+            return (SecondsPerMegapixel, EstimationBasis.Pipeline);
         }
 
-        if (calibration is not null &&
-            engine.CalibrationKey is { } key &&
-            calibration.SecondsPerMegapixel(key) is { } measured)
+        if (calibration is not null)
         {
-            return measured;
+            if (engine.CalibrationKey is { } key &&
+                calibration.SecondsPerMegapixel(key) is { } exact)
+            {
+                return (exact, EstimationBasis.Measured);
+            }
+
+            // Avant le premier rendu de la session, la clé exacte (provider,
+            // version) n'existe pas encore : on prend la dernière mesure du
+            // modèle, celle que la confirmation affiche déjà comme provider.
+            if (calibration.LatestFor(engine.Id) is { } latest)
+            {
+                return (latest.SecondsPerMegapixel, EstimationBasis.Measured);
+            }
         }
 
         return engine.SecondsPerMegapixel > 0.0
-            ? engine.SecondsPerMegapixel
-            : SecondsPerMegapixel;
+            ? (engine.SecondsPerMegapixel, EstimationBasis.CatalogSeed)
+            : (SecondsPerMegapixel, EstimationBasis.Pipeline);
     }
 }

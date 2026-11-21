@@ -22,6 +22,10 @@ public sealed class EngineCalibrationStore
     private readonly string? _path;
     private Dictionary<string, Sample> _entries = [];
 
+    // Chaque écriture avance ce compteur : c'est lui, et non l'ordre du
+    // dictionnaire, qui dit quelle mesure est la plus récente.
+    private long _sequence;
+
     /// <param name="path">
     /// Fichier de cache ; nul pour une instance en mémoire, ce qu'utilisent les
     /// tests et un rendu sans persistance.
@@ -52,24 +56,46 @@ public sealed class EngineCalibrationStore
     }
 
     /// <summary>
-    /// Dernier provider mesuré pour ce modèle sur cette machine, même avec une
-    /// autre empreinte ou une autre version : c'est ce qui permet d'annoncer
-    /// « DirectML » avant même d'ouvrir la session du jour.
+    /// Provider de la mesure la plus récente pour ce modèle sur cette machine,
+    /// même avec une autre empreinte ou une autre version : c'est ce qui permet
+    /// d'annoncer « DirectML » avant même d'ouvrir la session du jour. Si le
+    /// moteur a tourné sur CPU hier et sur DirectML ce matin, c'est DirectML.
     /// </summary>
-    public string? ProviderFor(string modelId)
+    public string? ProviderFor(string modelId) => NewestEntry(modelId)?.Provider;
+
+    /// <summary>
+    /// Mesure la plus récente pour ce modèle, toutes empreintes et versions
+    /// confondues. Avant d'ouvrir la session du jour, c'est la seule qu'on
+    /// puisse citer : la clé exacte (provider, version) n'existe pas encore.
+    /// </summary>
+    public (double SecondsPerMegapixel, string Provider)? LatestFor(string modelId) =>
+        NewestEntry(modelId) is { } newest
+            ? (newest.Sample.SecondsPerMegapixel, newest.Provider)
+            : null;
+
+    private (string Provider, Sample Sample)? NewestEntry(string modelId)
     {
         lock (_gate)
         {
-            foreach (var key in _entries.Keys)
+            (string Provider, Sample Sample)? newest = null;
+
+            foreach (var (key, sample) in _entries)
             {
                 var parts = key.Split('|');
-                if (parts.Length == 5 && parts[0] == modelId)
+                if (parts.Length != 5 || parts[0] != modelId)
                 {
-                    return parts[2];
+                    continue;
                 }
+
+                if (newest is { } current && sample.Sequence < current.Sample.Sequence)
+                {
+                    continue;
+                }
+
+                newest = (parts[2], sample);
             }
 
-            return null;
+            return newest;
         }
     }
 
@@ -89,7 +115,7 @@ public sealed class EngineCalibrationStore
             var samples = Math.Min(previous.Samples + 1, MaximumSamples);
             var mean = ((previous.SecondsPerMegapixel * previous.Samples) + secondsPerMegapixel) / samples;
 
-            _entries[key] = new Sample(samples, mean);
+            _entries[key] = new Sample(samples, mean, ++_sequence);
             Save();
         }
     }
@@ -112,6 +138,7 @@ public sealed class EngineCalibrationStore
             if (document?.Entries is not null)
             {
                 _entries = new Dictionary<string, Sample>(document.Entries);
+                _sequence = document.Sequence;
             }
         }
         catch (Exception exception) when (
@@ -139,7 +166,7 @@ public sealed class EngineCalibrationStore
 
             File.WriteAllText(
                 _path,
-                JsonSerializer.Serialize(new CacheDocument(1, _entries)));
+                JsonSerializer.Serialize(new CacheDocument(1, _entries, _sequence)));
         }
         catch (Exception exception) when (
             exception is IOException or UnauthorizedAccessException)
@@ -148,9 +175,13 @@ public sealed class EngineCalibrationStore
         }
     }
 
-    private sealed record Sample(int Samples, double SecondsPerMegapixel);
+    private sealed record Sample(
+        int Samples,
+        double SecondsPerMegapixel,
+        long Sequence = 0);
 
     private sealed record CacheDocument(
         int Version,
-        Dictionary<string, Sample>? Entries);
+        Dictionary<string, Sample>? Entries,
+        long Sequence = 0);
 }

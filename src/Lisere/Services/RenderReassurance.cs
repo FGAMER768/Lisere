@@ -1,40 +1,20 @@
 using System;
-using Lisere.Core.Enhancement;
 
 namespace Lisere.Services;
 
 /// <summary>
-/// Reassuring copy shown while a long render runs. The percentage is the real
-/// pipeline progress; the sentence only depends on that value, so no stage is
-/// announced before it actually starts.
+/// Pendant un rendu, on ne raconte pas ce qui se passe : les étapes et les
+/// tuiles défilent trop vite pour être lues et transforment l'attente en
+/// chantier. Seuls le pourcentage réel et une phrase qui rassure sont affichés.
 /// </summary>
 public static class RenderReassurance
 {
-    public static string DescribeImage(
-        ILocalizationService strings,
-        EnhancementProgress progress)
+    /// <summary>Message d'attente pour l'image : rien d'autre que ce qui rassure.</summary>
+    public static string Reassure(ILocalizationService strings, double percent)
     {
         ArgumentNullException.ThrowIfNull(strings);
-        ArgumentNullException.ThrowIfNull(progress);
 
-        var stage = progress.Stage switch
-        {
-            EnhancementStage.Compression => strings["imageWaitCompression"],
-            EnhancementStage.Noise => strings["imageWaitNoise"],
-            EnhancementStage.Antialias => strings["imageWaitAntialias"],
-            EnhancementStage.Deblur => strings["imageWaitDeblur"],
-            EnhancementStage.Sharpen => strings["imageWaitSharpen"],
-            EnhancementStage.Detail => strings["imageWaitDetail"],
-            EnhancementStage.Halo => strings["imageWaitHalo"],
-            EnhancementStage.Grading => strings["imageWaitGrading"],
-            EnhancementStage.Preview => strings["imageWaitPreview"],
-            _ => strings["imageWaitFinish"]
-        };
-
-        var hint = Hint(strings, progress.Percent);
-        return string.IsNullOrEmpty(hint)
-            ? stage
-            : strings.Format("imageWaitStageHint", stage, hint);
+        return Hint(strings, percent) ?? strings["renderReassuranceQuiet"];
     }
 
     public static string? Hint(ILocalizationService strings, double percent)

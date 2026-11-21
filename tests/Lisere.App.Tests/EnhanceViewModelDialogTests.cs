@@ -86,7 +86,7 @@ public class EnhanceViewModelDialogTests
     }
 
     [Fact]
-    public async Task LongEnhancementShowsRealStagesAndReassuranceInTheWaitDialog()
+    public async Task LongEnhancementOnlyReassuresInTheWaitDialog()
     {
         var dialogs = new FakeDialogService();
         var orchestrator = new FakeOrchestrator
@@ -104,18 +104,34 @@ public class EnhanceViewModelDialogTests
         Assert.Contains(
             dialogs.Events,
             entry => entry.StartsWith("wait:Préparation du rendu", StringComparison.Ordinal));
+        // Le pourcentage reste réel, mais le texte ne raconte plus les étapes.
         Assert.Contains(
             dialogs.Events,
-            entry => entry.StartsWith("update:Reconstruction du détail", StringComparison.Ordinal) &&
-                entry.Contains("progresse", StringComparison.Ordinal));
+            entry => entry.StartsWith("update:Le rendu progresse normalement.", StringComparison.Ordinal) &&
+                entry.EndsWith(":60", StringComparison.Ordinal));
         Assert.Contains(
             dialogs.Events,
-            entry => entry.StartsWith("update:Préparation de l'aperçu", StringComparison.Ordinal) &&
+            entry => entry.StartsWith("update:Dernière ligne droite", StringComparison.Ordinal) &&
                 entry.EndsWith(":95", StringComparison.Ordinal));
         Assert.Contains(
             dialogs.Events,
-            entry => entry.StartsWith("update:Préparation de l'aperçu", StringComparison.Ordinal) &&
+            entry => entry.StartsWith("update:Dernière ligne droite", StringComparison.Ordinal) &&
                 entry.EndsWith(":99", StringComparison.Ordinal));
+
+        string[] stages =
+        [
+            "compression", "bruit", "anticrénelage", "flou", "netteté",
+            "détail", "halos", "étalonnage", "aperçu"
+        ];
+
+        foreach (var update in dialogs.Events.Where(
+            entry => entry.StartsWith("update:", StringComparison.Ordinal)))
+        {
+            foreach (var stage in stages)
+            {
+                Assert.DoesNotContain(stage, update, StringComparison.OrdinalIgnoreCase);
+            }
+        }
     }
 
     [Fact]

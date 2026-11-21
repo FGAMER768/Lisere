@@ -81,6 +81,45 @@ public class ImageRenderEstimatorTests
     }
 
     [Fact]
+    public void TheEstimateSaysWhereItsNumberComesFrom()
+    {
+        var source = new RgbImage(1000, 1000);
+        var key = new EngineCalibrationKey("test.engine", "sha", "DirectML", 256, "1.0");
+        var calibration = new EngineCalibrationStore();
+        var engine = new FakeEngine(secondsPerMegapixel: 64) { CalibrationKey = key };
+
+        Assert.Equal(
+            EstimationBasis.CatalogSeed,
+            ImageRenderEstimator.Explain(source, EnhancementMode.Manual, engine).Basis);
+        Assert.Equal(
+            EstimationBasis.CatalogSeed,
+            ImageRenderEstimator.Explain(source, EnhancementMode.Manual, engine, calibration).Basis);
+        Assert.Equal(
+            EstimationBasis.Pipeline,
+            ImageRenderEstimator.Explain(
+                source,
+                EnhancementMode.Manual,
+                new FakeEngine(0, family: EnhancementEngineFamily.Classical)).Basis);
+
+        calibration.Record(new EngineMeasurement(key, 1.0, TimeSpan.FromSeconds(5)));
+
+        Assert.Equal(
+            EstimationBasis.Measured,
+            ImageRenderEstimator.Explain(source, EnhancementMode.Manual, engine, calibration).Basis);
+
+        // Avant le premier rendu de la session, la clé exacte est inconnue : la
+        // dernière mesure du modèle doit quand même être utilisée.
+        var beforeSession = ImageRenderEstimator.Explain(
+            source,
+            EnhancementMode.Manual,
+            new FakeEngine(secondsPerMegapixel: 64),
+            calibration);
+
+        Assert.Equal(EstimationBasis.Measured, beforeSession.Basis);
+        Assert.InRange(beforeSession.Duration.TotalSeconds, 6.7, 6.9);
+    }
+
+    [Fact]
     public void AnEngineThatWillNotRunIsNeverPriced()
     {
         var source = new RgbImage(1000, 1000);
