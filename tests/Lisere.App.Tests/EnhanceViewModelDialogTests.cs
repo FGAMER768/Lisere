@@ -1,4 +1,5 @@
 using System.Windows.Media;
+using Lisere.Ai.Enhancement;
 using Lisere.Core.Enhancement;
 using Lisere.Core.Imaging;
 using Lisere.Models;
@@ -115,6 +116,47 @@ public class EnhanceViewModelDialogTests
             dialogs.Events,
             entry => entry.StartsWith("update:Préparation de l'aperçu", StringComparison.Ordinal) &&
                 entry.EndsWith(":99", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ANerualEngineDrivesTheEstimate()
+    {
+        var dialogs = new FakeDialogService();
+        var viewModel = CreateViewModel(
+            dialogs,
+            new FakeImageCodec { Width = 300, Height = 300 },
+            new FakeOrchestrator(),
+            engines:
+            [
+                new FrameLookEnhancer(new ClassicFrameEnhancer()),
+                new SlowEngine(secondsPerMegapixel: 64)
+            ]);
+
+        // 0,09 Mpx : le pipeline classique, sélectionné par défaut, reste sous le
+        // seuil de confirmation.
+        Assert.Equal(
+            EnhancementEngineFamily.Classical,
+            viewModel.SelectedEngine!.Family);
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+        Assert.Equal(0, dialogs.ConfirmCalls);
+
+        // Le même cliché avec un modèle de nettoyage coûte des dizaines de
+        // secondes : la confirmation doit s'ouvrir et annoncer cette durée.
+        viewModel.SelectedEngine = viewModel.Engines.First(engine =>
+            engine.Family is EnhancementEngineFamily.NeuralSuperResolution);
+        dialogs.Events.Clear();
+
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, dialogs.ConfirmCalls);
+        Assert.NotNull(dialogs.LastPlan);
+        Assert.Contains(
+            dialogs.LastPlan!.Lines,
+            line => line.Value.Contains("0,1 Mpx", StringComparison.Ordinal));
+        Assert.Contains(
+            dialogs.Events,
+            entry => entry.StartsWith("wait:Préparation du rendu", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -448,13 +490,43 @@ public class EnhanceViewModelDialogTests
         IDialogService dialogs,
         IImageCodec codec,
         IEnhancementOrchestrator orchestrator,
-        IFileDialogService? files = null) =>
+        IFileDialogService? files = null,
+        IReadOnlyList<IFrameEnhancer>? engines = null) =>
         new(
             files ?? new FakeFileDialogService(),
             codec,
             orchestrator,
             dialogs,
-            new LocalizationService());
+            new LocalizationService(),
+            engines);
+
+    private sealed class SlowEngine(double secondsPerMegapixel) : IFrameEnhancer
+    {
+        public string Id => "test.slow";
+
+        public string DisplayName => "Nettoyage lent";
+
+        public EnhancementEngineFamily Family => EnhancementEngineFamily.NeuralSuperResolution;
+
+        public string Description => "Moteur de test.";
+
+        public bool IsAvailable => true;
+
+        public string? UnavailableReason => null;
+
+        public int NativeScale => 1;
+
+        public double SecondsPerMegapixel => secondsPerMegapixel;
+
+        public RgbImage Enhance(
+            RgbImage source,
+            FrameEnhancementRequest request,
+            CancellationToken cancellationToken) => source;
+
+        public void Dispose()
+        {
+        }
+    }
 
     private sealed class FakeDialogService : IDialogService
     {

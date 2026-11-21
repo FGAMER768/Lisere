@@ -83,8 +83,18 @@ de 256 px avec 8 px de contexte, puis recomposition du cœur de chaque prédicti
 
 Coût mesuré (DirectML, photo 900×900) : **52 s** ; en imposant le CPU, 65 s. Ce
 modèle est donc réservé à un rendu soigné, pas à un enchaînement rapide : pour
-le même pixel, Real-ESRGAN x4v3 prend 3,5 s. Le plan de rendu de la page Image
-annonce encore l'estimation du pipeline classique, sous-estimée pour ce moteur.
+le même pixel, Real-ESRGAN x4v3 prend 3,5 s. Le catalogue déclare ce coût
+(`secondsPerMegapixel`) pour que la page Image annonce une durée honnête et
+fasse avancer sa barre tuile par tuile.
+
+### Comparaison avec SCUNet
+
+Seul autre débruteur 1× disponible en ONNX à entrée libre, SCUNet
+(`scunet_color_real_psnr`, MIT, 73 Mo) a été mesuré sur la même machine et la
+même photo : 37 s/Mpx avec des tuiles de 264 px, 24 s/Mpx avec 448 px — soit
+**44 s au lieu de 52 s** de bout en bout (≈15 %), pour un fichier 2,4 fois plus
+lourd, une peau nettement plus lissée et des sourcils aplatis. Le gain est trop
+faible pour le coût visuel : RealPLKSR est conservé.
 
 ## Modèle d'interpolation RIFE
 

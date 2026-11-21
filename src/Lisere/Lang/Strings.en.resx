@@ -850,7 +850,7 @@
     <value>Prepare the enhancement</value>
   </data>
   <data name="imagePlanIntro" xml:space="preserve">
-    <value>This image is large: multi-scale detail can take tens of seconds. Check the settings before starting.</value>
+    <value>This render can take tens of seconds. Check the settings before starting.</value>
   </data>
   <data name="imagePlanDestination" xml:space="preserve">
     <value>Result</value>

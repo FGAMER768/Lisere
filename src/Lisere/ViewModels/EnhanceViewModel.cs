@@ -364,7 +364,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
         // Le détail multi-échelles coûte ~2,4 s par mégapixel : sur une grande
         // image, on annonce la durée avant de lancer plutôt que de la subir.
-        var estimate = ImageRenderEstimator.Estimate(_source, request.Mode);
+        var estimate = ImageRenderEstimator.Estimate(_source, request.Mode, SelectedEngine);
         var isLongRender = estimate >= ImageRenderEstimator.ConfirmationThreshold;
         if (isLongRender &&
             !await _dialogService.ConfirmRenderAsync(ImageRenderPlanFactory.Create(

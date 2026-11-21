@@ -328,6 +328,8 @@ The note below the menu indicates whether the engine is ready or why it is unava
 
 The same choice is offered on the **Image** page, with **Lisere Classic** as the default. A neural engine replaces the whole pipeline for the frame, at its original size, and disables **Refine faces**: that texture belongs to the classical pipeline.
 
+The estimate announced before a long render and the progress bar both follow the chosen engine: a neural model costs tens of seconds per megapixel, and the bar moves tile by tile instead of jumping at the end.
+
 ### 6.3 Importing a video preset
 
 The **Import preset...** button reads a JSON file and applies what Liseré can reproduce:

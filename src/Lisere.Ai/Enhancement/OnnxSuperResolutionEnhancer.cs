@@ -51,6 +51,8 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
 
     public int NativeScale => Math.Clamp(_model.Manifest.Scale, 1, 4);
 
+    public double SecondsPerMegapixel => _model.Manifest.SecondsPerMegapixel;
+
     public RgbImage Enhance(
         RgbImage source,
         FrameEnhancementRequest request,
@@ -73,7 +75,7 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
             0.0);
 
         var scale = NativeScale;
-        var upscaledLuma = UpscaleLuma(preCleaned, scale, cancellationToken);
+        var upscaledLuma = UpscaleLuma(preCleaned, scale, request.Progress, cancellationToken);
 
         var nativeWidth = checked(preCleaned.Width * scale);
         var nativeHeight = checked(preCleaned.Height * scale);
@@ -115,7 +117,11 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
         return output;
     }
 
-    private GrayImage UpscaleLuma(RgbImage image, int scale, CancellationToken cancellationToken)
+    private GrayImage UpscaleLuma(
+        RgbImage image,
+        int scale,
+        IProgress<double>? progress,
+        CancellationToken cancellationToken)
     {
         ImageFilters.ToYCbCr(image, out var luma, out _, out _);
 
@@ -130,14 +136,18 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
 
         var patch = new float[checked(_tileSize * _tileSize)];
 
-        foreach (var tile in tiles)
+        var total = tiles.Count;
+        for (var index = 0; index < total; index++)
         {
+            var tile = tiles[index];
             cancellationToken.ThrowIfCancellationRequested();
 
             FillPatch(luma, tile, patch);
             var prediction = RunTile(patch);
 
             CopyTile(prediction, scale, tile, destination, outputWidth);
+
+            progress?.Report((index + 1) * 100.0 / total);
         }
 
         return new GrayImage(outputWidth, outputHeight, destination);

@@ -13,7 +13,10 @@ public sealed record ModelManifest(
     string Plane,
     string License,
     string Source,
-    string Description);
+    string Description,
+    // Coût mesuré du modèle, en secondes par mégapixel d'entrée. Sert à annoncer
+    // une durée honnête avant un rendu neuronal ; 0 laisse l'estimation générique.
+    double SecondsPerMegapixel = 0.0);
 
 public sealed record CatalogModel(
     ModelManifest Manifest,

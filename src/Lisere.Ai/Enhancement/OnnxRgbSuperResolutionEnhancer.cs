@@ -53,6 +53,8 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
 
     public int NativeScale => Math.Clamp(_model.Manifest.Scale, 1, 4);
 
+    public double SecondsPerMegapixel => _model.Manifest.SecondsPerMegapixel;
+
     public RgbImage Enhance(
         RgbImage source,
         FrameEnhancementRequest request,
@@ -74,7 +76,7 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
             0.0,
             0.0);
 
-        var enhanced = UpscaleRgb(preCleaned, cancellationToken);
+        var enhanced = UpscaleRgb(preCleaned, request.Progress, cancellationToken);
 
         var (targetWidth, targetHeight) = request.ResolveSize(source.Width, source.Height);
         var output = targetWidth == enhanced.Width && targetHeight == enhanced.Height
@@ -99,7 +101,10 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
         return output;
     }
 
-    private RgbImage UpscaleRgb(RgbImage image, CancellationToken cancellationToken)
+    private RgbImage UpscaleRgb(
+        RgbImage image,
+        IProgress<double>? progress,
+        CancellationToken cancellationToken)
     {
         var scale = NativeScale;
         var tiles = TilePlanner.Plan(image.Width, image.Height, _coreSize, _overlap);
@@ -107,8 +112,10 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
         var outputHeight = checked(image.Height * scale);
         var destination = new byte[checked(outputWidth * outputHeight * 3)];
 
-        foreach (var tile in tiles)
+        var total = tiles.Count;
+        for (var index = 0; index < total; index++)
         {
+            var tile = tiles[index];
             cancellationToken.ThrowIfCancellationRequested();
 
             var inputWidth = tile.Width + tile.ContextLeft + tile.ContextRight;
@@ -118,6 +125,10 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
             var prediction = RunTile(input, inputWidth, inputHeight);
 
             CopyTile(prediction, tile, inputWidth, inputHeight, destination, outputWidth);
+
+            // One tile is the smallest honest unit of progress: the model runs
+            // as a single opaque call, so anything finer would be invented.
+            progress?.Report((index + 1) * 100.0 / total);
         }
 
         return new RgbImage(outputWidth, outputHeight, destination);

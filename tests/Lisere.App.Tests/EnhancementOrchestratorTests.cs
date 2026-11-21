@@ -1,3 +1,4 @@
+using Lisere.Ai.Enhancement;
 using Lisere.Core.Enhancement;
 using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
@@ -125,12 +126,85 @@ public class EnhancementOrchestratorTests
             new EnhancementOrchestrator().EnhanceAsync(request, cancellation.Token));
     }
 
+    [Fact]
+    public async Task EngineTilesDriveTheDetailStage()
+    {
+        var reports = new List<EnhancementProgress>();
+        var engine = new ReportingEngine();
+        var request = new EnhancementRequest(
+            new RgbImage(32, 32),
+            EnhancementMode.Manual,
+            new EnhancementParameters(0, 0, 0, 20, 0, 0),
+            0,
+            0,
+            ColorPreset.None,
+            null,
+            new DirectProgress<EnhancementProgress>(reports.Add)) with
+        {
+            Engine = engine
+        };
+
+        await new EnhancementOrchestrator().EnhanceAsync(request, CancellationToken.None);
+
+        var details = reports
+            .Where(report => report.Stage is EnhancementStage.Detail)
+            .Select(report => report.Percent)
+            .ToArray();
+
+        // Sans étalonnage, le détail couvre 0 à 95 % : chaque tuile doit s'y
+        // retrouver au prorata, et plus jamais sauter d'un coup à la fin.
+        Assert.Equal(1, engine.Calls);
+        Assert.InRange(details.Length, 4, 8);
+        Assert.Equal(0, details[0], 3);
+        Assert.Equal(95, details[^1], 3);
+        Assert.Equal(details.OrderBy(percent => percent), details);
+        Assert.Contains(details, percent => percent is > 20 and < 80);
+    }
+
     private static double LumaStandardDeviation(RgbImage image)
     {
         var luma = ImageFilters.ToGray(image).Pixels;
         var mean = luma.Average(value => (double)value);
         var variance = luma.Average(value => (value - mean) * (value - mean));
         return Math.Sqrt(variance);
+    }
+
+    private sealed class ReportingEngine : IFrameEnhancer
+    {
+        public int Calls { get; private set; }
+
+        public string Id => "test.reporting";
+
+        public string DisplayName => "Moteur de test";
+
+        public EnhancementEngineFamily Family => EnhancementEngineFamily.NeuralSuperResolution;
+
+        public string Description => "Moteur de test.";
+
+        public bool IsAvailable => true;
+
+        public string? UnavailableReason => null;
+
+        public int NativeScale => 1;
+
+        public RgbImage Enhance(
+            RgbImage source,
+            FrameEnhancementRequest request,
+            CancellationToken cancellationToken)
+        {
+            Calls++;
+
+            foreach (var percent in new[] { 25.0, 50.0, 75.0 })
+            {
+                request.Progress?.Report(percent);
+            }
+
+            return source;
+        }
+
+        public void Dispose()
+        {
+        }
     }
 
     private sealed class FakeFaceDetector : IFaceDetector

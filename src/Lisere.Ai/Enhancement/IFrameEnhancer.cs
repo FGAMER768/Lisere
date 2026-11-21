@@ -16,7 +16,10 @@ public sealed record FrameEnhancementRequest(
     int? TargetHeight = null,
     bool ApplyChromaTone = false,
     ColorPreset Grading = ColorPreset.None,
-    UltronCcSettings? GradingSettings = null)
+    UltronCcSettings? GradingSettings = null,
+    // Avancement du moteur, de 0 à 100, pour les moteurs qui travaillent par
+    // tuiles ; le pipeline classique n'en a pas besoin, il est trop court.
+    IProgress<double>? Progress = null)
 {
     public EnhancementParameters ClampedParameters => Parameters.Clamp();
 
@@ -63,6 +66,13 @@ public interface IFrameEnhancer : IDisposable
     string? UnavailableReason { get; }
 
     int NativeScale { get; }
+
+    /// <summary>
+    /// Coût mesuré du moteur en secondes par mégapixel source. Zéro quand le
+    /// moteur n'a rien mesuré : l'appelant retombe alors sur son estimation
+    /// générique plutôt que d'inventer un chiffre.
+    /// </summary>
+    double SecondsPerMegapixel => 0.0;
 
     RgbImage Enhance(
         RgbImage source,

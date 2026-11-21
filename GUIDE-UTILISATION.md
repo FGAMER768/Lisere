@@ -328,6 +328,8 @@ La note sous le menu indique si le moteur est prêt ou pourquoi il est indisponi
 
 Le même choix est proposé sur la page **Image**, avec **Lisere Classic** par défaut. Un moteur neuronal y remplace le pipeline complet pour toute l'image, à sa taille d'origine, et désactive l'option **Affiner les visages** : cette texture fait partie du pipeline classique.
 
+L'estimation annoncée avant un long rendu et la barre de progression suivent le moteur choisi : un modèle neuronal se compte en dizaines de secondes par mégapixel, et la barre avance par tuiles au lieu de sauter à la fin.
+
 ### 6.3 Importer un preset vidéo
 
 Le bouton **Importer un preset...** lit un fichier JSON et applique ce que Liseré sait reproduire :

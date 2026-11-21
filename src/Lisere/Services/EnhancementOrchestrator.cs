@@ -119,10 +119,16 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
     {
         progress?.Report(new EnhancementProgress(EnhancementStage.Detail, 0.0));
 
+        // The engine tiles the frame and reports after each tile; that becomes
+        // the Detail stage, which the caller already scales to its own range.
         var frame = new FrameEnhancementRequest(
             parameters,
             request.RecoverOriginalDetail,
-            request.AddNoise);
+            request.AddNoise,
+            Progress: progress is null
+                ? null
+                : new DirectProgress<double>(percent =>
+                    progress.Report(new EnhancementProgress(EnhancementStage.Detail, percent))));
 
         var output = engine.Enhance(request.Source, frame, cancellationToken);
 
