@@ -12,7 +12,7 @@ public sealed partial class EnhanceViewModel
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(EngineNote))]
-    [NotifyPropertyChangedFor(nameof(IsNeuralEngine))]
+    [NotifyPropertyChangedFor(nameof(HasModelSelected))]
     [NotifyPropertyChangedFor(nameof(CanRefineFaces))]
     private IFrameEnhancer? _selectedEngine;
 
@@ -22,10 +22,10 @@ public sealed partial class EnhanceViewModel
     /// A model takes over the whole pipeline, and the face-aware texture belongs
     /// to that pipeline: the option is disabled rather than silently ignored.
     /// </summary>
-    public bool IsNeuralEngine =>
+    public bool HasModelSelected =>
         SelectedEngine is { Family: EnhancementEngineFamily.NeuralSuperResolution };
 
-    public bool CanRefineFaces => !IsNeuralEngine;
+    public bool CanRefineFaces => !HasModelSelected;
 
     /// <summary>What the selected engine does, or why it cannot run.</summary>
     public string EngineNote => SelectedEngine switch
