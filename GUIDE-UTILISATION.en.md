@@ -117,7 +117,7 @@ The central preview is interactive:
 - **Drag with the left button** when the image is zoomed to move it.
 - With the divider focused: `Left` / `Right` move by 1%, `Page Up` / `Page Down` by 10%, `Home` / `End` go to the ends.
 
-Zoom is **synchronised**: before and after zoom together. The point under the cursor stays in place as much as possible, which avoids losing the detail being inspected.
+Zoom is **synchronised**: before and after zoom together. The point under the cursor stays in place as much as possible, which avoids losing the detail being inspected. In side by side, zoom is anchored on the centre of the stage — the line splitting both halves — so they keep exactly the same framing.
 
 ---
 
@@ -368,7 +368,7 @@ The **timeline** below the preview shows the duration and selects the position: 
 
 The image follows the playhead: the source frame is reloaded at every new position and, as soon as a preview exists, the after image is recomputed there. A request still running is cancelled by the next one, so only the last stop counts.
 
-The five buttons above the timeline are the transport: **start**, **previous frame**, **play/pause** (`Space`), **next frame** (`Ctrl` with the arrows) and **end**. Playback advances one frame at a time, at the rate the file decodes, and stops at the end of the clip; the after image follows playback as fast as the engine allows, then refreshes completely when you pause.
+The five buttons above the timeline are the transport: **start**, **previous frame**, **play/pause** (`Space`), **next frame** (`Ctrl` with the arrows) and **end**. Playback advances one frame at a time and stops at the end of the clip. Before and after move together: a frame is only published once the after image is computed, so both halves always show the same instant. The pace is the engine's, not the file's.
 
 - **Refresh preview** (`Ctrl+Enter`) extracts the frame at the chosen position and applies the current settings.
 - **Render 1 second** runs the real pipeline on a segment around the position, then displays the middle frame. The file is temporary and silent.

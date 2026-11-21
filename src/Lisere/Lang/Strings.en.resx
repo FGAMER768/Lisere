@@ -739,7 +739,7 @@
     <value>Render cancelled.</value>
   </data>
   <data name="videoProgressDone" xml:space="preserve">
-    <value>{0} frames rendered in {1:0.0} s.</value>
+    <value>{0} frames rendered in {1}.</value>
   </data>
   <data name="engineAvailable" xml:space="preserve">
     <value>Available</value>
@@ -1085,5 +1085,14 @@
   </data>
   <data name="videoProgressPercent" xml:space="preserve">
     <value>{0:0} %</value>
+  </data>
+  <data name="durationSeconds" xml:space="preserve">
+    <value>{0:0.0} s</value>
+  </data>
+  <data name="durationMinutes" xml:space="preserve">
+    <value>{0:m\:ss}</value>
+  </data>
+  <data name="durationHours" xml:space="preserve">
+    <value>{0:h\:mm\:ss}</value>
   </data>
 </root>

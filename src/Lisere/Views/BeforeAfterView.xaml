@@ -167,23 +167,44 @@
                     </Grid>
                 </Grid>
 
+                <!-- Chaque moitié est un cadre clippé qui reçoit le même zoom et
+                     le même déplacement : les deux images montrent donc toujours
+                     exactement la même région, de part et d'autre du trait. -->
                 <Grid x:Name="SideBySideLayer" Visibility="Collapsed">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Image x:Name="SideBySideBeforeImage"
-                           Grid.Column="0"
-                           AutomationProperties.Name="{Binding Localization[beforeAfterBeforePreview], ElementName=Root}"
-                           RenderOptions.BitmapScalingMode="HighQuality"
-                           Source="{Binding BeforeImage, ElementName=Root}"
-                           Stretch="Uniform" />
-                    <Image x:Name="SideBySideAfterImage"
-                           Grid.Column="1"
-                           AutomationProperties.Name="{Binding Localization[beforeAfterAfterPreview], ElementName=Root}"
-                           RenderOptions.BitmapScalingMode="HighQuality"
-                           Source="{Binding AfterImage, ElementName=Root}"
-                           Stretch="Uniform" />
+                    <Grid Grid.Column="0" ClipToBounds="True">
+                        <Image x:Name="SideBySideBeforeImage"
+                               AutomationProperties.Name="{Binding Localization[beforeAfterBeforePreview], ElementName=Root}"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               RenderTransformOrigin="0.5,0.5"
+                               Source="{Binding BeforeImage, ElementName=Root}"
+                               Stretch="Uniform">
+                            <Image.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform x:Name="SideBeforeScale" ScaleX="1" ScaleY="1" />
+                                    <TranslateTransform x:Name="SideBeforeTranslate" X="0" Y="0" />
+                                </TransformGroup>
+                            </Image.RenderTransform>
+                        </Image>
+                    </Grid>
+                    <Grid Grid.Column="1" ClipToBounds="True">
+                        <Image x:Name="SideBySideAfterImage"
+                               AutomationProperties.Name="{Binding Localization[beforeAfterAfterPreview], ElementName=Root}"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               RenderTransformOrigin="0.5,0.5"
+                               Source="{Binding AfterImage, ElementName=Root}"
+                               Stretch="Uniform">
+                            <Image.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform x:Name="SideAfterScale" ScaleX="1" ScaleY="1" />
+                                    <TranslateTransform x:Name="SideAfterTranslate" X="0" Y="0" />
+                                </TransformGroup>
+                            </Image.RenderTransform>
+                        </Image>
+                    </Grid>
                 </Grid>
             </Grid>
 

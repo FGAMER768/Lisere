@@ -39,6 +39,22 @@ public class BeforeAfterZoomTests
     }
 
     [Fact]
+    public void SideBySideZoomAnchorsOnTheDividerAtTheStageCentre()
+    {
+        var stage = new Size(800, 600);
+        var cursor = new Point(120, 90);
+
+        // Chaque moitié montre le même cadrage : ancrer sous le curseur ferait
+        // diverger la moitié opposée, donc on ancre au milieu de la scène.
+        Assert.Equal(
+            new Point(400, 300),
+            BeforeAfterView.ZoomAnchor(PreviewMode.SideBySide, cursor, stage));
+        Assert.Equal(
+            cursor,
+            BeforeAfterView.ZoomAnchor(PreviewMode.Split, cursor, stage));
+    }
+
+    [Fact]
     public void PanIsLimitedToTheOverflowOfTheZoomedImage()
     {
         // 400 x 200 at 2x overflows a 600 x 400 viewport by 100 px horizontally

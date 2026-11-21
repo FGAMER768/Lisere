@@ -14,10 +14,10 @@ public class DurationFormattingTests
 
         Assert.Equal(
             "5,9 s",
-            VideoRenderPlanFactory.FormatDuration(TimeSpan.FromSeconds(5.9), french.Culture));
+            VideoRenderPlanFactory.FormatDuration(TimeSpan.FromSeconds(5.9), french));
         Assert.Equal(
             "5.9 s",
-            VideoRenderPlanFactory.FormatDuration(TimeSpan.FromSeconds(5.9), english.Culture));
+            VideoRenderPlanFactory.FormatDuration(TimeSpan.FromSeconds(5.9), english));
     }
 
     [Fact]
@@ -27,9 +27,9 @@ public class DurationFormattingTests
 
         Assert.Equal(
             "1:05",
-            VideoRenderPlanFactory.FormatDuration(TimeSpan.FromSeconds(65), french.Culture));
+            VideoRenderPlanFactory.FormatDuration(TimeSpan.FromSeconds(65), french));
         Assert.Equal(
             "2:00:00",
-            VideoRenderPlanFactory.FormatDuration(TimeSpan.FromHours(2), french.Culture));
+            VideoRenderPlanFactory.FormatDuration(TimeSpan.FromHours(2), french));
     }
 }

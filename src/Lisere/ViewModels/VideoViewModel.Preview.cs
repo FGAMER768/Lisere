@@ -370,7 +370,15 @@ public sealed partial class VideoViewModel
         return _autoSamples;
     }
 
-    private async Task LoadPreviewFrameAsync(VideoInfo video, CancellationToken cancellationToken)
+    /// <param name="publish">
+    /// Faux quand l'appelant veut publier l'avant en même temps que l'après,
+    /// une fois l'inférence terminée : sinon les deux moitiés montrent deux
+    /// instants différents du clip.
+    /// </param>
+    private async Task<VideoPreviewFrame> LoadPreviewFrameAsync(
+        VideoInfo video,
+        CancellationToken cancellationToken,
+        bool publish = true)
     {
         var frame = await _previewRenderer.LoadSourceFrameAsync(
             video,
@@ -378,7 +386,13 @@ public sealed partial class VideoViewModel
             cancellationToken);
 
         _previewFrame = frame.Pixels;
-        BeforeImage = frame.Image;
+
+        if (publish)
+        {
+            BeforeImage = frame.Image;
+        }
+
+        return frame;
     }
 
     private async Task ReloadPreviewFrameAsync(CancellationToken cancellationToken)

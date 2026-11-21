@@ -45,7 +45,7 @@ public static class ImageRenderPlanFactory
                     strings["videoEstimateLabel"],
                     strings.Format(
                         "imageEstimateText",
-                        VideoRenderPlanFactory.FormatDuration(estimate, strings.Culture),
+                        VideoRenderPlanFactory.FormatDuration(estimate, strings),
                         megapixels)),
                 .. ProvenanceLines(strings, engine, basis)
             ],
@@ -55,7 +55,7 @@ public static class ImageRenderPlanFactory
             strings["videoPlanCancel"],
             strings.Format(
                 "imagePlanReassurance",
-                VideoRenderPlanFactory.FormatDuration(estimate, strings.Culture)));
+                VideoRenderPlanFactory.FormatDuration(estimate, strings)));
     }
 
     /// <summary>

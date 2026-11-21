@@ -170,7 +170,7 @@ public sealed partial class VideoViewModel
                 ProgressText = Strings.Format(
                     "videoProgressDone",
                     result.FramesWritten,
-                    result.Elapsed.TotalSeconds);
+                    VideoRenderPlanFactory.FormatDuration(result.Elapsed, Strings));
                 SetStatus("videoStatusRendered", Path.GetFileName(result.OutputPath));
             }
         }
@@ -335,7 +335,7 @@ public sealed partial class VideoViewModel
             {
                 text = $"{text} · {Strings.Format(
                     "videoRemaining",
-                    VideoRenderPlanFactory.FormatDuration(remaining, Strings.Culture))}";
+                    VideoRenderPlanFactory.FormatDuration(remaining, Strings))}";
             }
         }
 

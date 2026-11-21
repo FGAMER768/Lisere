@@ -56,6 +56,6 @@ public sealed class LocalizationService : ILocalizationService
         LanguageChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public CultureInfo Culture =>
+    private CultureInfo Culture =>
         _currentLanguage == AppLanguage.English ? EnglishCulture : FrenchCulture;
 }

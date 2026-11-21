@@ -67,7 +67,7 @@ FFmpeg ships with the application and is verified by SHA-256 at startup. An **Up
 - Before/after preview on a frame extracted at the chosen position; opening does not compute the preview, it must be requested explicitly (`Ctrl+Enter`).
 - **Editing timeline**: time ruler, ticks, playhead, click/drag seeking, arrow keys and `Home`/`End`.
 - **Live preview**: moving the playhead reloads the source frame at the new position; once a preview exists, the after image is recomputed there at the engine's pace. A newer move cancels the request that has not finished yet.
-- **Transport**: start, previous frame, play/pause, next frame and end of the clip. Playback advances frame by frame at the decoding rate and stops at the end of the clip.
+- **Transport**: start, previous frame, play/pause, next frame and end of the clip. Playback advances frame by frame; before and after stay on the same frame, at the engine's pace, and stops at the end of the clip.
 - Applies the same six parameters to each frame, with Auto estimation sampled across the clip.
 - **Video colour grading**: the same **Enhancement (AI)** and **Colour grading** tabs as the Image page, with the five looks (Ultron CC, Matrix CC, Infinity CC, Nebulus CC, Splendida CC) and **Manual (sliders)**. They are applied to every frame, after enhancement and before the Chroma tone curve. Each queue job freezes the choice.
 - Interchangeable engines:
@@ -87,7 +87,7 @@ FFmpeg ships with the application and is verified by SHA-256 at startup. An **Up
 - **One-second preview render**: renders the real segment around the chosen position with the current settings, then shows the resulting frame.
 - **Preview export**: the same one-second segment can be written to a chosen file, without audio, for inspection or keeping.
 - **Live frame**: during a render, the latest produced frame replaces the preview and stays visible after cancellation.
-- **Synchronised zoom**: wheel, buttons or `+` / `-` / `0` keys on the comparison; before and after zoom together, the point under the cursor stays in place (the centre stays centred), and dragging moves the enlarged image. The `-` / `+` icons are centred in their buttons.
+- **Synchronised zoom**: wheel, buttons or `+` / `-` / `0` keys on the comparison; before and after zoom together, the point under the cursor stays in place (the centre stays centred, and in side by side zoom anchors on the line splitting both halves), and dragging moves the enlarged image. The `-` / `+` icons are centred in their buttons.
 - **Three preview modes**: split, single (output only) and side by side, with icon buttons on both image and video comparisons.
 
 ### Common
@@ -377,7 +377,7 @@ dotnet test Lisere.slnx
 
 The solution contains four xUnit test projects: `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` and `Lisere.App.Tests`.
 
-Current state: **457 tests** (125 Core, 24 Ai, 53 Video, 255 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
+Current state: **458 tests** (125 Core, 24 Ai, 53 Video, 256 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
 
 Video integration tests generate a clip with FFmpeg and verify rendering, audio preservation, deinterlacing, exact size, cancellation and preview extraction. They are silently skipped when FFmpeg cannot be found, so the rest of the suite remains runnable on a machine without video tooling.
 

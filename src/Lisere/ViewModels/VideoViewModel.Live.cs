@@ -126,9 +126,12 @@ public sealed partial class VideoViewModel
                 }
 
                 PreviewPositionPercent = next;
+
+                // Pendant la lecture, l'avant attend l'après : les deux moitiés
+                // doivent montrer la même frame, pas deux instants voisins.
                 await RefreshLiveFrameAsync(
                     HasPreview,
-                    waitForEnhancement: false,
+                    waitForEnhancement: true,
                     cancellation.Token);
             }
         }
@@ -221,7 +224,11 @@ public sealed partial class VideoViewModel
             return;
         }
 
-        await LoadPreviewFrameAsync(video, cancellationToken);
+        var enhancing = enhance && waitForEnhancement && HasAvailableEngine;
+        var frame = await LoadPreviewFrameAsync(
+            video,
+            cancellationToken,
+            publish: !enhancing);
         cancellationToken.ThrowIfCancellationRequested();
 
         if (!enhance || !HasAvailableEngine)
@@ -238,6 +245,10 @@ public sealed partial class VideoViewModel
 
         await RefreshAfterImageAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+
+        // L'après vient d'être calculé pour cette frame : publier l'avant
+        // maintenant garantit que les deux moitiés montrent le même instant.
+        BeforeImage = frame.Image;
     }
 
     /// <summary>

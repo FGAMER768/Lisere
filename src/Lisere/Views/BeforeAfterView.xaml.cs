@@ -308,12 +308,11 @@ public partial class BeforeAfterView : UserControl
     {
         var view = (BeforeAfterView)d;
         var (width, height) = GetImageSize(view.AfterImage ?? view.BeforeImage);
-        var isNewSource = e.Property == BeforeImageProperty && view.BeforeImage is not null;
 
-        // A live render replaces the after image once a second; resetting on
-        // every frame would throw the user's zoom away. A new source or a new
-        // content geometry starts a fresh viewport instead.
-        if (isNewSource ||
+        // Pendant la lecture, l'avant change à chaque frame : ce n'est pas une
+        // nouvelle source et cela ne doit pas jeter le zoom. Seule l'apparition
+        // d'une première image (ou une géométrie différente) recadre la vue.
+        if ((e.Property == BeforeImageProperty && e.OldValue is null) ||
             Math.Abs(width - view._imageWidth) > 0.01 ||
             Math.Abs(height - view._imageHeight) > 0.01)
         {
@@ -421,18 +420,10 @@ public partial class BeforeAfterView : UserControl
             return;
         }
 
-        var pan = AnchoredPan(
-            e.GetPosition(Stage),
-            new Point(_panX, _panY),
-            new Size(Stage.ActualWidth, Stage.ActualHeight),
-            new Size(contentWidth, contentHeight),
-            Zoom,
-            next);
-
-        // The Zoom setter runs ApplyZoom, which clamps the pan for the new scale.
-        _panX = pan.X;
-        _panY = pan.Y;
-        Zoom = next;
+        // En side by side, chaque moitié montre le même cadrage. Ancrer le zoom
+        // sous le curseur décalerait la moitié opposée : on zoome donc sur le
+        // milieu de la scène, c'est-à-dire sur le trait qui sépare les deux.
+        ZoomAround(ZoomAnchor(PreviewMode, e.GetPosition(Stage), StageSize), next);
         e.Handled = true;
     }
 
@@ -483,9 +474,49 @@ public partial class BeforeAfterView : UserControl
         e.Handled = true;
     }
 
-    private void OnZoomInClick(object sender, RoutedEventArgs e) => Zoom = StepZoom(Zoom, 1);
+    private Size StageSize => new(Stage.ActualWidth, Stage.ActualHeight);
 
-    private void OnZoomOutClick(object sender, RoutedEventArgs e) => Zoom = StepZoom(Zoom, -1);
+    private Point StageCentre => new(StageSize.Width / 2, StageSize.Height / 2);
+
+    /// <summary>
+    /// Le zoom suit le curseur dans les modes qui superposent les deux images.
+    /// En side by side, il suit le milieu de la scène — le trait de séparation —
+    /// pour que les deux moitiés gardent exactement le même cadrage.
+    /// </summary>
+    internal static Point ZoomAnchor(PreviewMode mode, Point cursor, Size stage) =>
+        mode == PreviewMode.SideBySide
+            ? new Point(stage.Width / 2, stage.Height / 2)
+            : cursor;
+
+    /// <summary>
+    /// Changes the zoom while keeping the content under <paramref name="anchor"/>.
+    /// The Zoom setter then applies and clamps the pan for the new scale.
+    /// </summary>
+    private void ZoomAround(Point anchor, double next)
+    {
+        if (Math.Abs(next - Zoom) < 0.001)
+        {
+            return;
+        }
+
+        var pan = AnchoredPan(
+            anchor,
+            new Point(_panX, _panY),
+            new Size(Stage.ActualWidth, Stage.ActualHeight),
+            new Size(ContentWidth, ContentHeight),
+            Zoom,
+            next);
+
+        _panX = pan.X;
+        _panY = pan.Y;
+        Zoom = next;
+    }
+
+    private void OnZoomInClick(object sender, RoutedEventArgs e) =>
+        ZoomAround(StageCentre, StepZoom(Zoom, 1));
+
+    private void OnZoomOutClick(object sender, RoutedEventArgs e) =>
+        ZoomAround(StageCentre, StepZoom(Zoom, -1));
 
     private void OnZoomResetClick(object sender, RoutedEventArgs e) => ResetZoom();
 
@@ -600,22 +631,56 @@ public partial class BeforeAfterView : UserControl
             return;
         }
 
-        ZoomScale.ScaleX = Zoom;
-        ZoomScale.ScaleY = Zoom;
+        if (PreviewMode == PreviewMode.SideBySide)
+        {
+            // Le conteneur commun reste au repos : le zoom vit dans chaque
+            // moitié clippée, avec les mêmes valeurs des deux côtés. Appliquer
+            // le zoom au conteneur entier décalerait la moitié opposée et les
+            // deux images ne montreraient plus la même région.
+            ZoomScale.ScaleX = 1;
+            ZoomScale.ScaleY = 1;
+            ZoomTranslate.X = 0;
+            ZoomTranslate.Y = 0;
 
-        var pan = ClampPan(
-            _panX,
-            _panY,
-            Stage.ActualWidth,
-            Stage.ActualHeight,
-            ContentWidth,
-            ContentHeight,
-            Zoom);
+            var halfWidth = Math.Max(0, Stage.ActualWidth / 2);
+            var halfHeight = Math.Max(0, Stage.ActualHeight);
+            var (imageWidth, imageHeight) = GetImageSize(AfterImage ?? BeforeImage);
+            var fit = imageWidth > 0 && imageHeight > 0
+                ? Math.Min(halfWidth / imageWidth, halfHeight / imageHeight)
+                : 1;
+            var sidePan = ClampPan(
+                _panX,
+                _panY,
+                halfWidth,
+                halfHeight,
+                imageWidth * fit,
+                imageHeight * fit,
+                Zoom);
 
-        _panX = pan.X;
-        _panY = pan.Y;
-        ZoomTranslate.X = _panX;
-        ZoomTranslate.Y = _panY;
+            _panX = sidePan.X;
+            _panY = sidePan.Y;
+            ApplySideZoom(SideBeforeScale, SideBeforeTranslate, sidePan);
+            ApplySideZoom(SideAfterScale, SideAfterTranslate, sidePan);
+        }
+        else
+        {
+            ZoomScale.ScaleX = Zoom;
+            ZoomScale.ScaleY = Zoom;
+
+            var pan = ClampPan(
+                _panX,
+                _panY,
+                Stage.ActualWidth,
+                Stage.ActualHeight,
+                ContentWidth,
+                ContentHeight,
+                Zoom);
+
+            _panX = pan.X;
+            _panY = pan.Y;
+            ZoomTranslate.X = _panX;
+            ZoomTranslate.Y = _panY;
+        }
 
         SetValue(IsZoomedPropertyKey, Zoom > MinimumZoom + 0.001);
 
@@ -626,6 +691,22 @@ public partial class BeforeAfterView : UserControl
 
         Stage.Cursor = IsZoomed ? Cursors.Hand : Cursors.Arrow;
         UpdateWipe();
+    }
+
+    private void ApplySideZoom(
+        ScaleTransform? scale,
+        TranslateTransform? translate,
+        Point pan)
+    {
+        if (scale is null || translate is null)
+        {
+            return;
+        }
+
+        scale.ScaleX = Zoom;
+        scale.ScaleY = Zoom;
+        translate.X = pan.X;
+        translate.Y = pan.Y;
     }
 
     /// <summary>

@@ -93,30 +93,30 @@ public static class VideoRenderPlanFactory
         return strings.Format(
             "videoEstimateText",
             estimate.OutputFrames,
-            FormatDuration(estimate.EstimatedTime, strings.Culture));
+            FormatDuration(estimate.EstimatedTime, strings));
     }
 
     /// <summary>
-    /// Durée lisible dans la langue de l'interface : « 5,9 s » en français,
-    /// « 5.9 s » en anglais. Le reste (minutes, heures) ne contient que des
-    /// chiffres et des deux-points.
+    /// Durée lisible dans la langue de l'interface. Les formats vivent dans les
+    /// ressources, comme le reste du texte : c'est <c>Format</c> qui applique la
+    /// culture, donc « 5,9 s » en français et « 5.9 s » en anglais.
     /// </summary>
-    public static string FormatDuration(TimeSpan duration, IFormatProvider culture)
+    public static string FormatDuration(TimeSpan duration, ILocalizationService strings)
     {
-        ArgumentNullException.ThrowIfNull(culture);
+        ArgumentNullException.ThrowIfNull(strings);
 
         var clamped = duration < TimeSpan.Zero ? TimeSpan.Zero : duration;
-
         if (clamped.TotalHours >= 1)
         {
-            return clamped.ToString(@"h\:mm\:ss", culture);
+            return strings.Format("durationHours", clamped);
         }
 
         if (clamped.TotalMinutes >= 1)
         {
-            return clamped.ToString(@"m\:ss", culture);
+            return strings.Format("durationMinutes", clamped);
         }
 
-        return $"{clamped.TotalSeconds.ToString("0.0", culture)} s";
+        // Le format des secondes s'applique à un nombre, pas à un TimeSpan.
+        return strings.Format("durationSeconds", clamped.TotalSeconds);
     }
 }

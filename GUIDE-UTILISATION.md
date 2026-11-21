@@ -117,7 +117,7 @@ L'aperçu central est interactif :
 - **Glisser avec le bouton gauche** quand l'image est zoomée pour la déplacer.
 - Avec le séparateur au clavier : `←` / `→` déplacent de 1 %, `Page préc.` / `Page suiv.` de 10 %, `Début` / `Fin` vont aux extrémités.
 
-Le zoom est **synchronisé** : l'avant et l'après zooment ensemble. Le point sous le curseur reste autant que possible en place, ce qui évite de perdre le détail que l'on inspecte.
+Le zoom est **synchronisé** : l'avant et l'après zooment ensemble. Le point sous le curseur reste autant que possible en place, ce qui évite de perdre le détail que l'on inspecte. En side by side, le zoom s'ancre au milieu de la scène — sur le trait qui sépare les deux moitiés — pour qu'elles gardent exactement le même cadrage.
 
 ---
 
@@ -368,7 +368,7 @@ La **timeline** sous l'aperçu affiche la durée et permet de choisir la positio
 
 L'image suit le déplacement : la frame source est rechargée à chaque nouvelle position et, dès qu'un aperçu existe déjà, l'image après est recalculée au même endroit. Une demande encore en cours est annulée par la suivante : seul le dernier arrêt compte.
 
-Les cinq boutons au-dessus de la timeline forment le transport : **début**, **image précédente**, **lecture/pause** (`Espace`), **image suivante** (`Ctrl` et les flèches) et **fin**. La lecture avance d'une frame à la fois, au rythme où le fichier se décode, et s'arrête à la fin du clip ; l'image après suit la lecture aussi vite que le moteur le permet, puis se recalcule complètement à la pause.
+Les cinq boutons au-dessus de la timeline forment le transport : **début**, **image précédente**, **lecture/pause** (`Espace`), **image suivante** (`Ctrl` et les flèches) et **fin**. La lecture avance d'une frame à la fois et s'arrête à la fin du clip. L'avant et l'après avancent ensemble : chaque frame n'est publiée qu'une fois l'après calculé, donc les deux moitiés montrent toujours le même instant. Le rythme est celui du moteur, pas du fichier.
 
 - **Rafraîchir l'aperçu** (`Ctrl+Entrée`) extrait la frame à la position choisie et applique les réglages courants.
 - **Rendre 1 seconde** exécute le vrai pipeline sur un segment autour de la position, puis affiche la frame du milieu. Le fichier est temporaire et sans audio.
