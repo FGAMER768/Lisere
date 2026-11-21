@@ -236,8 +236,43 @@ render produced with Topaz. The three images share the same crop and resolution
 
 **Base** is the starting image. **Topaz** is the reference render made with the Ultron
 CC preset. **Liseré** is the local render with Chroma and Ultron CC. The comparison
-covers sharpness, skin and hair micro-texture, leather rendering and midtones. The
-displayed images are JPEGs reduced to 900 px; the working files are not distributed.
+covers sharpness, skin and hair micro-texture, leather rendering and midtones. The three
+table images are JPEGs reduced to 900 px; the working files are not distributed.
+
+### 🧪 Two demonstrations + an upscale bonus
+
+Two cases produced by the Image page pipeline, with the exact settings, plus an ×4
+upscale bonus. Each comparison includes a 100% detail.
+
+**1. 1608 px photo — Auto + Ultron CC**
+
+<img src="assets/demos/01-auto-ultron.jpg" width="880" alt="Before/after comparison on a 1608 px photo, with a 100% detail">
+
+Source 1608 × 1608. **Auto** preset, **Ultron CC** grading, no face refinement, no
+upscaling. Output 1608 × 1608.
+
+**2. 1916 × 2608 portrait — Auto, no grading**
+
+<img src="assets/demos/02-auto-portrait.jpg" width="880" alt="Before/after comparison on the official portrait of Barack Obama, with a 100% detail">
+
+Source 1916 × 2608. **Auto** preset, **no colour grading**, no face refinement, no
+upscaling. Output 1916 × 2608.
+
+**Bonus — 640 × 427 landscape, ×4 upscale**
+
+<img src="assets/demos/03-mount-cook-4x.jpg" width="880" alt="Bicubic ×4 and Real-ESRGAN ×4 comparison on Hooker Lake and Mount Cook">
+
+Source 640 × 427. **Bicubic ×4** / **Real-ESRGAN ×4** comparison, original detail 20,
+output 2560 × 1708. This render uses the **×4 engine from video export**; the Image
+page keeps the source size.
+
+*Image credits.* Demo 1 and the comparison above: still from the *Iron Man* film
+series (Marvel Studios), used for illustration only; all rights reserved. Demo 2:
+official portrait of Barack Obama by **Pete Souza**,
+[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), via
+[Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Official_portrait_of_Barack_Obama.jpg).
+Bonus: photo by Danny Postma, CC0, via
+[AltPhotos](https://altphotos.com/photo/hooker-lake-at-the-bottom-of-mount-cook-new-zealand-1747/).
 
 <a id="shortcuts"></a>
 ## ⌨️ Shortcuts

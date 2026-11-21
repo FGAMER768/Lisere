@@ -240,8 +240,43 @@ résolution (1608 × 1608) :
 **Base** est l'image de départ. **Topaz** est le rendu de référence obtenu avec le
 preset Ultron CC. **Liseré** est le rendu local, avec le préréglage Chroma et
 l'étalonnage Ultron CC. La comparaison porte sur la netteté, la micro-texture de la
-peau et des cheveux, le rendu du cuir et les tons moyens. Les images affichées sont
-des JPEG réduits à 900 px ; les fichiers de travail ne sont pas distribués.
+peau et des cheveux, le rendu du cuir et les tons moyens. Les trois images du tableau
+sont des JPEG réduits à 900 px ; les fichiers de travail ne sont pas distribués.
+
+### 🧪 Deux démonstrations + un bonus upscale
+
+Deux cas générés par le pipeline de la page Image, avec les réglages exacts, et un
+bonus d'upscale ×4. Chaque comparatif inclut un détail à 100 %.
+
+**1. Photo 1608 px — Auto + Ultron CC**
+
+<img src="assets/demos/01-auto-ultron.jpg" width="880" alt="Comparatif avant/après sur une photo 1608 px, avec un détail à 100 %">
+
+Source 1608 × 1608. Préréglage **Auto**, étalonnage **Ultron CC**, aucun renforcement
+de visages, aucun agrandissement. Sortie 1608 × 1608.
+
+**2. Portrait 1916 × 2608 — Auto sans étalonnage**
+
+<img src="assets/demos/02-auto-portrait.jpg" width="880" alt="Comparatif avant/après sur le portrait officiel de Barack Obama, avec un détail à 100 %">
+
+Source 1916 × 2608. Préréglage **Auto**, **aucune colorimétrie**, aucun renforcement
+de visages, aucun agrandissement. Sortie 1916 × 2608.
+
+**Bonus — paysage 640 × 427, upscale ×4**
+
+<img src="assets/demos/03-mount-cook-4x.jpg" width="880" alt="Comparatif bicubique ×4 et Real-ESRGAN ×4 sur le lac Hooker et le mont Cook">
+
+Source 640 × 427. Comparatif **bicubique ×4** / **Real-ESRGAN ×4**, détails d'origine
+20, sortie 2560 × 1708. Ce rendu utilise le **moteur ×4 de l'export vidéo** ; la page
+Image conserve la taille source.
+
+*Crédits images.* Démo 1 et comparatif ci-dessus : photogramme de la saga *Iron Man*
+(Marvel Studios), utilisé à titre illustratif ; tous droits réservés. Démo 2 :
+portrait officiel de Barack Obama par **Pete Souza**, licence
+[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), via
+[Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Official_portrait_of_Barack_Obama.jpg).
+Bonus : photo de Danny Postma, CC0, via
+[AltPhotos](https://altphotos.com/photo/hooker-lake-at-the-bottom-of-mount-cook-new-zealand-1747/).
 
 <a id="raccourcis"></a>
 ## ⌨️ Raccourcis
