@@ -169,6 +169,26 @@ public class EnhancementOrchestratorTests
         return Math.Sqrt(variance);
     }
 
+    [Fact]
+    public async Task AClassicalEngineIsNeverRun()
+    {
+        var engine = new ReportingEngine { Family = EnhancementEngineFamily.Classical };
+        var request = new EnhancementRequest(
+            new RgbImage(32, 32),
+            EnhancementMode.Manual,
+            new EnhancementParameters(0, 0, 0, 20, 0, 0),
+            0,
+            0,
+            ColorPreset.None) with
+        {
+            Engine = engine
+        };
+
+        await new EnhancementOrchestrator().EnhanceAsync(request, CancellationToken.None);
+
+        Assert.Equal(0, engine.Calls);
+    }
+
     private sealed class ReportingEngine : IFrameEnhancer
     {
         public int Calls { get; private set; }
@@ -177,7 +197,8 @@ public class EnhancementOrchestratorTests
 
         public string DisplayName => "Moteur de test";
 
-        public EnhancementEngineFamily Family => EnhancementEngineFamily.NeuralSuperResolution;
+        public EnhancementEngineFamily Family { get; init; } =
+            EnhancementEngineFamily.NeuralSuperResolution;
 
         public string Description => "Moteur de test.";
 

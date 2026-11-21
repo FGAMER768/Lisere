@@ -56,14 +56,34 @@ public class ImageRenderEstimatorTests
                 new FakeEngine(secondsPerMegapixel: 0)));
     }
 
-    private sealed class FakeEngine(double secondsPerMegapixel, bool available = true)
+    [Fact]
+    public void AnEngineThatWillNotRunIsNeverPriced()
+    {
+        var source = new RgbImage(1000, 1000);
+        var generic = ImageRenderEstimator.Estimate(source, EnhancementMode.Manual);
+
+        // Un moteur classique n'est jamais exécuté par l'orchestrateur : lui
+        // prêter un coût de modèle ferait annoncer une durée qui n'arrivera pas.
+        var classical = new FakeEngine(
+            64,
+            family: EnhancementEngineFamily.Classical);
+
+        Assert.Equal(
+            generic,
+            ImageRenderEstimator.Estimate(source, EnhancementMode.Manual, classical));
+    }
+
+    private sealed class FakeEngine(
+        double secondsPerMegapixel,
+        bool available = true,
+        EnhancementEngineFamily family = EnhancementEngineFamily.NeuralSuperResolution)
         : IFrameEnhancer
     {
         public string Id => "test.engine";
 
         public string DisplayName => "Moteur de test";
 
-        public EnhancementEngineFamily Family => EnhancementEngineFamily.NeuralSuperResolution;
+        public EnhancementEngineFamily Family => family;
 
         public string Description => "Moteur de test.";
 

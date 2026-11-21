@@ -8,9 +8,10 @@ namespace Lisere.Services;
 /// Estime la durée d'une amélioration à partir de la surface de l'image et du
 /// moteur choisi. Le détail multi-échelles du pipeline classique domine son coût
 /// (~2,4 s par mégapixel mesuré sur le préréglage Chroma) ; un moteur neuronal
-/// coûte bien davantage et déclare son propre chiffre, mesuré sur sa machine de
-/// référence. Le seuil de confirmation évite une attente subie sur les grandes
-/// images sans interrompre les petites.
+/// coûte bien davantage et déclare son propre chiffre, relevé sur une machine de
+/// référence — donc faux ailleurs, et c'est mesuré sur place qu'il deviendra
+/// juste (voir la calibration à prévoir). Le seuil de confirmation évite une
+/// attente subie sur les grandes images sans interrompre les petites.
 /// </summary>
 public static class ImageRenderEstimator
 {
@@ -29,14 +30,19 @@ public static class ImageRenderEstimator
 
         var megapixels = source.Width * source.Height / 1_000_000.0;
 
-        // Le moteur n'est sollicité que s'il y a quelque chose à améliorer : le
-        // préréglage « Aucun » court-circuite aussi le modèle.
-        var perMegapixel = mode == EnhancementMode.None
+        var perMegapixel = mode is EnhancementMode.None
             ? SecondsPerMegapixelWithoutEnhancement
-            : engine is { IsAvailable: true, SecondsPerMegapixel: > 0.0 } measured
-                ? measured.SecondsPerMegapixel
-                : SecondsPerMegapixel;
+            : EngineCost(engine);
 
         return TimeSpan.FromSeconds(FixedOverheadSeconds + (megapixels * perMegapixel));
     }
+
+    /// <summary>
+    /// Le coût déclaré par le modèle, quand il y en a un ; le pipeline classique
+    /// sinon — une borne basse, jamais un chiffre inventé.
+    /// </summary>
+    private static double EngineCost(IFrameEnhancer? engine) =>
+        EnhancementRequest.IsNeuralEngine(engine) && engine is { SecondsPerMegapixel: > 0.0 } measured
+            ? measured.SecondsPerMegapixel
+            : SecondsPerMegapixel;
 }

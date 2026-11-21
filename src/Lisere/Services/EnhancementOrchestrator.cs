@@ -43,9 +43,8 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                         value.Stage,
                         value.Percent * pipelineShare / 100.0)));
 
-            var output = request.Engine is { IsAvailable: true } engine &&
-                !skipsEnhancement &&
-                engine.Family is EnhancementEngineFamily.NeuralSuperResolution
+            var engine = request.ActiveEngine;
+            var output = engine is not null
                 ? RunEngine(engine, request, parameters, pipelineProgress, cancellationToken)
                 : EnhancementPipeline.Enhance(
                     request.Source,
