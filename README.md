@@ -2,7 +2,7 @@
 
 <img src="assets/LisereIcon.png" width="104" alt="Icône de Liseré">
 
-# Liseré
+# 🖼️ Liseré
 
 **Améliorez vos photos et vos vidéos, sans les envoyer ailleurs.**
 
@@ -18,21 +18,22 @@ des moteurs qui tournent en local et des exports prêts à garder.
 
 <img src="assets/screenshots/image-fr.png" alt="Espace Image de Liseré : comparaison avant/après avec l'étalonnage Ultron CC">
 
-## Sommaire
+## 📖 Sommaire
 
-- [Pourquoi Liseré ?](#pourquoi-liseré-)
-- [Installation](#installation)
-- [Prise en main](#prise-en-main)
-- [Fonctionnalités](#fonctionnalités)
-- [Préréglages](#préréglages)
-- [Avant / après](#avant--après)
-- [Raccourcis](#raccourcis)
-- [Formats et limites](#formats-et-limites)
-- [Développement](#développement)
-- [FAQ](#faq)
-- [Crédits et licences](#crédits-et-licences)
+- [💡 Pourquoi Liseré ?](#pourquoi)
+- [📥 Installation](#installation)
+- [⚡ Prise en main](#prise-en-main)
+- [✨ Fonctionnalités](#fonctionnalites)
+- [🎛️ Préréglages](#prereglages)
+- [🖼️ Avant / après](#avant-apres)
+- [⌨️ Raccourcis](#raccourcis)
+- [📐 Formats et limites](#formats-et-limites)
+- [🛠️ Développement](#developpement)
+- [❓ FAQ](#faq)
+- [❤️ Crédits et licences](#credits-et-licences)
 
-## Pourquoi Liseré ?
+<a id="pourquoi"></a>
+## 💡 Pourquoi Liseré ?
 
 - **Tout reste sur votre PC.** Aucun compte, aucun envoi de fichier, aucun service externe.
   Seule la vérification de mise à jour, lancée à votre demande, contacte GitHub.
@@ -45,7 +46,8 @@ des moteurs qui tournent en local et des exports prêts à garder.
 
 <img src="assets/screenshots/video-fr.png" alt="Espace Vidéo de Liseré : timeline, transport et comparaison avant/après">
 
-## Installation
+<a id="installation"></a>
+## 📥 Installation
 
 Téléchargez [Lisere-Setup.exe](https://github.com/FGAMER768/Lisere/releases/latest/download/Lisere-Setup.exe)
 puis lancez-le. L'installateur installe Liseré pour le compte Windows courant, sans
@@ -78,16 +80,17 @@ supprime le dossier d'installation en entier.
 
 </details>
 
-## Prise en main
+<a id="prise-en-main"></a>
+## ⚡ Prise en main
 
-### Une image
+### 🖼️ Une image
 
 1. **Ouvrir** (`Ctrl+O`) : l'original s'affiche, rien n'est calculé.
 2. Choisissez un préréglage ou réglez les curseurs. **Colorimétrie** ouvre le second menu.
 3. **Améliorer l'image** (`Ctrl+Entrée`).
 4. Faites glisser le séparateur, puis **Exporter en JPEG** (`Ctrl+S`).
 
-### Une vidéo
+### 🎬 Une vidéo
 
 1. Onglet **Vidéo**, puis **Ouvrir** (`Ctrl+O`).
 2. Choisissez le moteur, le préréglage, la résolution, la cadence et les passes utiles.
@@ -97,9 +100,10 @@ supprime le dossier d'installation en entier.
 La lecture suit le temps réel : quand le moteur ne peut pas suivre, les frames sont
 sautées au lieu de ralentir le clip, et l'avant comme l'après restent sur la même image.
 
-## Fonctionnalités
+<a id="fonctionnalites"></a>
+## ✨ Fonctionnalités
 
-### Image
+### 📷 Image
 
 - Ouverture des formats pris en charge par Windows Imaging Component, avec
   normalisation des images CMJN, 16 bits, indexées, progressives ou transparentes.
@@ -116,7 +120,7 @@ sautées au lieu de ralentir le clip, et l'avant comme l'après restent sur la m
 - Estimation automatique, avertissements hors plage, estimation de durée avant un
   rendu long, annulation et export JPEG de qualité 92.
 
-### Vidéo
+### 🎥 Vidéo
 
 - Analyse FFmpeg (`ffprobe`) : résolution, cadence, durée, codecs et audio.
 - Timeline de montage, transport clavier, aperçu en direct et comparaison
@@ -135,15 +139,16 @@ sautées au lieu de ralentir le clip, et l'avant comme l'après restent sur la m
 - File d'attente séquentielle : chaque job fige ses réglages, un échec n'arrête pas
   les suivants.
 
-### Les deux espaces
+### 🧩 Les deux espaces
 
 - Interface française et anglaise, bascule immédiate et mémorisée.
 - Traitement asynchrone, dialogues d'attente, erreurs localisées sans détail brut.
 - Mise à jour depuis GitHub : contrôle SHA-256, extraction sécurisée, redémarrage.
 
-## Préréglages
+<a id="prereglages"></a>
+## 🎛️ Préréglages
 
-### Amélioration
+### ⚙️ Amélioration
 
 | Préréglage | Comportement |
 |---|---|
@@ -153,7 +158,7 @@ sautées au lieu de ralentir le clip, et l'avant comme l'après restent sur la m
 | **Auto + relatif moyen** | Estimation automatique, puis ajustement relatif moyen. |
 | **Aucune** | Aucune correction : seuls la colorimétrie et l'export s'appliquent. |
 
-### Colorimétrie
+### 🎨 Colorimétrie
 
 | Préréglage | Comportement |
 |---|---|
@@ -165,7 +170,7 @@ sautées au lieu de ralentir le clip, et l'avant comme l'après restent sur la m
 | **Manuel** | Règle saturation, luminosité, contraste et vibrance à la main. |
 | **Aucune** | Aucun étalonnage : l'image garde les couleurs de l'amélioration. |
 
-### Preset complet
+### 📦 Preset complet
 
 La carte **Preset complet** de la page Image réunit dans un seul JSON les curseurs,
 la colorimétrie, le moteur et le renforcement des visages :
@@ -212,7 +217,7 @@ est un modèle de super-résolution. Les champs inconnus sont ignorés ; un form
 version non reconnus sont refusés avec un message localisé. Si un résultat existe
 déjà, l'import le marque comme obsolète jusqu'au prochain rendu.
 
-### Presets vidéo importés
+### 🎞️ Presets vidéo importés
 
 Le bouton **Importer un preset...** lit un JSON exporté par une application
 d'amélioration vidéo et transpose ce que Liseré sait reproduire : les six curseurs,
@@ -221,7 +226,8 @@ désentrelacement. Le grain est approximé par un seul dosage de bruit. Le modè
 mentionné est affiché à titre informatif : **aucun poids propriétaire n'est chargé**,
 le rendu utilise le moteur sélectionné dans Liseré.
 
-## Avant / après
+<a id="avant-apres"></a>
+## 🖼️ Avant / après
 
 Le préréglage **Chroma** et sa courbe de tons ont été réglés puis comparés à un rendu
 de référence produit avec Topaz. Les trois images partagent le même cadrage et la même
@@ -237,7 +243,8 @@ l'étalonnage Ultron CC. La comparaison porte sur la netteté, la micro-texture 
 peau et des cheveux, le rendu du cuir et les tons moyens. Les images affichées sont
 des JPEG réduits à 900 px ; les fichiers de travail ne sont pas distribués.
 
-## Raccourcis
+<a id="raccourcis"></a>
+## ⌨️ Raccourcis
 
 | Raccourci | Image | Vidéo |
 |---|---|---|
@@ -250,12 +257,13 @@ des JPEG réduits à 900 px ; les fichiers de travail ne sont pas distribués.
 Les boutons **FR** et **EN** de la barre de titre changent la langue sans redémarrage ;
 le choix est enregistré dans `%APPDATA%\Lisere\settings.json`.
 
-## Formats et limites
+<a id="formats-et-limites"></a>
+## 📐 Formats et limites
 
 <details>
-<summary>Images, vidéos et comportement des moteurs</summary>
+<summary>🔍 Images, vidéos et comportement des moteurs</summary>
 
-### Image
+### 📷 Image
 
 - Entrées proposées : `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tif`, `.tiff`, `.gif`, `.ico`,
   `.wdp`, `.jxr`, `.webp`, `.heic`, `.heif` et `.avif`, selon les codecs Windows.
@@ -264,7 +272,7 @@ le choix est enregistré dans `%APPDATA%\Lisere\settings.json`.
 - Taille maximale du fichier : 24 Mo. Limite de décodage : 40 millions de pixels.
 - Export JPEG uniquement, qualité 92.
 
-### Vidéo
+### 🎥 Vidéo
 
 - Entrées proposées : `.mp4`, `.mov`, `.mkv`, `.avi`, `.webm`, `.m4v`, `.mts`,
   `.m2ts`, `.wmv`, `.mpg`, `.mpeg`, selon les codecs FFmpeg.
@@ -281,7 +289,7 @@ le choix est enregistré dans `%APPDATA%\Lisere\settings.json`.
   après 24 h ; l'export de l'aperçu va vers le fichier choisi. Ni l'un ni l'autre ne
   conserve l'audio.
 
-### Moteurs et presets
+### 🧠 Moteurs et presets
 
 - Les moteurs ONNX tournent sur **DirectML** quand un adaptateur DirectX 12 est
   disponible, avec un repli CPU dont la raison est affichée dans la note du moteur.
@@ -297,9 +305,10 @@ le choix est enregistré dans `%APPDATA%\Lisere\settings.json`.
 
 </details>
 
-## Développement
+<a id="developpement"></a>
+## 🛠️ Développement
 
-### Prérequis
+### 📋 Prérequis
 
 - Windows 10 ou Windows 11.
 - [SDK .NET 10](https://dotnet.microsoft.com/download) pour compiler ; l'installateur
@@ -320,7 +329,7 @@ le paquet intégré. `src/Lisere.Setup` est volontairement hors de la solution :
 `net48` et doit être construit avec `scripts/build-setup.ps1`.
 
 <details>
-<summary>Architecture et structure du dépôt</summary>
+<summary>🏗️ Architecture et structure du dépôt</summary>
 
 | Projet | Rôle |
 |---|---|
@@ -353,7 +362,7 @@ scripts/           ffmpeg, publication, installateur, signature
 </details>
 
 <details>
-<summary>Tests et publication</summary>
+<summary>🧪 Tests et publication</summary>
 
 La suite compte **463 tests** (125 Core, 24 Ai, 53 Video, 261 App) avec 0 avertissement
 de build. Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le
@@ -383,7 +392,8 @@ Le détail du paquet et des garde-fous d'extraction est dans
 
 </details>
 
-## FAQ
+<a id="faq"></a>
+## ❓ FAQ
 
 **Mes fichiers quittent-ils ma machine ?**
 Non. Tout le traitement est local. Seule la vérification de mise à jour, quand vous la
@@ -413,12 +423,13 @@ restant affiché suit la progression réelle.
 **Paramètres → Applications → Liseré**, ou `Lisere.exe --uninstall`. Les images,
 presets et réglages restent dans `%APPDATA%\Lisere`.
 
-## Crédits et licences
+<a id="credits-et-licences"></a>
+## ❤️ Crédits et licences
 
 Liseré est conçu et développé par **FGAMER768**. Il ne redistribue aucun poids, code
 ou média propriétaire.
 
-### Modèles
+### 🧠 Modèles
 
 - **YuNet** (détection de visages) : Shiqi Yu / OpenCV Zoo, licence MIT.
 - **RIFE 4.9** (interpolation) : Practical-RIFE, licence MIT.
@@ -431,13 +442,13 @@ ou média propriétaire.
 
 Les licences complètes et les empreintes sont dans [`models/README.md`](models/README.md).
 
-### Bibliothèques
+### 📚 Bibliothèques
 
 **WPF-UI**, **Fluent System Icons**, **CommunityToolkit.Mvvm**,
 **Microsoft.Extensions.Hosting**, **xUnit.net** et **Microsoft.NET.Test.Sdk**, sous
 licences MIT ou Apache-2.0 selon le projet.
 
-### Identité et références
+### 🪪 Identité et références
 
 - L'icône (`assets/LisereIcon.svg`, `assets/Lisere.ico`, `assets/LisereIcon.png`) a été
   créée pour le projet.
@@ -448,7 +459,7 @@ licences MIT ou Apache-2.0 selon le projet.
 - La courbe de tons de **Chroma** a été relevée sur un rendu Topaz ; Topaz est une
   marque de Topaz Labs. Aucun poids, code ou média Topaz n'est distribué.
 
-### Images de test et documentation
+### 🧪 Images de test et documentation
 
 - `tests/Lisere.App.Tests/TestData/face.jpg` : portrait officiel de Barack Obama par
   Pete Souza (CC BY 3.0), recadré pour les tests ; voir le README du dossier.

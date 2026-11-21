@@ -2,7 +2,7 @@
 
 <img src="assets/LisereIcon.png" width="104" alt="Liseré icon">
 
-# Liseré
+# 🖼️ Liseré
 
 **Enhance your photos and videos without sending them anywhere.**
 
@@ -18,21 +18,22 @@ engines that run locally, and exports ready to keep.
 
 <img src="assets/screenshots/image-en.png" alt="Liseré Image space: before/after comparison with Ultron CC grading">
 
-## Contents
+## 📖 Contents
 
-- [Why Liseré?](#why-liseré)
-- [Installation](#installation)
-- [Getting started](#getting-started)
-- [Features](#features)
-- [Presets](#presets)
-- [Before / after](#before--after)
-- [Shortcuts](#shortcuts)
-- [Formats and limits](#formats-and-limits)
-- [Development](#development)
-- [FAQ](#faq)
-- [Credits and licences](#credits-and-licences)
+- [💡 Why Liseré?](#why)
+- [📥 Installation](#installation)
+- [⚡ Getting started](#getting-started)
+- [✨ Features](#features)
+- [🎛️ Presets](#presets)
+- [🖼️ Before / after](#before-after)
+- [⌨️ Shortcuts](#shortcuts)
+- [📐 Formats and limits](#formats-and-limits)
+- [🛠️ Development](#development)
+- [❓ FAQ](#faq)
+- [❤️ Credits and licences](#credits)
 
-## Why Liseré?
+<a id="why"></a>
+## 💡 Why Liseré?
 
 - **Everything stays on your PC.** No account, no file upload, no external service.
   Only the optional update check, started when you ask for it, contacts GitHub.
@@ -45,7 +46,8 @@ engines that run locally, and exports ready to keep.
 
 <img src="assets/screenshots/video-en.png" alt="Liseré Video space: timeline, transport and before/after comparison">
 
-## Installation
+<a id="installation"></a>
+## 📥 Installation
 
 Download [Lisere-Setup.exe](https://github.com/FGAMER768/Lisere/releases/latest/download/Lisere-Setup.exe)
 and run it. The installer installs Liseré for the current Windows account, without
@@ -77,16 +79,17 @@ installation, because uninstalling removes the whole install folder.
 
 </details>
 
-## Getting started
+<a id="getting-started"></a>
+## ⚡ Getting started
 
-### An image
+### 🖼️ An image
 
 1. **Open** (`Ctrl+O`): the original appears, nothing is computed.
 2. Pick a preset or adjust the sliders. **Colour grading** opens the second menu.
 3. **Enhance image** (`Ctrl+Enter`).
 4. Drag the divider, then **Export as JPEG** (`Ctrl+S`).
 
-### A video
+### 🎬 A video
 
 1. Open the **Video** tab, then **Open** (`Ctrl+O`).
 2. Choose the engine, preset, resolution, frame rate and optional passes.
@@ -96,9 +99,10 @@ installation, because uninstalling removes the whole install folder.
 Playback follows real time: when the engine cannot keep up, frames are skipped instead
 of slowing the clip down, and before and after always show the same frame.
 
-## Features
+<a id="features"></a>
+## ✨ Features
 
-### Image
+### 📷 Image
 
 - Opens the formats supported by Windows Imaging Component, normalising CMYK, 16-bit,
   indexed, progressive or transparent images.
@@ -115,7 +119,7 @@ of slowing the clip down, and before and after always show the same frame.
 - Automatic estimation, out-of-range warnings, duration estimate before a long render,
   cancellation and JPEG export at quality 92.
 
-### Video
+### 🎥 Video
 
 - FFmpeg (`ffprobe`) analysis: resolution, frame rate, duration, codecs and audio.
 - Editing timeline, keyboard transport, live preview and before/after comparison on the
@@ -134,15 +138,16 @@ of slowing the clip down, and before and after always show the same frame.
 - Sequential queue: each job freezes its settings, and one failure does not stop the
   following clips.
 
-### Both spaces
+### 🧩 Both spaces
 
 - French and English UI, instant switch, remembered between sessions.
 - Asynchronous work, wait dialogs and localised errors without raw technical details.
 - GitHub updates: SHA-256 check, safe extraction and restart.
 
-## Presets
+<a id="presets"></a>
+## 🎛️ Presets
 
-### Enhancement
+### ⚙️ Enhancement
 
 | Preset | Behaviour |
 |---|---|
@@ -152,7 +157,7 @@ of slowing the clip down, and before and after always show the same frame.
 | **Auto + relative medium** | Automatic estimate, then a medium relative adjustment. |
 | **None** | No correction: only colour grading and export apply. |
 
-### Colour grading
+### 🎨 Colour grading
 
 | Preset | Behaviour |
 |---|---|
@@ -164,7 +169,7 @@ of slowing the clip down, and before and after always show the same frame.
 | **Manual** | Adjusts saturation, brightness, contrast and vibrance by hand. |
 | **None** | No grading: the image keeps the enhancement's colours. |
 
-### Complete preset
+### 📦 Complete preset
 
 The Image page's **Complete preset** card stores the sliders, colour grading, engine
 and face refinement in a single JSON file:
@@ -210,7 +215,7 @@ engine is a super-resolution model. Unknown fields are ignored; an unrecognised 
 or version is refused with a localised message. If a result already exists, importing
 marks it stale until the next render.
 
-### Imported video presets
+### 🎞️ Imported video presets
 
 The **Import preset...** button reads a JSON file exported by a video enhancement app
 and carries over what Liseré can reproduce: the six controls, original detail, noise,
@@ -218,7 +223,8 @@ FHD/4K size, frame rate, stabilisation and deinterlacing. Grain is approximated 
 single noise amount. The mentioned model is shown for information only: **no
 proprietary weights are loaded**, and rendering uses the engine selected in Liseré.
 
-## Before / after
+<a id="before-after"></a>
+## 🖼️ Before / after
 
 The **Chroma** preset and its tone curve were tuned and then compared with a reference
 render produced with Topaz. The three images share the same crop and resolution
@@ -233,7 +239,8 @@ CC preset. **Liseré** is the local render with Chroma and Ultron CC. The compar
 covers sharpness, skin and hair micro-texture, leather rendering and midtones. The
 displayed images are JPEGs reduced to 900 px; the working files are not distributed.
 
-## Shortcuts
+<a id="shortcuts"></a>
+## ⌨️ Shortcuts
 
 | Shortcut | Image | Video |
 |---|---|---|
@@ -246,12 +253,13 @@ displayed images are JPEGs reduced to 900 px; the working files are not distribu
 The **FR** and **EN** buttons in the title bar switch language without a restart; the
 choice is stored in `%APPDATA%\Lisere\settings.json`.
 
-## Formats and limits
+<a id="formats-and-limits"></a>
+## 📐 Formats and limits
 
 <details>
-<summary>Images, videos and engine behaviour</summary>
+<summary>🔍 Images, videos and engine behaviour</summary>
 
-### Image
+### 📷 Image
 
 - Offered inputs: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tif`, `.tiff`, `.gif`, `.ico`,
   `.wdp`, `.jxr`, `.webp`, `.heic`, `.heif` and `.avif`, depending on Windows codecs.
@@ -260,7 +268,7 @@ choice is stored in `%APPDATA%\Lisere\settings.json`.
 - Maximum file size: 24 MB. Decoding limit: 40 megapixels.
 - JPEG export only, quality 92.
 
-### Video
+### 🎥 Video
 
 - Offered inputs: `.mp4`, `.mov`, `.mkv`, `.avi`, `.webm`, `.m4v`, `.mts`, `.m2ts`,
   `.wmv`, `.mpg`, `.mpeg`, depending on FFmpeg codecs.
@@ -275,7 +283,7 @@ choice is stored in `%APPDATA%\Lisere\settings.json`.
 - The one-second preview writes a temporary MP4 to `%TEMP%\Lisere\previews`, purged
   after 24 h; preview export goes to the chosen file. Neither keeps audio.
 
-### Engines and presets
+### 🧠 Engines and presets
 
 - ONNX engines run on **DirectML** when a DirectX 12 adapter is available, with a CPU
   fallback whose reason is shown in the engine note.
@@ -289,9 +297,10 @@ choice is stored in `%APPDATA%\Lisere\settings.json`.
 
 </details>
 
-## Development
+<a id="development"></a>
+## 🛠️ Development
 
-### Requirements
+### 📋 Requirements
 
 - Windows 10 or Windows 11.
 - [.NET 10 SDK](https://dotnet.microsoft.com/download) to build; the installer does not
@@ -312,7 +321,7 @@ In Visual Studio, open `Lisere.slnx`, set `src/Lisere` as the startup project an
 be built with `scripts/build-setup.ps1`.
 
 <details>
-<summary>Architecture and repository layout</summary>
+<summary>🏗️ Architecture and repository layout</summary>
 
 | Project | Role |
 |---|---|
@@ -345,7 +354,7 @@ scripts/           ffmpeg, publishing, installer, signing
 </details>
 
 <details>
-<summary>Tests and publishing</summary>
+<summary>🧪 Tests and publishing</summary>
 
 The suite has **463 tests** (125 Core, 24 Ai, 53 Video, 261 App) with 0 build warnings.
 Video integration tests generate a clip with FFmpeg and check rendering, audio,
@@ -373,7 +382,8 @@ and extraction safeguards are in [`Update/README.md`](Update/README.md).
 
 </details>
 
-## FAQ
+<a id="faq"></a>
+## ❓ FAQ
 
 **Do my files leave my machine?**
 No. All processing is local. Only the update check, when you ask for it, contacts GitHub.
@@ -402,12 +412,13 @@ render follows real progress.
 **Settings → Apps → Liseré**, or `Lisere.exe --uninstall`. Images, presets and settings
 remain in `%APPDATA%\Lisere`.
 
-## Credits and licences
+<a id="credits"></a>
+## ❤️ Credits and licences
 
 Liseré is designed and developed by **FGAMER768**. It redistributes no proprietary
 weights, code or media.
 
-### Models
+### 🧠 Models
 
 - **YuNet** (face detection): Shiqi Yu / OpenCV Zoo, MIT licence.
 - **RIFE 4.9** (interpolation): Practical-RIFE, MIT licence.
@@ -420,13 +431,13 @@ weights, code or media.
 
 Full licences and hashes are in [`models/README.md`](models/README.md).
 
-### Libraries
+### 📚 Libraries
 
 **WPF-UI**, **Fluent System Icons**, **CommunityToolkit.Mvvm**,
 **Microsoft.Extensions.Hosting**, **xUnit.net** and **Microsoft.NET.Test.Sdk**, under MIT
 or Apache-2.0 licences depending on the project.
 
-### Identity and references
+### 🪪 Identity and references
 
 - The icon (`assets/LisereIcon.svg`, `assets/Lisere.ico`, `assets/LisereIcon.png`) was
   created for the project.
@@ -436,7 +447,7 @@ or Apache-2.0 licences depending on the project.
 - The **Chroma** tone curve was measured on a Topaz render; Topaz is a trademark of
   Topaz Labs. No Topaz weights, code or media are distributed.
 
-### Test images and documentation
+### 🧪 Test images and documentation
 
 - `tests/Lisere.App.Tests/TestData/face.jpg`: official portrait of Barack Obama by Pete
   Souza (CC BY 3.0), cropped for tests; see the folder README.
