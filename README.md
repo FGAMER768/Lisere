@@ -246,7 +246,8 @@ sont des JPEG réduits à 900 px ; les fichiers de travail ne sont pas distribu�
 ### 🧪 Deux démonstrations + un bonus upscale
 
 Deux cas générés par le pipeline de la page Image, avec les réglages exacts, et un
-bonus d'upscale ×4. Chaque comparatif inclut un détail à 100 %.
+bonus d'upscale ×4. Chaque comparatif se lit de gauche à droite : avant, puis après ;
+la seconde rangée est un détail à 100 %.
 
 **1. Photo 1608 px — Auto + Ultron CC**
 

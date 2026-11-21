@@ -242,7 +242,8 @@ table images are JPEGs reduced to 900 px; the working files are not distributed.
 ### 🧪 Two demonstrations + an upscale bonus
 
 Two cases produced by the Image page pipeline, with the exact settings, plus an ×4
-upscale bonus. Each comparison includes a 100% detail.
+upscale bonus. Each comparison reads left to right: before, then after; the second
+row is a 100% detail.
 
 **1. 1608 px photo — Auto + Ultron CC**
 
