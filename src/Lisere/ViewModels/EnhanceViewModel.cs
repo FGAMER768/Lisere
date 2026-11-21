@@ -145,13 +145,15 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         IEnhancementOrchestrator orchestrator,
         IDialogService dialogService,
         ILocalizationService localization,
-        IReadOnlyList<IFrameEnhancer>? engines = null)
+        IReadOnlyList<IFrameEnhancer>? engines = null,
+        EngineCalibrationStore? calibration = null)
     {
         _fileDialogService = fileDialogService;
         _imageCodec = imageCodec;
         _orchestrator = orchestrator;
         _dialogService = dialogService;
         _localization = localization;
+        _calibration = calibration ?? new EngineCalibrationStore();
         Engines = engines ?? [];
         SelectDefaultEngine();
 
@@ -364,7 +366,11 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
         // Le détail multi-échelles coûte ~2,4 s par mégapixel : sur une grande
         // image, on annonce la durée avant de lancer plutôt que de la subir.
-        var estimate = ImageRenderEstimator.Estimate(_source, request.Mode, SelectedEngine);
+        var estimate = ImageRenderEstimator.Estimate(
+            _source,
+            request.Mode,
+            SelectedEngine,
+            _calibration);
         var isLongRender = estimate >= ImageRenderEstimator.ConfirmationThreshold;
         if (isLongRender &&
             !await _dialogService.ConfirmRenderAsync(ImageRenderPlanFactory.Create(
@@ -374,7 +380,9 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
                 SelectedPreset?.Label ?? string.Empty,
                 SelectedColorPreset?.Label ?? string.Empty,
                 estimate,
-                BeforeImage)))
+                BeforeImage,
+                SelectedEngine,
+                SelectedEngine is { } engine ? _calibration.ProviderFor(engine.Id) : null)))
         {
             return;
         }
@@ -409,6 +417,13 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
                 progress is null ? request : request with { Progress = progress },
                 cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
+
+            // Le rendu vient de mesurer son propre coût : la prochaine
+            // estimation sur cette machine en profitera.
+            if (result.Measurement is { } measurement)
+            {
+                _calibration.Record(measurement);
+            }
 
             _enhanced = result.Image;
 

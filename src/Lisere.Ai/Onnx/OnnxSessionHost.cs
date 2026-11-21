@@ -21,7 +21,8 @@ internal sealed class OnnxSessionHost : IDisposable
         _provider = provider;
     }
 
-    public string ProviderName { get; private set; } = "non chargé";
+    /// <summary>Nul tant que la session n'a pas été ouverte.</summary>
+    public string? ProviderName { get; private set; }
 
     public string? FallbackReason { get; private set; }
 
@@ -67,7 +68,7 @@ internal sealed class OnnxSessionHost : IDisposable
         {
             _session?.Dispose();
             _session = null;
-            ProviderName = "non chargé";
+            ProviderName = null;
         }
     }
 }

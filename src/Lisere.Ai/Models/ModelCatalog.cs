@@ -48,6 +48,7 @@ public sealed class ModelCatalog
 
         var models = document.Models
             .Select(manifest => Resolve(directory, manifest))
+            .Concat(LoadCustomModels(directory))
             .ToArray();
 
         return new ModelCatalog(directory, models);
@@ -113,6 +114,17 @@ public sealed class ModelCatalog
                 $"Fichier de modèle absent : {manifest.File}");
         }
 
+        // Un modèle fourni par l'utilisateur n'a pas d'empreinte épinglée : il
+        // tourne, signalé, plutôt que d'exiger de lui un hash qu'il n'a pas.
+        if (string.IsNullOrWhiteSpace(manifest.Sha256))
+        {
+            return new CatalogModel(
+                manifest,
+                fullPath,
+                false,
+                "Modèle local, empreinte non vérifiée.");
+        }
+
         var actual = ComputeSha256(fullPath);
         var verified = string.Equals(actual, manifest.Sha256, StringComparison.OrdinalIgnoreCase);
 
@@ -121,6 +133,46 @@ public sealed class ModelCatalog
             fullPath,
             verified,
             verified ? null : $"Empreinte SHA-256 inattendue pour {manifest.File}.");
+    }
+
+    /// <summary>
+    /// Lit les manifestes déposés dans `custom/`, à côté du catalogue livré. Un
+    /// fichier illisible est ignoré sans empêcher le chargement du reste.
+    /// </summary>
+    private static IEnumerable<CatalogModel> LoadCustomModels(string directory)
+    {
+        var folder = Path.Combine(directory, "custom");
+        if (!System.IO.Directory.Exists(folder))
+        {
+            return [];
+        }
+
+        var models = new List<CatalogModel>();
+        foreach (var path in System.IO.Directory
+            .EnumerateFiles(folder, "*.json")
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var manifest = JsonSerializer.Deserialize<ModelManifest>(
+                    File.ReadAllText(path),
+                    JsonOptions);
+
+                if (manifest is null || string.IsNullOrWhiteSpace(manifest.Id))
+                {
+                    continue;
+                }
+
+                models.Add(Resolve(directory, manifest));
+            }
+            catch (Exception exception) when (
+                exception is IOException or JsonException or UnauthorizedAccessException)
+            {
+                // Un manifeste cassé ne doit pas priver l'utilisateur des autres.
+            }
+        }
+
+        return models;
     }
 
     public static string ComputeSha256(string path)

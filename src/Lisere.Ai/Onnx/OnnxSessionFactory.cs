@@ -21,6 +21,10 @@ public sealed record OnnxSessionResult(
 /// </summary>
 public static class OnnxSessionFactory
 {
+    /// <summary>Version du moteur d'exécution, qui fait partie de la clé de calibration.</summary>
+    public static string RuntimeVersion { get; } =
+        typeof(InferenceSession).Assembly.GetName().Version?.ToString(3) ?? "inconnue";
+
     public static OnnxSessionResult Create(
         string modelPath,
         OnnxExecutionProvider requested = OnnxExecutionProvider.Auto,

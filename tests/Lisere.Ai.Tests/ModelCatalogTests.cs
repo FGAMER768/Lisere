@@ -41,6 +41,71 @@ public class ModelCatalogTests
     }
 
     [Fact]
+    public void ALocalModelWithoutFingerprintRunsAndIsFlagged()
+    {
+        var source = ModelCatalog.DiscoverDirectory();
+        Assert.NotNull(source);
+
+        var temporary = Path.Combine(Path.GetTempPath(), $"lisere-local-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(temporary, "onnx"));
+        Directory.CreateDirectory(Path.Combine(temporary, "custom"));
+
+        try
+        {
+            File.Copy(
+                Path.Combine(source, "catalog.json"),
+                Path.Combine(temporary, "catalog.json"));
+            File.WriteAllBytes(Path.Combine(temporary, "onnx", "mine.onnx"), [1, 2, 3]);
+            WriteManifest(temporary, "mine.json", "mon-modele", sha256: string.Empty);
+            WriteManifest(temporary, "wrong.json", "empreinte-fausse", sha256: "deadbeef");
+
+            var catalog = ModelCatalog.Load(temporary);
+
+            var local = Assert.Single(
+                catalog.Models,
+                candidate => candidate.Manifest.Id == "mon-modele");
+            Assert.False(local.IsVerified);
+            Assert.True(local.IsRunnable);
+            Assert.Contains("empreinte", local.Issue, StringComparison.Ordinal);
+
+            // Une empreinte fournie mais fausse reste un refus, pas un badge.
+            var wrong = Assert.Single(
+                catalog.Models,
+                candidate => candidate.Manifest.Id == "empreinte-fausse");
+            Assert.False(wrong.IsRunnable);
+        }
+        finally
+        {
+            Directory.Delete(temporary, recursive: true);
+        }
+    }
+
+    private static void WriteManifest(
+        string directory,
+        string fileName,
+        string id,
+        string sha256) =>
+        File.WriteAllText(
+            Path.Combine(directory, "custom", fileName),
+            $$"""
+            {
+              "id": "{{id}}",
+              "displayName": "{{id}}",
+              "family": "restoration",
+              "file": "onnx/mine.onnx",
+              "sha256": "{{sha256}}",
+              "scale": 1,
+              "inputName": "input",
+              "outputName": "output",
+              "tileSize": 256,
+              "plane": "rgb",
+              "license": "local",
+              "source": "utilisateur",
+              "description": "Modèle déposé à la main."
+            }
+            """);
+
+    [Fact]
     public void ATamperedModelIsReportedUnverified()
     {
         var source = ModelCatalog.DiscoverDirectory();

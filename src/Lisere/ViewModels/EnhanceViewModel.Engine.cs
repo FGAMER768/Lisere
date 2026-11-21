@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Lisere.Ai.Enhancement;
+using Lisere.Services;
 
 namespace Lisere.ViewModels;
 
@@ -10,6 +11,8 @@ namespace Lisere.ViewModels;
 /// </summary>
 public sealed partial class EnhanceViewModel
 {
+    private readonly EngineCalibrationStore _calibration;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(EngineNote))]
     [NotifyPropertyChangedFor(nameof(HasModelSelected))]
@@ -34,6 +37,7 @@ public sealed partial class EnhanceViewModel
         { IsAvailable: false } engine => Strings.Format(
             "engineUnavailable",
             engine.UnavailableReason ?? Strings["engineMissing"]),
+        { IsVerified: false } engine => $"{engine.Description} {Strings["engineLocalModel"]}",
         { } engine => engine.Description
     };
 

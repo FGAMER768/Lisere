@@ -58,6 +58,9 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                     synthesizeSkinTexture: true,
                     faces: DetectFaces(request, cancellationToken));
 
+            // Ce que le modèle a réellement coûté, à confier au cache local.
+            var measurement = engine?.LastMeasurement;
+
             // L'étalonnage est un étage distinct : il s'applique après
             // l'amélioration, quel que soit le préréglage IA choisi.
             if (gradingShare > 0.0)
@@ -100,7 +103,8 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                 output,
                 parameters,
                 request.Mode,
-                ParameterValidator.Validate(parameters));
+                ParameterValidator.Validate(parameters),
+                measurement);
         }, cancellationToken);
     }
 

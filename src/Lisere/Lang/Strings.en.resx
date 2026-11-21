@@ -861,6 +861,12 @@
   <data name="imagePlanConfirm" xml:space="preserve">
     <value>Start enhancing</value>
   </data>
+  <data name="imagePlanEngine" xml:space="preserve">
+    <value>Engine</value>
+  </data>
+  <data name="engineLocalModel" xml:space="preserve">
+    <value>Local model, unchecked fingerprint: it runs at your own risk.</value>
+  </data>
   <data name="imageEstimateText" xml:space="preserve">
     <value>≈ {0} · {1:0.#} MP</value>
   </data>

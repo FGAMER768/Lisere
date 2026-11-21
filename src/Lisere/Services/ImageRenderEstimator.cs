@@ -21,28 +21,57 @@ public static class ImageRenderEstimator
     private const double SecondsPerMegapixelWithoutEnhancement = 0.15;
     private const double FixedOverheadSeconds = 0.3;
 
+    // La première image d'une session paie sa compilation DirectML ; les
+    // suivantes non, d'où un coût fixe compté seulement quand le provider n'est
+    // pas encore connu.
+    private const double SessionStartupSeconds = 1.5;
+
     public static TimeSpan Estimate(
         RgbImage source,
         EnhancementMode mode,
-        IFrameEnhancer? engine = null)
+        IFrameEnhancer? engine = null,
+        EngineCalibrationStore? calibration = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         var megapixels = source.Width * source.Height / 1_000_000.0;
 
-        var perMegapixel = mode is EnhancementMode.None
-            ? SecondsPerMegapixelWithoutEnhancement
-            : EngineCost(engine);
+        if (mode is EnhancementMode.None)
+        {
+            return TimeSpan.FromSeconds(
+                FixedOverheadSeconds + (megapixels * SecondsPerMegapixelWithoutEnhancement));
+        }
 
-        return TimeSpan.FromSeconds(FixedOverheadSeconds + (megapixels * perMegapixel));
+        var startup = EnhancementRequest.IsNeuralEngine(engine) && engine!.ActiveProvider is null
+            ? SessionStartupSeconds
+            : 0.0;
+
+        return TimeSpan.FromSeconds(
+            FixedOverheadSeconds + startup + (megapixels * EngineCost(engine, calibration)));
     }
 
     /// <summary>
-    /// Le coût déclaré par le modèle, quand il y en a un ; le pipeline classique
-    /// sinon — une borne basse, jamais un chiffre inventé.
+    /// Le coût mesuré sur cette machine d'abord, puis la graine du catalogue,
+    /// puis le pipeline classique — une borne basse, jamais un chiffre inventé.
     /// </summary>
-    private static double EngineCost(IFrameEnhancer? engine) =>
-        EnhancementRequest.IsNeuralEngine(engine) && engine is { SecondsPerMegapixel: > 0.0 } measured
-            ? measured.SecondsPerMegapixel
+    private static double EngineCost(
+        IFrameEnhancer? engine,
+        EngineCalibrationStore? calibration)
+    {
+        if (engine is null || !EnhancementRequest.IsNeuralEngine(engine))
+        {
+            return SecondsPerMegapixel;
+        }
+
+        if (calibration is not null &&
+            engine.CalibrationKey is { } key &&
+            calibration.SecondsPerMegapixel(key) is { } measured)
+        {
+            return measured;
+        }
+
+        return engine.SecondsPerMegapixel > 0.0
+            ? engine.SecondsPerMegapixel
             : SecondsPerMegapixel;
+    }
 }

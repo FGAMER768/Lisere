@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Lisere.Ai.Models;
 using Lisere.Ai.Onnx;
 using Lisere.Core.Enhancement;
@@ -33,7 +34,7 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
     }
 
     /// <summary>Provider actually used once the session has been created.</summary>
-    public string ExecutionProvider => _host.ProviderName;
+    public string ExecutionProvider => _host.ProviderName ?? "non chargé";
 
     public string? ProviderFallbackReason => _host.FallbackReason;
 
@@ -45,13 +46,28 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
 
     public string Description => _model.Manifest.Description;
 
-    public bool IsAvailable => _model.IsVerified;
+    public bool IsAvailable => _model.IsRunnable;
+
+    public bool IsVerified => _model.IsVerified;
 
     public string? UnavailableReason => _model.Issue;
 
     public int NativeScale => Math.Clamp(_model.Manifest.Scale, 1, 4);
 
     public double SecondsPerMegapixel => _model.Manifest.SecondsPerMegapixel;
+
+    public string? ActiveProvider => _host.ProviderName;
+
+    public EngineCalibrationKey? CalibrationKey => MeasurementKey;
+
+    public EngineMeasurement? LastMeasurement { get; private set; }
+
+    private EngineCalibrationKey MeasurementKey => new(
+        _model.Manifest.Id,
+        _model.Manifest.Sha256,
+        _host.ProviderName ?? "inconnu",
+        _tileSize,
+        OnnxSessionFactory.RuntimeVersion);
 
     public RgbImage Enhance(
         RgbImage source,
@@ -67,6 +83,11 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
                 UnavailableReason ?? "Le modèle n'est pas disponible.");
         }
 
+        // Ouvrir la session hors chrono : son démarrage se paie une fois, et la
+        // mesure doit décrire le coût qui revient à chaque image.
+        _host.Get(ValidateSession);
+        var stopwatch = Stopwatch.StartNew();
+
         // Pre-clean with the classical knobs (compression, noise, AA/deblur).
         var preCleaned = EnhancementPipeline.Enhance(
             source,
@@ -76,6 +97,12 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
 
         var scale = NativeScale;
         var upscaledLuma = UpscaleLuma(preCleaned, scale, request.Progress, cancellationToken);
+        stopwatch.Stop();
+
+        LastMeasurement = new EngineMeasurement(
+            MeasurementKey,
+            source.Width * source.Height / 1_000_000.0,
+            stopwatch.Elapsed);
 
         var nativeWidth = checked(preCleaned.Width * scale);
         var nativeHeight = checked(preCleaned.Height * scale);

@@ -170,6 +170,31 @@ public class EnhancementOrchestratorTests
     }
 
     [Fact]
+    public async Task TheRenderCarriesItsOwnCostMeasurement()
+    {
+        var engine = new ReportingEngine();
+        var request = new EnhancementRequest(
+            new RgbImage(32, 32),
+            EnhancementMode.Manual,
+            new EnhancementParameters(0, 0, 0, 20, 0, 0),
+            0,
+            0,
+            ColorPreset.None) with
+        {
+            Engine = engine
+        };
+
+        var result = await new EnhancementOrchestrator().EnhanceAsync(
+            request,
+            CancellationToken.None);
+
+        Assert.NotNull(result.Measurement);
+        var measurement = result.Measurement!.Value;
+        Assert.Equal("test.reporting", measurement.Key.ModelId);
+        Assert.Equal(4.0, measurement.SecondsPerMegapixel, 3);
+    }
+
+    [Fact]
     public async Task AClassicalEngineIsNeverRun()
     {
         var engine = new ReportingEngine { Family = EnhancementEngineFamily.Classical };
@@ -192,6 +217,8 @@ public class EnhancementOrchestratorTests
     private sealed class ReportingEngine : IFrameEnhancer
     {
         public int Calls { get; private set; }
+
+        public EngineMeasurement? LastMeasurement { get; private set; }
 
         public string Id => "test.reporting";
 
@@ -219,6 +246,11 @@ public class EnhancementOrchestratorTests
             {
                 request.Progress?.Report(percent);
             }
+
+            LastMeasurement = new EngineMeasurement(
+                new EngineCalibrationKey("test.reporting", "sha", "CPU", 256, "1.0"),
+                0.5,
+                TimeSpan.FromSeconds(2));
 
             return source;
         }

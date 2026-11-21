@@ -35,7 +35,8 @@ public sealed record EnhancementResult(
     RgbImage Image,
     EnhancementParameters Parameters,
     EnhancementMode Mode,
-    IReadOnlyList<ParameterWarning> Warnings);
+    IReadOnlyList<ParameterWarning> Warnings,
+    EngineMeasurement? Measurement = null);
 
 public interface IEnhancementOrchestrator
 {

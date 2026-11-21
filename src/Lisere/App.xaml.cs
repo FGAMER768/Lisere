@@ -36,6 +36,8 @@ public partial class App : Application
                 services.AddSingleton<IDialogService>(
                     provider => provider.GetRequiredService<DialogService>());
                 services.AddSingleton<IImageCodec, ImageCodec>();
+                services.AddSingleton(
+                    new EngineCalibrationStore(EngineCalibrationStore.DefaultPath));
                 services.AddSingleton<IFaceDetector, LazyFaceDetector>();
                 services.AddSingleton<IEnhancementOrchestrator, EnhancementOrchestrator>();
                 services.AddSingleton<EnhanceViewModel>();

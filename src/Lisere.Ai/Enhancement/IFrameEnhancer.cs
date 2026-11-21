@@ -74,6 +74,28 @@ public interface IFrameEnhancer : IDisposable
     /// </summary>
     double SecondsPerMegapixel => 0.0;
 
+    /// <summary>
+    /// Provider réellement chargé, une fois la session ouverte. Nul tant que le
+    /// modèle n'a pas tourné : on ne prétend pas savoir à l'avance sur quoi il
+    /// tombera.
+    /// </summary>
+    string? ActiveProvider => null;
+
+    /// <summary>Clé de la mesure de coût sur cette machine, nulle sans modèle.</summary>
+    EngineCalibrationKey? CalibrationKey => null;
+
+    /// <summary>
+    /// Mesure relevée par le dernier <see cref="Enhance"/>, hors chargement de
+    /// session ; lue juste après le rendu pour alimenter le cache local.
+    /// </summary>
+    EngineMeasurement? LastMeasurement => null;
+
+    /// <summary>
+    /// Faux pour un modèle fourni par l'utilisateur : il tourne, mais rien ne
+    /// prouve que le fichier est celui qu'il prétend être.
+    /// </summary>
+    bool IsVerified => true;
+
     RgbImage Enhance(
         RgbImage source,
         FrameEnhancementRequest request,

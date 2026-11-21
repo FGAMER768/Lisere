@@ -330,6 +330,10 @@ Le même choix est proposé sur la page **Image**, avec **Lisere Classic** par d
 
 L'estimation annoncée avant un long rendu et la barre de progression suivent le moteur choisi : un modèle neuronal se compte en dizaines de secondes par mégapixel, et la barre avance par tuiles au lieu de sauter à la fin.
 
+Cette durée s'affine avec l'usage : chaque rendu chronomètre son moteur, et le résultat est mémorisé par modèle, empreinte, provider et version d'ONNX Runtime dans le cache local de Windows (`%LOCALAPPDATA%\Lisere\engine-calibration.json`). La confirmation affiche ensuite le moteur et le provider réellement utilisés, par exemple « Nettoyage photo 1× · DirectML » ; sur une autre carte graphique, c'est la mesure de cette machine qui compte, pas le chiffre de référence livré.
+
+Un modèle ONNX personnel déposé dans `models/custom/` (voir `models/README.md`) apparaît dans la même liste, avec la mention « Modèle local, empreinte non vérifiée ».
+
 ### 6.3 Importer un preset vidéo
 
 Le bouton **Importer un preset...** lit un fichier JSON et applique ce que Liseré sait reproduire :

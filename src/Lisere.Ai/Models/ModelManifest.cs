@@ -22,4 +22,11 @@ public sealed record CatalogModel(
     ModelManifest Manifest,
     string FullPath,
     bool IsVerified,
-    string? Issue);
+    string? Issue)
+{
+    /// <summary>
+    /// Un modèle vérifié tourne ; un modèle local sans empreinte aussi, mais il
+    /// est signalé à l'utilisateur. Une empreinte qui ne correspond pas bloque.
+    /// </summary>
+    public bool IsRunnable => IsVerified || string.IsNullOrWhiteSpace(Manifest.Sha256);
+}

@@ -861,6 +861,12 @@
   <data name="imagePlanConfirm" xml:space="preserve">
     <value>Lancer l'amélioration</value>
   </data>
+  <data name="imagePlanEngine" xml:space="preserve">
+    <value>Moteur</value>
+  </data>
+  <data name="engineLocalModel" xml:space="preserve">
+    <value>Modèle local, empreinte non vérifiée : il tourne sous votre responsabilité.</value>
+  </data>
   <data name="imageEstimateText" xml:space="preserve">
     <value>≈ {0} · {1:0.#} Mpx</value>
   </data>

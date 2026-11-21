@@ -36,6 +36,14 @@ public sealed class FrameLookEnhancer : IFrameEnhancer
 
     public double SecondsPerMegapixel => _inner.SecondsPerMegapixel;
 
+    public string? ActiveProvider => _inner.ActiveProvider;
+
+    public EngineCalibrationKey? CalibrationKey => _inner.CalibrationKey;
+
+    public EngineMeasurement? LastMeasurement => _inner.LastMeasurement;
+
+    public bool IsVerified => _inner.IsVerified;
+
     /// <summary>
     /// An engine is shown to people: a list box or a screen reader must read the
     /// model's name, not the type of the wrapper.

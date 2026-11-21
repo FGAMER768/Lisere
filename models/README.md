@@ -62,6 +62,37 @@ même contrat `1×3×H×W → 1×3×4H×4W` : déposer le fichier sous `models/o
 ajouter une entrée `plane: "rgb"` dans `catalog.json`, et le moteur RVB s'en sert
 sans changement de code.
 
+## Modèles locaux
+
+Déposez un manifeste JSON dans `custom/`, à côté de ce fichier, et le modèle
+apparaît dans la liste des moteurs, après les modèles livrés :
+
+```json
+{
+  "id": "mon-modele",
+  "displayName": "Mon modèle",
+  "family": "restoration",
+  "file": "onnx/mon-modele.onnx",
+  "sha256": "",
+  "scale": 1,
+  "inputName": "input",
+  "outputName": "output",
+  "tileSize": 256,
+  "plane": "rgb",
+  "license": "local",
+  "source": "utilisateur",
+  "description": "Débruitage maison, export ONNX de mon propre entraînement."
+}
+```
+
+- `sha256` vide : le modèle tourne, signalé « Modèle local, empreinte non
+  vérifiée » sur la page Image. C'est le cas normal d'un fichier qu'on a
+  soi-même exporté.
+- `sha256` renseigné mais faux : le modèle est refusé, exactement comme un
+  modèle livré altéré.
+- `file` est relatif au dossier `models/`, pas au dossier `custom/`.
+- Un manifeste illisible est ignoré sans priver les autres du chargement.
+
 ## Modèle de nettoyage 1× RealPLKSR
 
 - **Source** : <https://github.com/Phhofm/models/releases/tag/1xDeNoise_realplksr_otf>

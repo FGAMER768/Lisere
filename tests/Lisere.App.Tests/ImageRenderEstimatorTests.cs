@@ -19,9 +19,10 @@ public class ImageRenderEstimatorTests
             EnhancementMode.Manual,
             new FakeEngine(secondsPerMegapixel: 64));
 
-        // 0,3 s fixes + 2,4 s par mégapixel pour le pipeline classique.
+        // 0,3 s fixes + 2,4 s par mégapixel pour le pipeline classique ; le
+        // premier rendu neuronal ajoute en plus l'ouverture de sa session.
         Assert.InRange(classical.TotalSeconds, 2.6, 2.8);
-        Assert.InRange(neural.TotalSeconds, 64.2, 64.4);
+        Assert.InRange(neural.TotalSeconds, 65.7, 65.9);
     }
 
     [Fact]
@@ -48,12 +49,35 @@ public class ImageRenderEstimatorTests
                 source,
                 EnhancementMode.Manual,
                 new FakeEngine(64, available: false)));
-        Assert.Equal(
-            generic,
-            ImageRenderEstimator.Estimate(
-                source,
-                EnhancementMode.Manual,
-                new FakeEngine(secondsPerMegapixel: 0)));
+        // Sans coût déclaré, la pente reste celle du pipeline classique ; le
+        // démarrage de session s'y ajoute, aucune mesure ne pouvant l'éviter.
+        var unmeasured = ImageRenderEstimator.Estimate(
+            source,
+            EnhancementMode.Manual,
+            new FakeEngine(secondsPerMegapixel: 0));
+        Assert.Equal(generic.TotalSeconds + 1.5, unmeasured.TotalSeconds, 3);
+    }
+
+    [Fact]
+    public void TheMeasuredCostBeatsTheCatalogueSeed()
+    {
+        var key = new EngineCalibrationKey("test.engine", "sha", "CPU", 256, "1.0");
+        var calibration = new EngineCalibrationStore();
+        calibration.Record(new EngineMeasurement(key, 1.0, TimeSpan.FromSeconds(5)));
+        var engine = new FakeEngine(secondsPerMegapixel: 64)
+        {
+            CalibrationKey = key,
+            ActiveProvider = "DirectML"
+        };
+
+        var estimate = ImageRenderEstimator.Estimate(
+            new RgbImage(1000, 1000),
+            EnhancementMode.Manual,
+            engine,
+            calibration);
+
+        // 5 s/Mpx mesurés ici, pas les 64 s/Mpx de la machine de référence.
+        Assert.InRange(estimate.TotalSeconds, 5.2, 5.4);
     }
 
     [Fact]
@@ -84,6 +108,10 @@ public class ImageRenderEstimatorTests
         public string DisplayName => "Moteur de test";
 
         public EnhancementEngineFamily Family => family;
+
+        public EngineCalibrationKey? CalibrationKey { get; init; }
+
+        public string? ActiveProvider { get; init; }
 
         public string Description => "Moteur de test.";
 

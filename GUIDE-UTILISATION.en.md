@@ -330,6 +330,10 @@ The same choice is offered on the **Image** page, with **Lisere Classic** as the
 
 The estimate announced before a long render and the progress bar both follow the chosen engine: a neural model costs tens of seconds per megapixel, and the bar moves tile by tile instead of jumping at the end.
 
+That duration sharpens with use: every render times its engine, and the result is remembered per model, fingerprint, provider and ONNX Runtime version in `%LOCALAPPDATA%\Lisere\engine-calibration.json`. The confirmation then shows the engine and the provider actually used, for example "1x photo cleaning · DirectML"; on another graphics card the measurement from that machine is what counts, not the shipped reference figure.
+
+A personal ONNX model dropped into `models/custom/` (see `models/README.md`) appears in the same list, marked "Local model, unchecked fingerprint".
+
 ### 6.3 Importing a video preset
 
 The **Import preset...** button reads a JSON file and applies what Liseré can reproduce:
