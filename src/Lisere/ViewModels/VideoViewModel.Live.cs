@@ -108,7 +108,9 @@ public sealed partial class VideoViewModel
     /// </summary>
     private async Task PlayAsync()
     {
-        if (IsPlaying || !CanMovePlayhead())
+        if (IsPlaying ||
+            !CanMovePlayhead() ||
+            _video is not { DurationSeconds: > 0, FrameRate: > 0 } video)
         {
             return;
         }
@@ -127,11 +129,6 @@ public sealed partial class VideoViewModel
 
         try
         {
-            if (_video is not { DurationSeconds: > 0, FrameRate: > 0 } video)
-            {
-                return;
-            }
-
             var frameRate = video.FrameRate;
             var lastFrame = (long)Math.Floor(
                 video.DurationSeconds * MaximumPreviewPositionPercent / 100.0 * frameRate);
@@ -143,7 +140,7 @@ public sealed partial class VideoViewModel
             var clock = Stopwatch.StartNew();
             var shownFrame = startFrame - 1;
 
-            while (!cancellation.IsCancellationRequested)
+            while (shownFrame < lastFrame && !cancellation.IsCancellationRequested)
             {
                 // Position due maintenant : si le moteur a pris du retard, la
                 // cible a sauté des frames et la lecture reste au temps réel.
@@ -151,12 +148,12 @@ public sealed partial class VideoViewModel
                     startFrame + (long)Math.Floor(clock.Elapsed.TotalSeconds * frameRate),
                     lastFrame);
 
-                if (targetFrame <= shownFrame)
+                if (targetFrame == shownFrame)
                 {
-                    var nextFrameAt = (shownFrame + 1 - startFrame) / frameRate;
-                    var delay = nextFrameAt - clock.Elapsed.TotalSeconds;
+                    var remaining = (shownFrame + 1 - startFrame) / frameRate
+                        - clock.Elapsed.TotalSeconds;
                     await Task.Delay(
-                        TimeSpan.FromMilliseconds(Math.Max(1, delay * 1000)),
+                        TimeSpan.FromSeconds(Math.Max(0.001, remaining)),
                         cancellation.Token);
                     continue;
                 }
@@ -166,15 +163,7 @@ public sealed partial class VideoViewModel
 
                 // Pendant la lecture, l'avant attend l'après : les deux moitiés
                 // doivent montrer la même frame, pas deux instants voisins.
-                await RefreshLiveFrameAsync(
-                    HasPreview,
-                    waitForEnhancement: true,
-                    cancellation.Token);
-
-                if (targetFrame >= lastFrame)
-                {
-                    break;
-                }
+                await RefreshLiveFrameAsync(cancellation.Token);
             }
         }
         catch (Exception exception) when (IsFrameFailure(exception))
@@ -238,7 +227,7 @@ public sealed partial class VideoViewModel
                 return;
             }
 
-            await RefreshLiveFrameAsync(HasPreview, waitForEnhancement: true, cancellation.Token);
+            await RefreshLiveFrameAsync(cancellation.Token);
         }
         catch (Exception exception) when (IsFrameFailure(exception))
         {
@@ -256,32 +245,26 @@ public sealed partial class VideoViewModel
         }
     }
 
-    private async Task RefreshLiveFrameAsync(
-        bool enhance,
-        bool waitForEnhancement,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Decodes the frame under the playhead and, once a preview exists, waits for
+    /// the engine: an observer must never see one half ahead of the other.
+    /// </summary>
+    private async Task RefreshLiveFrameAsync(CancellationToken cancellationToken)
     {
         if (_video is not { } video)
         {
             return;
         }
 
-        var enhancing = enhance && waitForEnhancement && HasAvailableEngine;
+        var enhancing = HasPreview && HasAvailableEngine;
         var frame = await LoadPreviewFrameAsync(
             video,
             cancellationToken,
             publish: !enhancing);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!enhance || !HasAvailableEngine)
+        if (!enhancing)
         {
-            return;
-        }
-
-        if (!waitForEnhancement)
-        {
-            // Playback must not wait for an inference slower than the frame rate.
-            _ = PublishAfterImageAsync(cancellationToken);
             return;
         }
 
@@ -297,16 +280,6 @@ public sealed partial class VideoViewModel
         BeforeImage = frame.Image;
         AfterImage = enhanced;
         HasPreview = true;
-    }
-
-    private async Task PublishAfterImageAsync(CancellationToken cancellationToken)
-    {
-        var enhanced = await RenderAfterImageAsync(cancellationToken);
-        if (enhanced is not null)
-        {
-            AfterImage = enhanced;
-            HasPreview = true;
-        }
     }
 
     /// <summary>

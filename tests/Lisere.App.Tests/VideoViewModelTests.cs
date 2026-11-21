@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -957,6 +958,70 @@ public class VideoViewModelTests
     }
 
     [Fact]
+    public async Task PlaybackSkipsFramesWhenTheEngineIsSlowerThanTheFrameRate()
+    {
+        // Le moteur met 300 ms par image : à 10 i/s il n'en calcule qu'une sur
+        // trois. La lecture doit sauter les autres au lieu de ralentir.
+        var shown = new List<int>();
+        var engine = new FakeEngine(
+            unavailable: false,
+            delay: TimeSpan.FromMilliseconds(300));
+        var viewModel = CreateViewModel(
+            engine: engine,
+            extractor: new MarkedFrameExtractor(),
+            codec: new MarkedImageCodec());
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.RefreshPreviewCommand.ExecuteAsync(null);
+        Assert.True(viewModel.HasPreview);
+
+        PropertyChangedEventHandler onChanged = (_, e) =>
+        {
+            if (e.PropertyName == nameof(VideoViewModel.AfterImage) &&
+                viewModel.AfterImage is { } after)
+            {
+                lock (shown)
+                {
+                    shown.Add(FrameIndex(after));
+                }
+            }
+        };
+        viewModel.PropertyChanged += onChanged;
+
+        TimeSpan elapsed;
+        try
+        {
+            viewModel.PreviewPositionPercent = 0;
+            var clock = Stopwatch.StartNew();
+            viewModel.TogglePlaybackCommand.Execute(null);
+            Assert.True(viewModel.IsPlaying, "playback should start");
+            await WaitForAsync(() => !viewModel.IsPlaying, "playback should stop at the end");
+            clock.Stop();
+            elapsed = clock.Elapsed;
+        }
+        finally
+        {
+            viewModel.PropertyChanged -= onChanged;
+        }
+
+        List<int> frames;
+        lock (shown)
+        {
+            frames = [.. shown];
+        }
+
+        // Le clip compte 10 images, dont 9 à jouer : le moteur n'a le temps
+        // d'en produire qu'une poignée.
+        Assert.InRange(frames.Count, 2, 6);
+        Assert.True(
+            frames.Zip(frames.Skip(1), (first, second) => second - first).Any(gap => gap > 1),
+            $"playback should jump over frames (shown {string.Join(", ", frames)})");
+
+        // Sans saut, 10 inférences de 300 ms prendraient 3 s. En suivant
+        // l'horloge, le clip (0,9 s de contenu) finit près du temps réel.
+        Assert.InRange(elapsed.TotalSeconds, 0.8, 2.2);
+    }
+
+    [Fact]
     public async Task ScrubbingEnhancesTheFrameOnlyWhenAPreviewExists()
     {
         var engine = new FakeEngine(unavailable: false);
@@ -1045,8 +1110,13 @@ public class VideoViewModelTests
     private sealed class FakeEngine : IFrameEnhancer
     {
         private readonly bool _unavailable;
+        private readonly TimeSpan _delay;
 
-        public FakeEngine(bool unavailable) => _unavailable = unavailable;
+        public FakeEngine(bool unavailable, TimeSpan? delay = null)
+        {
+            _unavailable = unavailable;
+            _delay = delay ?? TimeSpan.Zero;
+        }
 
         public FrameEnhancementRequest? LastRequest { get; private set; }
 
@@ -1073,6 +1143,12 @@ public class VideoViewModelTests
         {
             LastRequest = request;
             EnhanceCount++;
+
+            if (_delay > TimeSpan.Zero)
+            {
+                Thread.Sleep(_delay);
+            }
+
             return source.Clone();
         }
 
