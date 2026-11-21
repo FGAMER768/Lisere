@@ -93,23 +93,30 @@ public static class VideoRenderPlanFactory
         return strings.Format(
             "videoEstimateText",
             estimate.OutputFrames,
-            FormatDuration(estimate.EstimatedTime));
+            FormatDuration(estimate.EstimatedTime, strings.Culture));
     }
 
-    public static string FormatDuration(TimeSpan duration)
+    /// <summary>
+    /// Durée lisible dans la langue de l'interface : « 5,9 s » en français,
+    /// « 5.9 s » en anglais. Le reste (minutes, heures) ne contient que des
+    /// chiffres et des deux-points.
+    /// </summary>
+    public static string FormatDuration(TimeSpan duration, IFormatProvider culture)
     {
+        ArgumentNullException.ThrowIfNull(culture);
+
         var clamped = duration < TimeSpan.Zero ? TimeSpan.Zero : duration;
 
         if (clamped.TotalHours >= 1)
         {
-            return clamped.ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture);
+            return clamped.ToString(@"h\:mm\:ss", culture);
         }
 
         if (clamped.TotalMinutes >= 1)
         {
-            return clamped.ToString(@"m\:ss", CultureInfo.InvariantCulture);
+            return clamped.ToString(@"m\:ss", culture);
         }
 
-        return $"{clamped.TotalSeconds.ToString("0.0", CultureInfo.InvariantCulture)} s";
+        return $"{clamped.TotalSeconds.ToString("0.0", culture)} s";
     }
 }

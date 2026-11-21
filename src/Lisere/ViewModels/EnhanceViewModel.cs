@@ -400,7 +400,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             isLongRender
                 ? _localization.Format(
                     "imageWaitPreparing",
-                    VideoRenderPlanFactory.FormatDuration(estimate.Duration))
+                    VideoRenderPlanFactory.FormatDuration(estimate.Duration, _localization.Culture))
                 : StatusMessage,
             cancellation.Cancel);
         var progress = isLongRender

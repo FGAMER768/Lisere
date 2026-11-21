@@ -377,7 +377,7 @@ dotnet test Lisere.slnx
 
 The solution contains four xUnit test projects: `Lisere.Core.Tests`, `Lisere.Ai.Tests`, `Lisere.Video.Tests` and `Lisere.App.Tests`.
 
-Current state: **455 tests** (125 Core, 24 Ai, 53 Video, 253 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
+Current state: **457 tests** (125 Core, 24 Ai, 53 Video, 255 App), 0 build warnings. The full suite passes in parallel on the reference machine. The one-second preview render is covered by an FFmpeg integration test that checks its duration and the absence of an audio track; exporting that segment is covered by a view-model test. The per-user uninstall script is covered by `UninstallServiceTests.cs`.
 
 Video integration tests generate a clip with FFmpeg and verify rendering, audio preservation, deinterlacing, exact size, cancellation and preview extraction. They are silently skipped when FFmpeg cannot be found, so the rest of the suite remains runnable on a machine without video tooling.
 

@@ -335,7 +335,7 @@ public sealed partial class VideoViewModel
             {
                 text = $"{text} · {Strings.Format(
                     "videoRemaining",
-                    VideoRenderPlanFactory.FormatDuration(remaining))}";
+                    VideoRenderPlanFactory.FormatDuration(remaining, Strings.Culture))}";
             }
         }
 
