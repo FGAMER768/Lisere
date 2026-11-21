@@ -328,9 +328,10 @@ public sealed partial class VideoViewModel
 
         if (percent is > 2 and < 100)
         {
+            // Sous la seconde, « ≈ 0.0 s restant » est du bruit : on l'omet.
             var remaining = RenderEstimator.Remaining(_renderWatch.Elapsed, percent);
 
-            if (remaining > TimeSpan.Zero)
+            if (remaining >= TimeSpan.FromSeconds(1))
             {
                 text = $"{text} · {Strings.Format(
                     "videoRemaining",
