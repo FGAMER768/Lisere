@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using System.IO;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
 
 namespace Lisere.ViewModels;
@@ -86,6 +89,12 @@ public sealed partial class VideoViewModel
             MaximumPreviewPositionPercent);
     }
 
+    private static double FramePercent(VideoInfo video, long frame) =>
+        Math.Clamp(
+            frame / video.FrameRate / video.DurationSeconds * 100.0,
+            0,
+            MaximumPreviewPositionPercent);
+
     private void SeekToFrame(double percent)
     {
         StopPlayback();
@@ -93,8 +102,9 @@ public sealed partial class VideoViewModel
     }
 
     /// <summary>
-    /// Plays the clip frame by frame as fast as the clip can be decoded: each step
-    /// waits for the frame it shows, so the playhead never runs ahead of the image.
+    /// Plays the clip in real time. The playhead follows the wall clock, so a
+    /// frame the engine cannot compute in time is skipped rather than delaying
+    /// the rest of the clip; before and after still advance on the same frame.
     /// </summary>
     private async Task PlayAsync()
     {
@@ -117,15 +127,42 @@ public sealed partial class VideoViewModel
 
         try
         {
+            if (_video is not { DurationSeconds: > 0, FrameRate: > 0 } video)
+            {
+                return;
+            }
+
+            var frameRate = video.FrameRate;
+            var lastFrame = (long)Math.Floor(
+                video.DurationSeconds * MaximumPreviewPositionPercent / 100.0 * frameRate);
+            var startFrame = Math.Clamp(
+                (long)Math.Round(video.DurationSeconds * PreviewPositionPercent / 100.0 * frameRate),
+                0,
+                lastFrame);
+
+            var clock = Stopwatch.StartNew();
+            var shownFrame = startFrame - 1;
+
             while (!cancellation.IsCancellationRequested)
             {
-                var next = StepByFrames(PreviewPositionPercent, 1);
-                if (next <= PreviewPositionPercent + 0.0001)
+                // Position due maintenant : si le moteur a pris du retard, la
+                // cible a sauté des frames et la lecture reste au temps réel.
+                var targetFrame = Math.Min(
+                    startFrame + (long)Math.Floor(clock.Elapsed.TotalSeconds * frameRate),
+                    lastFrame);
+
+                if (targetFrame <= shownFrame)
                 {
-                    break;
+                    var nextFrameAt = (shownFrame + 1 - startFrame) / frameRate;
+                    var delay = nextFrameAt - clock.Elapsed.TotalSeconds;
+                    await Task.Delay(
+                        TimeSpan.FromMilliseconds(Math.Max(1, delay * 1000)),
+                        cancellation.Token);
+                    continue;
                 }
 
-                PreviewPositionPercent = next;
+                shownFrame = targetFrame;
+                PreviewPositionPercent = FramePercent(video, targetFrame);
 
                 // Pendant la lecture, l'avant attend l'après : les deux moitiés
                 // doivent montrer la même frame, pas deux instants voisins.
@@ -133,6 +170,11 @@ public sealed partial class VideoViewModel
                     HasPreview,
                     waitForEnhancement: true,
                     cancellation.Token);
+
+                if (targetFrame >= lastFrame)
+                {
+                    break;
+                }
             }
         }
         catch (Exception exception) when (IsFrameFailure(exception))
@@ -239,46 +281,62 @@ public sealed partial class VideoViewModel
         if (!waitForEnhancement)
         {
             // Playback must not wait for an inference slower than the frame rate.
-            _ = RefreshAfterImageAsync(cancellationToken);
+            _ = PublishAfterImageAsync(cancellationToken);
             return;
         }
 
-        await RefreshAfterImageAsync(cancellationToken);
+        var enhanced = await RenderAfterImageAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+        if (enhanced is null)
+        {
+            return;
+        }
 
-        // L'après vient d'être calculé pour cette frame : publier l'avant
-        // maintenant garantit que les deux moitiés montrent le même instant.
+        // Les deux images sont publiées d'affilée, sans attente entre elles :
+        // un observateur de l'après voit toujours l'avant de la même frame.
         BeforeImage = frame.Image;
+        AfterImage = enhanced;
+        HasPreview = true;
+    }
+
+    private async Task PublishAfterImageAsync(CancellationToken cancellationToken)
+    {
+        var enhanced = await RenderAfterImageAsync(cancellationToken);
+        if (enhanced is not null)
+        {
+            AfterImage = enhanced;
+            HasPreview = true;
+        }
     }
 
     /// <summary>
     /// Enhances the frame currently shown. Only one inference runs at a time, so a
     /// playback faster than the engine drops frames instead of queueing them.
     /// </summary>
-    private async Task RefreshAfterImageAsync(CancellationToken cancellationToken)
+    private async Task<ImageSource?> RenderAfterImageAsync(CancellationToken cancellationToken)
     {
         if (_liveEnhancing ||
             _previewFrame is not { } frame ||
             SelectedEngine is not { IsAvailable: true } engine)
         {
-            return;
+            return null;
         }
 
         _liveEnhancing = true;
 
         try
         {
-            AfterImage = await _previewRenderer.RenderEnhancedFrameAsync(
+            return await _previewRenderer.RenderEnhancedFrameAsync(
                 frame,
                 engine.Enhancer,
                 BuildFrameRequest(),
                 cancellationToken);
-            HasPreview = true;
         }
         catch (Exception exception) when (IsFrameFailure(exception))
         {
             // The playhead moved on, or the engine cannot take this frame: the
             // previous after image stays visible instead of clearing the view.
+            return null;
         }
         finally
         {

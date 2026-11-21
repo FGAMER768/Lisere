@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.IO;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Lisere.Ai.Enhancement;
 using Lisere.Ai.Interpolation;
 using Lisere.Core.Enhancement;
@@ -901,6 +903,60 @@ public class VideoViewModelTests
     }
 
     [Fact]
+    public async Task PlaybackPublishesBeforeAndAfterFromTheSameFrame()
+    {
+        var pairs = new List<(int Before, int After)>();
+        var extractor = new MarkedFrameExtractor();
+        var viewModel = CreateViewModel(
+            extractor: extractor,
+            codec: new MarkedImageCodec());
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.RefreshPreviewCommand.ExecuteAsync(null);
+        Assert.True(viewModel.HasPreview);
+
+        // L'après est publié en dernier : à cet instant, l'avant doit déjà être
+        // celui de la même frame, sinon les deux moitiés divergent.
+        PropertyChangedEventHandler onChanged = (_, e) =>
+        {
+            if (e.PropertyName != nameof(VideoViewModel.AfterImage) ||
+                viewModel.AfterImage is not { } after)
+            {
+                return;
+            }
+
+            lock (pairs)
+            {
+                pairs.Add((FrameIndex(viewModel.BeforeImage), FrameIndex(after)));
+            }
+        };
+        viewModel.PropertyChanged += onChanged;
+
+        try
+        {
+            viewModel.PreviewPositionPercent = 0;
+            viewModel.TogglePlaybackCommand.Execute(null);
+            Assert.True(viewModel.IsPlaying, "playback should start");
+            await WaitForAsync(() => !viewModel.IsPlaying, "playback should stop at the end");
+        }
+        finally
+        {
+            viewModel.PropertyChanged -= onChanged;
+        }
+
+        List<(int Before, int After)> snapshot;
+        lock (pairs)
+        {
+            snapshot = [.. pairs];
+        }
+
+        Assert.True(
+            snapshot.Count >= 3,
+            $"playback should publish several frames (got {snapshot.Count}, {extractor.Positions.Count} extracts, position {viewModel.PreviewPositionPercent})");
+        Assert.All(snapshot, pair => Assert.Equal(pair.Before, pair.After));
+        Assert.True(snapshot[^1].After > snapshot[0].After, "playback should advance");
+    }
+
+    [Fact]
     public async Task ScrubbingEnhancesTheFrameOnlyWhenAPreviewExists()
     {
         var engine = new FakeEngine(unavailable: false);
@@ -942,7 +998,8 @@ public class VideoViewModelTests
         FakeInterpolator? rife = null,
         FakeVideoProbe? probe = null,
         IVideoFrameExtractor? extractor = null,
-        FakeEngine? engine = null)
+        FakeEngine? engine = null,
+        IImageCodec? codec = null)
     {
         var engines = new List<IFrameEnhancer>
         {
@@ -954,7 +1011,7 @@ public class VideoViewModelTests
             probe ?? new FakeVideoProbe { IsAvailable = toolchainAvailable },
             extractor ?? new FakeFrameExtractor(),
             renderer ?? new FakeVideoRenderer(),
-            new FakeImageCodec(),
+            codec ?? new FakeImageCodec(),
             dialogs ?? new FakeDialogService(),
             new LocalizationService(),
             engines,
@@ -1149,6 +1206,56 @@ public class VideoViewModelTests
                 height,
                 request.Source.FrameRate);
         }
+    }
+
+    /// <summary>Chaque image porte son numéro de frame dans le premier pixel.</summary>
+    private sealed class MarkedFrameExtractor : IVideoFrameExtractor
+    {
+        public List<double> Positions { get; } = [];
+
+        public Task<RgbImage> ExtractAsync(
+            VideoInfo info,
+            double positionSeconds,
+            CancellationToken cancellationToken)
+        {
+            Positions.Add(positionSeconds);
+            var image = new RgbImage(64, 36);
+            var frame = (int)Math.Round(positionSeconds * info.FrameRate);
+            image[0, 0, 0] = (byte)(frame & 0xFF);
+            image[0, 0, 1] = (byte)((frame >> 8) & 0xFF);
+            image[0, 0, 2] = 0x5A;
+            return Task.FromResult(image);
+        }
+    }
+
+    /// <summary>Conserve le marqueur de frame jusque dans l'ImageSource publié.</summary>
+    private sealed class MarkedImageCodec : IImageCodec
+    {
+        public Task<RgbImage> LoadAsync(string path, CancellationToken cancellationToken) =>
+            Task.FromResult(new RgbImage(4, 4));
+
+        public Task SaveJpegAsync(RgbImage image, string path, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task<ImageSource> CreatePreviewAsync(
+            RgbImage image,
+            int maximumWidth,
+            int maximumHeight,
+            CancellationToken cancellationToken)
+        {
+            var pixels = new byte[] { image[0, 0, 0], image[0, 0, 1], image[0, 0, 2] };
+            var bitmap = BitmapSource.Create(1, 1, 96, 96, PixelFormats.Rgb24, null, pixels, 3);
+            bitmap.Freeze();
+            return Task.FromResult<ImageSource>(bitmap);
+        }
+    }
+
+    private static int FrameIndex(ImageSource? source)
+    {
+        var bitmap = Assert.IsAssignableFrom<BitmapSource>(source);
+        var pixels = new byte[3];
+        bitmap.CopyPixels(pixels, 3, 0);
+        return pixels[0] | (pixels[1] << 8);
     }
 
     private sealed class FakeImageCodec : IImageCodec

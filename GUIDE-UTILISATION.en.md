@@ -368,7 +368,7 @@ The **timeline** below the preview shows the duration and selects the position: 
 
 The image follows the playhead: the source frame is reloaded at every new position and, as soon as a preview exists, the after image is recomputed there. A request still running is cancelled by the next one, so only the last stop counts.
 
-The five buttons above the timeline are the transport: **start**, **previous frame**, **play/pause** (`Space`), **next frame** (`Ctrl` with the arrows) and **end**. Playback advances one frame at a time and stops at the end of the clip. Before and after move together: a frame is only published once the after image is computed, so both halves always show the same instant. The pace is the engine's, not the file's.
+The five buttons above the timeline are the transport: **start**, **previous frame**, **play/pause** (`Space`), **next frame** (`Ctrl` with the arrows) and **end**. Playback follows real time and stops at the end of the clip. When the engine cannot compute every frame in time, intermediate frames are skipped instead of slowing playback down. Before and after move together: a frame is only published once the after image is computed, so both halves always show the same instant.
 
 - **Refresh preview** (`Ctrl+Enter`) extracts the frame at the chosen position and applies the current settings.
 - **Render 1 second** runs the real pipeline on a segment around the position, then displays the middle frame. The file is temporary and silent.

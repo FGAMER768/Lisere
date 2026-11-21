@@ -368,7 +368,7 @@ La **timeline** sous l'aperçu affiche la durée et permet de choisir la positio
 
 L'image suit le déplacement : la frame source est rechargée à chaque nouvelle position et, dès qu'un aperçu existe déjà, l'image après est recalculée au même endroit. Une demande encore en cours est annulée par la suivante : seul le dernier arrêt compte.
 
-Les cinq boutons au-dessus de la timeline forment le transport : **début**, **image précédente**, **lecture/pause** (`Espace`), **image suivante** (`Ctrl` et les flèches) et **fin**. La lecture avance d'une frame à la fois et s'arrête à la fin du clip. L'avant et l'après avancent ensemble : chaque frame n'est publiée qu'une fois l'après calculé, donc les deux moitiés montrent toujours le même instant. Le rythme est celui du moteur, pas du fichier.
+Les cinq boutons au-dessus de la timeline forment le transport : **début**, **image précédente**, **lecture/pause** (`Espace`), **image suivante** (`Ctrl` et les flèches) et **fin**. La lecture suit le temps réel et s'arrête à la fin du clip. Quand le moteur ne peut pas calculer toutes les frames à temps, les frames intermédiaires sont sautées plutôt que de ralentir la lecture. L'avant et l'après avancent ensemble : chaque frame n'est publiée qu'une fois l'après calculé, donc les deux moitiés montrent toujours le même instant.
 
 - **Rafraîchir l'aperçu** (`Ctrl+Entrée`) extrait la frame à la position choisie et applique les réglages courants.
 - **Rendre 1 seconde** exécute le vrai pipeline sur un segment autour de la position, puis affiche la frame du milieu. Le fichier est temporaire et sans audio.
