@@ -609,7 +609,9 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
                 RecoverOriginalDetail,
                 AddNoise,
                 SelectedColorPreset?.Preset ?? ColorPreset.None,
-                CurrentColorSettings);
+                CurrentColorSettings,
+                SelectedEngine?.Id,
+                RefineFaces && CanRefineFaces);
 
             await Task.Run(() => LiserePresetSerializer.Save(path, preset));
             SetStatus("statusPresetExported", Path.GetFileName(path));
@@ -873,10 +875,27 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
         try
         {
+            // Le moteur fait partie du rendu : on le restaure quand il est
+            // installé, sinon on garde celui de la session plutôt que d'imposer
+            // un modèle absent. Un preset antérieur (EngineId nul) ne choisit rien.
+            if (preset.EngineId is { } engineId &&
+                Engines.FirstOrDefault(engine =>
+                    engine.IsAvailable &&
+                    string.Equals(engine.Id, engineId, StringComparison.OrdinalIgnoreCase))
+                is { } engine)
+            {
+                SelectedEngine = engine;
+            }
+
             SelectedPreset = Presets.First(option => option.Mode == ResolveImportedMode(preset));
             AssignParameters(preset.Parameters);
             RecoverOriginalDetail = preset.RecoverOriginalDetail;
             AddNoise = preset.AddNoise;
+
+            if (preset.RefineFaces is { } refineFaces)
+            {
+                RefineFaces = refineFaces && CanRefineFaces;
+            }
 
             SelectedColorPreset = ColorPresets.First(
                 option => option.Preset == preset.ColorPreset);

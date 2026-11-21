@@ -12,7 +12,8 @@ namespace Lisere.Services;
 /// Reads and writes the single-file preset shared by the AI settings and the
 /// color grading. The shape is stable and versioned; values outside the UI
 /// ranges are clamped so a hand-edited file cannot put the pipeline in a state
-/// the sliders cannot represent.
+/// the sliders cannot represent. The model and face refinement were added as
+/// optional fields: an older preset stays readable and keeps the current model.
 /// </summary>
 public static class LiserePresetSerializer
 {
@@ -54,7 +55,9 @@ public static class LiserePresetSerializer
                     AntialiasDeblur = preset.Parameters.AntialiasDeblur
                 },
                 RecoverOriginalDetail = preset.RecoverOriginalDetail,
-                AddNoise = preset.AddNoise
+                AddNoise = preset.AddNoise,
+                Engine = preset.EngineId,
+                RefineFaces = preset.RefineFaces
             },
             Color = new ColorDocument
             {
@@ -176,6 +179,8 @@ public static class LiserePresetSerializer
             name = "Preset Liseré";
         }
 
+        var engineId = enhancement.Engine?.Trim();
+
         return new LiserePreset(
             name,
             ParseMode(enhancement.Mode),
@@ -183,7 +188,9 @@ public static class LiserePresetSerializer
             Math.Clamp(enhancement.RecoverOriginalDetail ?? 0.0, 0.0, 100.0),
             Math.Clamp(enhancement.AddNoise ?? 0.0, 0.0, EnhancementTuning.Noise.Maximum),
             ParseColorPreset(color.Preset),
-            clampedColor);
+            clampedColor,
+            string.IsNullOrWhiteSpace(engineId) ? null : engineId,
+            enhancement.RefineFaces);
     }
 
     public static LiserePreset Load(string path)
@@ -308,6 +315,10 @@ public static class LiserePresetSerializer
         public double? RecoverOriginalDetail { get; set; }
 
         public double? AddNoise { get; set; }
+
+        public string? Engine { get; set; }
+
+        public bool? RefineFaces { get; set; }
     }
 
     internal sealed class ParametersDocument

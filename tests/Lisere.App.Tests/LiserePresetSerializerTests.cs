@@ -49,7 +49,9 @@ public class LiserePresetSerializerTests
             17,
             0.015,
             ColorPreset.UltronCc,
-            new UltronCcSettings(150, 10, 12, 60));
+            new UltronCcSettings(150, 10, 12, 60),
+            "realesrgan-x4",
+            true);
 
         var json = LiserePresetSerializer.Serialize(preset);
         var parsed = LiserePresetSerializer.Parse(json);
@@ -59,6 +61,8 @@ public class LiserePresetSerializerTests
         Assert.Contains("\"fixCompression\": 61", json);
         Assert.Contains("\"saturationPercent\": 150", json);
         Assert.Contains("\"name\": \"Mon rendu\"", json);
+        Assert.Contains("\"engine\": \"realesrgan-x4\"", json);
+        Assert.Contains("\"refineFaces\": true", json);
     }
 
     [Fact]
@@ -73,6 +77,24 @@ public class LiserePresetSerializerTests
         Assert.Equal(ColorPreset.UltronCc, preset.ColorPreset);
         Assert.Equal(129.997, preset.ColorSettings.SaturationPercent, 3);
         Assert.Equal(5, preset.ColorSettings.Brightness);
+
+        // Un preset antérieur ne choisit ni moteur ni renforcement des visages :
+        // l'import doit garder ceux de la session.
+        Assert.Null(preset.EngineId);
+        Assert.Null(preset.RefineFaces);
+    }
+
+    [Fact]
+    public void ParseReadsTheModelAndFaceRefinement()
+    {
+        var json = CompleteJson.Replace(
+            "\"recoverOriginalDetail\": 20,",
+            "\"recoverOriginalDetail\": 20,\n            \"engine\": \"  realesrgan-x4  \",\n            \"refineFaces\": true,");
+
+        var preset = LiserePresetSerializer.Parse(json);
+
+        Assert.Equal("realesrgan-x4", preset.EngineId);
+        Assert.True(preset.RefineFaces);
     }
 
     [Fact]

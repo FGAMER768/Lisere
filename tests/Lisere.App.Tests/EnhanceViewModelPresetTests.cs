@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows.Media;
+using Lisere.Ai.Enhancement;
 using Lisere.Core.Enhancement;
 using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
@@ -18,7 +19,9 @@ public class EnhanceViewModelPresetTests
             Path.GetTempPath(),
             $"lisere-export-{Guid.NewGuid():N}.json");
         var files = new FakeFileDialogService { PresetTarget = path };
-        var viewModel = CreateViewModel(files);
+        var viewModel = CreateViewModel(
+            files,
+            engines: [new TestEngine("lisere.classic")]);
 
         try
         {
@@ -53,6 +56,8 @@ public class EnhanceViewModelPresetTests
             Assert.Equal(ColorPreset.UltronCc, preset.ColorPreset);
             Assert.Equal(150, preset.ColorSettings.SaturationPercent);
             Assert.Equal(60, preset.ColorSettings.Vibrance);
+            Assert.Equal("lisere.classic", preset.EngineId);
+            Assert.True(preset.RefineFaces);
             Assert.Contains("Preset exporté", viewModel.StatusMessage, StringComparison.Ordinal);
         }
         finally
@@ -96,6 +101,84 @@ public class EnhanceViewModelPresetTests
             Assert.True(viewModel.IsColorGradingActive);
             Assert.True(viewModel.HasAdjustableColorSettings);
             Assert.Contains("Portrait", viewModel.StatusMessage, StringComparison.Ordinal);
+            Assert.False(viewModel.HasError);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ImportingRestoresTheModelAndFaceRefinement()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"lisere-model-{Guid.NewGuid():N}.json");
+        var first = new TestEngine("lisere.first");
+        var chosen = new TestEngine("lisere.chosen");
+        LiserePresetSerializer.Save(
+            path,
+            new LiserePreset(
+                "Portrait",
+                EnhancementMode.Manual,
+                new EnhancementParameters(61, 39, 12, 86, 11, 94),
+                17,
+                0.015,
+                ColorPreset.None,
+                UltronCcSettings.FromPreset,
+                "lisere.chosen",
+                true));
+        var viewModel = CreateViewModel(
+            new FakeFileDialogService { PresetPath = path },
+            engines: [first, chosen]);
+        Assert.Same(first, viewModel.SelectedEngine);
+        viewModel.RefineFaces = false;
+
+        try
+        {
+            await viewModel.ImportPresetCommand.ExecuteAsync(null);
+
+            Assert.Same(chosen, viewModel.SelectedEngine);
+            Assert.True(viewModel.RefineFaces);
+            Assert.False(viewModel.HasError);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ImportingAnAbsentModelKeepsTheCurrentOne()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"lisere-missing-model-{Guid.NewGuid():N}.json");
+        var current = new TestEngine("lisere.current");
+        LiserePresetSerializer.Save(
+            path,
+            new LiserePreset(
+                "Portrait",
+                EnhancementMode.Manual,
+                new EnhancementParameters(61, 39, 12, 86, 11, 94),
+                17,
+                0.015,
+                ColorPreset.None,
+                UltronCcSettings.FromPreset,
+                "lisere.not-installed"));
+        var viewModel = CreateViewModel(
+            new FakeFileDialogService { PresetPath = path },
+            engines: [current]);
+        viewModel.RefineFaces = false;
+
+        try
+        {
+            await viewModel.ImportPresetCommand.ExecuteAsync(null);
+
+            Assert.Same(current, viewModel.SelectedEngine);
+            Assert.False(viewModel.RefineFaces);
+            Assert.Equal(61, viewModel.FixCompression);
             Assert.False(viewModel.HasError);
         }
         finally
@@ -284,13 +367,44 @@ public class EnhanceViewModelPresetTests
     private static EnhanceViewModel CreateViewModel(
         FakeFileDialogService files,
         FakeDialogService? dialogs = null,
-        ILocalizationService? localization = null) =>
+        ILocalizationService? localization = null,
+        IReadOnlyList<IFrameEnhancer>? engines = null) =>
         new(
             files,
             new FakeImageCodec(),
             new FakeOrchestrator(),
             dialogs ?? new FakeDialogService(),
-            localization ?? new LocalizationService());
+            localization ?? new LocalizationService(),
+            engines);
+
+    private sealed class TestEngine : IFrameEnhancer
+    {
+        public TestEngine(string id) => Id = id;
+
+        public string Id { get; }
+
+        public string DisplayName => Id;
+
+        public EnhancementEngineFamily Family => EnhancementEngineFamily.Classical;
+
+        public string Description => string.Empty;
+
+        public bool IsAvailable => true;
+
+        public string? UnavailableReason => null;
+
+        public int NativeScale => 1;
+
+        public RgbImage Enhance(
+            RgbImage source,
+            FrameEnhancementRequest request,
+            CancellationToken cancellationToken) =>
+            source.Clone();
+
+        public void Dispose()
+        {
+        }
+    }
 
     private sealed class FakeDialogService : IDialogService
     {
