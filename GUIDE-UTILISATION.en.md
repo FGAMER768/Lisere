@@ -416,7 +416,7 @@ It is **indicative**: per-frame cost is a model, not a measurement of your clip.
 
 During rendering:
 
-- a progress bar and text show the stage and percentage;
+- a progress bar, the real percentage and a reassuring message, without naming stages or tiles;
 - the latest produced frame replaces the preview and stays visible after cancellation;
 - the **Cancel render** button stops the process.
 

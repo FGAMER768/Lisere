@@ -735,38 +735,11 @@
   <data name="videoPresetUnknownModel" xml:space="preserve">
     <value>model not specified</value>
   </data>
-  <data name="videoProgressPreparing" xml:space="preserve">
-    <value>Preparing the render...</value>
-  </data>
   <data name="videoProgressCanceled" xml:space="preserve">
     <value>Render cancelled.</value>
   </data>
   <data name="videoProgressDone" xml:space="preserve">
     <value>{0} frames rendered in {1:0.0} s.</value>
-  </data>
-  <data name="videoProgressFrames" xml:space="preserve">
-    <value>{0} · {1} frames · {2:0.0} %</value>
-  </data>
-  <data name="videoProgressStage" xml:space="preserve">
-    <value>{0} · {1:0.0} %</value>
-  </data>
-  <data name="videoStagePreparing" xml:space="preserve">
-    <value>Preparing</value>
-  </data>
-  <data name="videoStageDeinterlacing" xml:space="preserve">
-    <value>Deinterlacing</value>
-  </data>
-  <data name="videoStageStabilizing" xml:space="preserve">
-    <value>Stabilisation</value>
-  </data>
-  <data name="videoStageRendering" xml:space="preserve">
-    <value>Rendering</value>
-  </data>
-  <data name="videoStageInterpolating" xml:space="preserve">
-    <value>Interpolation</value>
-  </data>
-  <data name="videoStageFinalizing" xml:space="preserve">
-    <value>Finalising</value>
   </data>
   <data name="engineAvailable" xml:space="preserve">
     <value>Available</value>
@@ -888,17 +861,11 @@
   <data name="videoPreviewRender" xml:space="preserve">
     <value>Render 1 second</value>
   </data>
-  <data name="videoPreviewRendering" xml:space="preserve">
-    <value>Rendering the preview…</value>
-  </data>
   <data name="videoPreviewReady" xml:space="preserve">
     <value>Preview rendered: 1 s at {0} %.</value>
   </data>
   <data name="videoPreviewExport" xml:space="preserve">
     <value>Export the 1 s preview</value>
-  </data>
-  <data name="videoPreviewExporting" xml:space="preserve">
-    <value>Exporting the preview…</value>
   </data>
   <data name="videoPreviewExported" xml:space="preserve">
     <value>Preview exported: {0}.</value>
@@ -1115,5 +1082,8 @@
   </data>
   <data name="renderReassuranceQuiet" xml:space="preserve">
     <value>The render is running quietly. You can cancel at any time.</value>
+  </data>
+  <data name="videoProgressPercent" xml:space="preserve">
+    <value>{0:0} %</value>
   </data>
 </root>

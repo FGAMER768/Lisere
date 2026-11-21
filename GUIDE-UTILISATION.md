@@ -416,7 +416,7 @@ Elle est **indicative** : le coût par image est un modèle, pas une mesure de v
 
 Pendant le rendu :
 
-- une barre de progression et un texte indiquent l'étape et le pourcentage ;
+- une barre de progression, le pourcentage réel et un message qui rassure, sans nommer les étapes ni les tuiles ;
 - la dernière frame produite remplace l'aperçu et reste visible après une annulation ;
 - le bouton **Annuler le rendu** arrête le processus.
 

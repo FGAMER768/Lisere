@@ -766,6 +766,43 @@ public class VideoViewModelTests
     }
 
     [Fact]
+    public async Task ARunningVideoRenderOnlyShowsReassuranceAndTheRealPercent()
+    {
+        var renderer = new FakeVideoRenderer();
+        var viewModel = CreateViewModel(renderer: renderer);
+        renderer.OnProgress = progress => progress.Report(new VideoRenderProgress(
+            VideoRenderStage.Interpolating,
+            60,
+            60,
+            4,
+            10,
+            null));
+        string? text = null;
+        string? hint = null;
+        renderer.Handler = async (request, _) =>
+        {
+            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+            while (!viewModel.ProgressHint.StartsWith("60", StringComparison.Ordinal) &&
+                DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(10);
+            }
+
+            text = viewModel.ProgressText;
+            hint = viewModel.ProgressHint;
+            return FakeVideoRenderer.ResultFor(request);
+        };
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.RenderCommand.ExecuteAsync(null);
+
+        Assert.Equal("Le rendu progresse normalement.", text);
+        Assert.DoesNotContain("Interpolation", text!, StringComparison.Ordinal);
+        Assert.DoesNotContain("images", text!, StringComparison.Ordinal);
+        Assert.StartsWith("60", hint!, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ACancelledRenderKeepsTheLastPartialFrameVisible()
     {
         var renderer = new FakeVideoRenderer();

@@ -132,14 +132,8 @@ public sealed partial class VideoViewModel
         IsBusy = true;
         ClearError();
         ProgressPercent = 0;
-        ProgressHint = string.Empty;
-        ProgressText = Strings[purpose switch
-        {
-            RenderPurpose.Preview => "videoPreviewRendering",
-            RenderPurpose.PreviewExport => "videoPreviewExporting",
-            _ => "videoProgressPreparing"
-        }];
         _renderWatch.Restart();
+        ShowReassuringProgress(0);
 
         Exception? error = null;
         var canceled = false;
@@ -315,8 +309,36 @@ public sealed partial class VideoViewModel
         }
 
         ProgressPercent = progress.OverallPercent;
-        ProgressText = DescribeProgress(progress);
-        ProgressHint = RenderReassurance.Hint(Strings, progress.OverallPercent) ?? string.Empty;
+        ShowReassuringProgress(progress.OverallPercent);
+    }
+
+    /// <summary>
+    /// Pendant un rendu vidéo, on ne nomme ni étape ni tuile : une phrase qui
+    /// rassure, le pourcentage réel, et le temps restant quand il se stabilise.
+    /// </summary>
+    private void ShowReassuringProgress(double percent)
+    {
+        ProgressText = RenderReassurance.Reassure(Strings, percent);
+        ProgressHint = DescribePercent(percent);
+    }
+
+    private string DescribePercent(double percent)
+    {
+        var text = Strings.Format("videoProgressPercent", percent);
+
+        if (percent is > 2 and < 100)
+        {
+            var remaining = RenderEstimator.Remaining(_renderWatch.Elapsed, percent);
+
+            if (remaining > TimeSpan.Zero)
+            {
+                text = $"{text} · {Strings.Format(
+                    "videoRemaining",
+                    VideoRenderPlanFactory.FormatDuration(remaining))}";
+            }
+        }
+
+        return text;
     }
 
     /// <summary>Live frame of the running render, also kept after a cancel.</summary>
@@ -347,6 +369,4 @@ public sealed partial class VideoViewModel
         }
     }
 
-    private string DescribeProgress(VideoRenderProgress progress) =>
-        VideoRenderStatusFormatter.Describe(Strings, progress, _renderWatch.Elapsed);
 }

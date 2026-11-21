@@ -735,38 +735,11 @@
   <data name="videoPresetUnknownModel" xml:space="preserve">
     <value>modèle non précisé</value>
   </data>
-  <data name="videoProgressPreparing" xml:space="preserve">
-    <value>Préparation du rendu...</value>
-  </data>
   <data name="videoProgressCanceled" xml:space="preserve">
     <value>Rendu annulé.</value>
   </data>
   <data name="videoProgressDone" xml:space="preserve">
     <value>{0} images rendues en {1:0.0} s.</value>
-  </data>
-  <data name="videoProgressFrames" xml:space="preserve">
-    <value>{0} · {1} images · {2:0.0} %</value>
-  </data>
-  <data name="videoProgressStage" xml:space="preserve">
-    <value>{0} · {1:0.0} %</value>
-  </data>
-  <data name="videoStagePreparing" xml:space="preserve">
-    <value>Préparation</value>
-  </data>
-  <data name="videoStageDeinterlacing" xml:space="preserve">
-    <value>Désentrelacement</value>
-  </data>
-  <data name="videoStageStabilizing" xml:space="preserve">
-    <value>Stabilisation</value>
-  </data>
-  <data name="videoStageRendering" xml:space="preserve">
-    <value>Rendu</value>
-  </data>
-  <data name="videoStageInterpolating" xml:space="preserve">
-    <value>Interpolation</value>
-  </data>
-  <data name="videoStageFinalizing" xml:space="preserve">
-    <value>Finalisation</value>
   </data>
   <data name="engineAvailable" xml:space="preserve">
     <value>Disponible</value>
@@ -888,17 +861,11 @@
   <data name="videoPreviewRender" xml:space="preserve">
     <value>Rendre 1 seconde</value>
   </data>
-  <data name="videoPreviewRendering" xml:space="preserve">
-    <value>Rendu de l'aperçu…</value>
-  </data>
   <data name="videoPreviewReady" xml:space="preserve">
     <value>Aperçu rendu : 1 s à {0} %.</value>
   </data>
   <data name="videoPreviewExport" xml:space="preserve">
     <value>Exporter l'aperçu (1 s)</value>
-  </data>
-  <data name="videoPreviewExporting" xml:space="preserve">
-    <value>Export de l'aperçu…</value>
   </data>
   <data name="videoPreviewExported" xml:space="preserve">
     <value>Aperçu exporté : {0}.</value>
@@ -1115,5 +1082,8 @@
   </data>
   <data name="renderReassuranceQuiet" xml:space="preserve">
     <value>Le rendu se déroule tranquillement. Vous pouvez annuler à tout moment.</value>
+  </data>
+  <data name="videoProgressPercent" xml:space="preserve">
+    <value>{0:0} %</value>
   </data>
 </root>
