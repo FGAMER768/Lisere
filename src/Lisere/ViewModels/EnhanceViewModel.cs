@@ -383,7 +383,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
                 estimate.Duration,
                 BeforeImage,
                 SelectedEngine,
-                SelectedEngine is { } engine ? _calibration.ProviderFor(engine.Id) : null,
+                SelectedEngine is { } engine ? _calibration.Latest(engine.Id)?.Provider : null,
                 estimate.Basis)))
         {
             return;

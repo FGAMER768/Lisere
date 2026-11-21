@@ -83,7 +83,7 @@ public static class ImageRenderEstimator
             // Avant le premier rendu de la session, la clé exacte (provider,
             // version) n'existe pas encore : on prend la dernière mesure du
             // modèle, celle que la confirmation affiche déjà comme provider.
-            if (calibration.LatestFor(engine.Id) is { } latest)
+            if (calibration.Latest(engine.Id) is { } latest)
             {
                 return (latest.SecondsPerMegapixel, EstimationBasis.Measured);
             }

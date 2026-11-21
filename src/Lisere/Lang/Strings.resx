@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -875,39 +875,6 @@
   </data>
   <data name="imageWaitPreparing" xml:space="preserve">
     <value>Préparation du rendu (≈ {0}). Tout se passe comme prévu.</value>
-  </data>
-  <data name="imageWaitStageHint" xml:space="preserve">
-    <value>{0} · {1}</value>
-  </data>
-  <data name="imageWaitCompression" xml:space="preserve">
-    <value>Correction de la compression</value>
-  </data>
-  <data name="imageWaitNoise" xml:space="preserve">
-    <value>Réduction du bruit</value>
-  </data>
-  <data name="imageWaitAntialias" xml:space="preserve">
-    <value>Anticrénelage</value>
-  </data>
-  <data name="imageWaitDeblur" xml:space="preserve">
-    <value>Récupération du flou</value>
-  </data>
-  <data name="imageWaitSharpen" xml:space="preserve">
-    <value>Netteté</value>
-  </data>
-  <data name="imageWaitDetail" xml:space="preserve">
-    <value>Reconstruction du détail</value>
-  </data>
-  <data name="imageWaitHalo" xml:space="preserve">
-    <value>Réduction des halos</value>
-  </data>
-  <data name="imageWaitFinish" xml:space="preserve">
-    <value>Finition</value>
-  </data>
-  <data name="imageWaitGrading" xml:space="preserve">
-    <value>Étalonnage colorimétrique</value>
-  </data>
-  <data name="imageWaitPreview" xml:space="preserve">
-    <value>Préparation de l'aperçu</value>
   </data>
   <data name="renderReassuranceStart" xml:space="preserve">
     <value>Tout se passe comme prévu.</value>

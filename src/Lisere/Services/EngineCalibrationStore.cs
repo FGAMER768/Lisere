@@ -56,24 +56,13 @@ public sealed class EngineCalibrationStore
     }
 
     /// <summary>
-    /// Provider de la mesure la plus récente pour ce modèle sur cette machine,
-    /// même avec une autre empreinte ou une autre version : c'est ce qui permet
-    /// d'annoncer « DirectML » avant même d'ouvrir la session du jour. Si le
-    /// moteur a tourné sur CPU hier et sur DirectML ce matin, c'est DirectML.
+    /// Dernière mesure du modèle sur cette machine — coût et provider, lus d'un
+    /// seul parcours — même avec une autre empreinte ou une autre version.
+    /// C'est ce qui permet d'annoncer « DirectML » et un chiffre local avant
+    /// même d'ouvrir la session du jour : si le moteur a tourné sur CPU hier et
+    /// sur DirectML ce matin, c'est DirectML du matin qui fait foi.
     /// </summary>
-    public string? ProviderFor(string modelId) => NewestEntry(modelId)?.Provider;
-
-    /// <summary>
-    /// Mesure la plus récente pour ce modèle, toutes empreintes et versions
-    /// confondues. Avant d'ouvrir la session du jour, c'est la seule qu'on
-    /// puisse citer : la clé exacte (provider, version) n'existe pas encore.
-    /// </summary>
-    public (double SecondsPerMegapixel, string Provider)? LatestFor(string modelId) =>
-        NewestEntry(modelId) is { } newest
-            ? (newest.Sample.SecondsPerMegapixel, newest.Provider)
-            : null;
-
-    private (string Provider, Sample Sample)? NewestEntry(string modelId)
+    public (double SecondsPerMegapixel, string Provider)? Latest(string modelId)
     {
         lock (_gate)
         {
@@ -95,7 +84,9 @@ public sealed class EngineCalibrationStore
                 newest = (parts[2], sample);
             }
 
-            return newest;
+            return newest is { } found
+                ? (found.Sample.SecondsPerMegapixel, found.Provider)
+                : null;
         }
     }
 

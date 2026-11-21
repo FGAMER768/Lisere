@@ -51,18 +51,18 @@ public class EngineCalibrationStoreTests
     public void TheMostRecentProviderIsTheOneShown()
     {
         var store = new EngineCalibrationStore();
-        Assert.Null(store.ProviderFor(Key.ModelId));
+        Assert.Null(store.Latest(Key.ModelId));
 
         store.Record(new EngineMeasurement(Key with { Provider = "CPU" }, 1.0, TimeSpan.FromSeconds(70)));
         store.Record(new EngineMeasurement(Key with { Provider = "DirectML" }, 1.0, TimeSpan.FromSeconds(52)));
 
         // La dernière mesure fait foi, pas la première entrée du dictionnaire.
-        Assert.Equal("DirectML", store.ProviderFor(Key.ModelId));
+        Assert.Equal("DirectML", store.Latest(Key.ModelId)?.Provider);
 
         store.Record(new EngineMeasurement(Key with { Provider = "CPU" }, 1.0, TimeSpan.FromSeconds(68)));
 
-        Assert.Equal("CPU", store.ProviderFor(Key.ModelId));
-        Assert.Null(store.ProviderFor("autre-modele"));
+        Assert.Equal("CPU", store.Latest(Key.ModelId)?.Provider);
+        Assert.Null(store.Latest("autre-modele"));
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class EngineCalibrationStoreTests
             first.Record(new EngineMeasurement(Key with { Provider = "CPU" }, 1.0, TimeSpan.FromSeconds(70)));
             first.Record(new EngineMeasurement(Key with { Provider = "DirectML" }, 1.0, TimeSpan.FromSeconds(52)));
 
-            Assert.Equal("DirectML", new EngineCalibrationStore(path).ProviderFor(Key.ModelId));
+            Assert.Equal("DirectML", new EngineCalibrationStore(path).Latest(Key.ModelId)?.Provider);
         }
         finally
         {
