@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/LisereIcon.png" width="104" alt="Icône de Liseré">
+<img src="assets/lisere-banner.png" width="880" alt="Bannière Liseré avec l'interface de l'application">
 
 # 🖼️ Liseré
 
@@ -249,21 +249,21 @@ Deux cas générés par le pipeline de la page Image, avec les réglages exacts,
 bonus d'upscale ×4. Chaque comparatif se lit de gauche à droite : avant, puis après ;
 la seconde rangée est un détail à 100 %.
 
-**1. Photo 1608 px — Auto + Ultron CC**
+**1. Photo 1608 px : Auto + Ultron CC**
 
 <img src="assets/demos/01-auto-ultron.jpg" width="880" alt="Comparatif avant/après sur une photo 1608 px, avec un détail à 100 %">
 
 Source 1608 × 1608. Préréglage **Auto**, étalonnage **Ultron CC**, aucun renforcement
 de visages, aucun agrandissement. Sortie 1608 × 1608.
 
-**2. Portrait 1916 × 2608 — Auto sans étalonnage**
+**2. Portrait 1916 × 2608 : Auto sans étalonnage**
 
 <img src="assets/demos/02-auto-portrait.jpg" width="880" alt="Comparatif avant/après sur le portrait officiel de Barack Obama, avec un détail à 100 %">
 
 Source 1916 × 2608. Préréglage **Auto**, **aucune colorimétrie**, aucun renforcement
 de visages, aucun agrandissement. Sortie 1916 × 2608.
 
-**Bonus — paysage 640 × 427, upscale ×4**
+**Bonus : paysage 640 × 427, upscale ×4**
 
 <img src="assets/demos/03-mount-cook-4x.jpg" width="880" alt="Comparatif bicubique ×4 et Real-ESRGAN ×4 sur le lac Hooker et le mont Cook">
 
@@ -287,8 +287,8 @@ Bonus : photo de Danny Postma, CC0, via
 | `Ctrl+O` | Ouvrir une image | Ouvrir une vidéo |
 | `Ctrl+Entrée` | Lancer l'amélioration | Rafraîchir l'aperçu |
 | `Ctrl+S` | Exporter en JPEG | Exporter la vidéo |
-| `Espace` | — | Lecture / pause |
-| `Ctrl+←` / `Ctrl+→` | — | Image précédente / suivante |
+| `Espace` | - | Lecture / pause |
+| `Ctrl+←` / `Ctrl+→` | - | Image précédente / suivante |
 
 Les boutons **FR** et **EN** de la barre de titre changent la langue sans redémarrage ;
 le choix est enregistré dans `%APPDATA%\Lisere\settings.json`.

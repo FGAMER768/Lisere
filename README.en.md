@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/LisereIcon.png" width="104" alt="Liseré icon">
+<img src="assets/lisere-banner.png" width="880" alt="Liseré banner with the app interface">
 
 # 🖼️ Liseré
 
@@ -245,21 +245,21 @@ Two cases produced by the Image page pipeline, with the exact settings, plus an 
 upscale bonus. Each comparison reads left to right: before, then after; the second
 row is a 100% detail.
 
-**1. 1608 px photo — Auto + Ultron CC**
+**1. 1608 px photo : Auto + Ultron CC**
 
 <img src="assets/demos/01-auto-ultron.jpg" width="880" alt="Before/after comparison on a 1608 px photo, with a 100% detail">
 
 Source 1608 × 1608. **Auto** preset, **Ultron CC** grading, no face refinement, no
 upscaling. Output 1608 × 1608.
 
-**2. 1916 × 2608 portrait — Auto, no grading**
+**2. 1916 × 2608 portrait : Auto, no grading**
 
 <img src="assets/demos/02-auto-portrait.jpg" width="880" alt="Before/after comparison on the official portrait of Barack Obama, with a 100% detail">
 
 Source 1916 × 2608. **Auto** preset, **no colour grading**, no face refinement, no
 upscaling. Output 1916 × 2608.
 
-**Bonus — 640 × 427 landscape, ×4 upscale**
+**Bonus : 640 × 427 landscape, ×4 upscale**
 
 <img src="assets/demos/03-mount-cook-4x.jpg" width="880" alt="Bicubic ×4 and Real-ESRGAN ×4 comparison on Hooker Lake and Mount Cook">
 
@@ -283,8 +283,8 @@ Bonus: photo by Danny Postma, CC0, via
 | `Ctrl+O` | Open an image | Open a video |
 | `Ctrl+Enter` | Run the enhancement | Refresh the preview |
 | `Ctrl+S` | Export as JPEG | Export the video |
-| `Space` | — | Play / pause |
-| `Ctrl+←` / `Ctrl+→` | — | Previous / next frame |
+| `Space` | - | Play / pause |
+| `Ctrl+←` / `Ctrl+→` | - | Previous / next frame |
 
 The **FR** and **EN** buttons in the title bar switch language without a restart; the
 choice is stored in `%APPDATA%\Lisere\settings.json`.
@@ -315,7 +315,7 @@ choice is stored in `%APPDATA%\Lisere\settings.json`.
 - **BasicVSR++ is not included**: the official weights are PyTorch and DCN alignment
   depends on CUDA. No verifiable ONNX export is distributed.
 - **Face restoration is not included**: GFPGAN and CodeFormer need a detector, a
-  512×512 alignment and pasting, for 340–377 MB weights.
+  512×512 alignment and pasting, for 340-377 MB weights.
 - The one-second preview writes a temporary MP4 to `%TEMP%\Lisere\previews`, purged
   after 24 h; preview export goes to the chosen file. Neither keeps audio.
 
