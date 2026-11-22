@@ -121,6 +121,21 @@ public class VideoViewModelTests
     }
 
     [Fact]
+    public void ChoosingAnAnimeEngineReplacesTheChromaPresetWithAuto()
+    {
+        var classic = new FakeEngine(unavailable: false, id: "lisere.classic");
+        var anime = new FakeEngine(unavailable: false, id: "realesr-animevideov3");
+        var viewModel = CreateViewModel(engines: [classic, anime]);
+
+        Assert.Equal(EnhancementMode.ChromaEnhanceMain, viewModel.SelectedPreset?.Mode);
+
+        viewModel.SelectedEngine = viewModel.Engines.Single(
+            engine => engine.Enhancer.Id == anime.Id);
+
+        Assert.Equal(EnhancementMode.Auto, viewModel.SelectedPreset?.Mode);
+    }
+
+    [Fact]
     public async Task OnlyTheChromaPresetRequestsTheToneCurve()
     {
         var renderer = new FakeVideoRenderer();
@@ -1064,9 +1079,10 @@ public class VideoViewModelTests
         FakeVideoProbe? probe = null,
         IVideoFrameExtractor? extractor = null,
         FakeEngine? engine = null,
-        IImageCodec? codec = null)
+        IImageCodec? codec = null,
+        IReadOnlyList<IFrameEnhancer>? engines = null)
     {
-        var engines = new List<IFrameEnhancer>
+        engines ??= new List<IFrameEnhancer>
         {
             engine ?? new FakeEngine(unavailableEngine)
         };
@@ -1111,18 +1127,20 @@ public class VideoViewModelTests
     {
         private readonly bool _unavailable;
         private readonly TimeSpan _delay;
+        private readonly string _id;
 
-        public FakeEngine(bool unavailable, TimeSpan? delay = null)
+        public FakeEngine(bool unavailable, TimeSpan? delay = null, string id = "fake")
         {
             _unavailable = unavailable;
             _delay = delay ?? TimeSpan.Zero;
+            _id = id;
         }
 
         public FrameEnhancementRequest? LastRequest { get; private set; }
 
         public int EnhanceCount { get; private set; }
 
-        public string Id => "fake";
+        public string Id => _id;
 
         public string DisplayName => "Moteur de test";
 

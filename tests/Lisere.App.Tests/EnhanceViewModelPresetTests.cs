@@ -188,6 +188,23 @@ public class EnhanceViewModelPresetTests
     }
 
     [Fact]
+    public void ChoosingAnAnimeEngineReplacesTheChromaPresetWithAuto()
+    {
+        var classic = new TestEngine("lisere.classic");
+        var anime = new TestEngine("realesrgan-anime-6b");
+        var viewModel = CreateViewModel(
+            new FakeFileDialogService(),
+            engines: [classic, anime]);
+
+        Assert.Same(classic, viewModel.SelectedEngine);
+        Assert.Equal(EnhancementMode.ChromaEnhanceMain, viewModel.SelectedPreset?.Mode);
+
+        viewModel.SelectedEngine = anime;
+
+        Assert.Equal(EnhancementMode.Auto, viewModel.SelectedPreset?.Mode);
+    }
+
+    [Fact]
     public async Task ImportingChromaKeepsThePresetWhenItsValuesMatch()
     {
         var path = Path.Combine(

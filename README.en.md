@@ -114,6 +114,8 @@ of slowing the clip down, and before and after always show the same frame.
 - Five reproduced After Effects grades: **Ultron CC**, **Matrix CC**, **Infinity CC**,
   **Nebulus CC** and **Splendida CC**, plus a manual mode.
 - Importable and exportable complete preset (sliders, colour, engine, faces).
+- **Anime ×4** neural engine dedicated to drawing, animation and digital art,
+  alongside the classical pipeline and the general engine.
 - Automatic estimation, out-of-range warnings, duration estimate before a long render,
   cancellation and JPEG export at quality 92.
 
@@ -124,7 +126,8 @@ of slowing the clip down, and before and after always show the same frame.
   chosen frame.
 - **Real-time playback** that skips frames the engine cannot keep up with.
 - Interchangeable engines: **Lisere Classic** (deterministic local pipeline) or
-  SHA-256-verified ONNX models, run on DirectML with CPU fallback.
+  SHA-256-verified ONNX models, including **AnimeVideo ×4** for animation, run
+  on DirectML with CPU fallback.
 - Source resolution, 2×, 4×, 1080p or 2160p; source frame rate, 30, 60 or 120 fps.
 - **RIFE ×2 neural interpolation**, `bwdif` deinterlacing and two-pass `vidstab`
   stabilisation.
@@ -154,6 +157,9 @@ of slowing the clip down, and before and after always show the same frame.
 | **Manual** | Applies the entered values directly. |
 | **Auto + relative medium** | Automatic estimate, then a medium relative adjustment. |
 | **None** | No correction: only colour grading and export apply. |
+
+When an anime engine is selected, **Chroma** automatically gives way to **Auto**; an
+existing Manual or Auto preset is left untouched.
 
 ### 🎨 Colour grading
 
@@ -273,6 +279,46 @@ official portrait of Barack Obama by **Pete Souza**,
 Bonus: photo by Danny Postma, CC0, via
 [AltPhotos](https://altphotos.com/photo/hooker-lake-at-the-bottom-of-mount-cook-new-zealand-1747/).
 
+### 🎞️ Anime 6B or AnimeVideo v3?
+
+The same five-second excerpt from **Namakura Gatana** (1917), 320 × 180 at 12 fps,
+upscaled ×4 with both anime engines. The settings are identical: **Manual** preset at
+zero, no colour grading, 1280 × 720 output, 60 frames. **AnimeVideo v3** is on the left,
+**Anime 6B** on the right.
+
+<img src="assets/demos/04-anime-6b-vs-animevideo.jpg" width="880" alt="AnimeVideo v3 on the left and Anime 6B on the right on Namakura Gatana, with a 100% detail">
+
+Top row: the whole frame; bottom row: a 100% detail. **AnimeVideo v3** keeps more grain
+and micro-texture; **Anime 6B** smooths flat areas and lines more aggressively, at the
+cost of a softer look.
+
+<img src="assets/demos/05-anime-temporal-noise.jpg" width="880" alt="Temporal noise maps on the roofs and the ground, AnimeVideo v3 on the left and Anime 6B on the right">
+
+The second plate measures the **mean difference between consecutive frames**,
+amplified ×200: roofs and sky on top, a flat patch of ground below. The darker the map,
+the less that area changes from one frame to the next.
+
+| Measurement (0–255) | Bicubic | AnimeVideo v3 | Anime 6B |
+|---|---:|---:|---:|
+| Mean global delta | 1.501 | **1.617** | 1.741 |
+| Flat-area delta, mean | 0.068 | 0.177 | **0.093** |
+| Per-pixel temporal standard deviation, flat area | 0.791 | 0.895 | **0.742** |
+| Per-pixel temporal standard deviation, texture p95 | 12.59 | **21.27** | 28.01 |
+
+**AnimeVideo v3 is therefore not universally more stable.** It is more stable globally
+and on highly detailed textures, but Anime 6B moves less on flat areas. The 6B render is
+also much slower: **72.3 s** versus **9.9 s** for these 60 frames on DirectML. Both models
+process each frame independently; neither adds explicit temporal coherence.
+
+The same full export launched from the Liseré window (AnimeVideo v3, 4×, Manual at zero)
+produces exactly **1280 × 720, 60 frames, 5.00 s**. Against the harness render:
+**PSNR 40.67 dB**, **SSIM 0.991**, the remaining difference coming from encoding quality
+(651,296 bytes versus 1,354,678).
+
+*Credit.* Excerpt from **Namakura Gatana** (『なまくら刀』, 1917) by **Jun'ichi Kōuchi**,
+a public-domain Japanese film, via
+[Internet Archive](https://archive.org/details/1917-the-dull-sword-namakura-gatana).
+
 <a id="shortcuts"></a>
 ## ⌨️ Shortcuts
 
@@ -390,7 +436,7 @@ scripts/           ffmpeg, publishing, installer, signing
 <details>
 <summary>🧪 Tests and publishing</summary>
 
-The suite has **463 tests** (125 Core, 24 Ai, 53 Video, 261 App) with 0 build warnings.
+The suite has **468 tests** (125 Core, 27 Ai, 53 Video, 263 App) with 0 build warnings.
 Video integration tests generate a clip with FFmpeg and check rendering, audio,
 deinterlacing, exact size, cancellation and preview extraction; they are skipped when
 FFmpeg is missing. Presets are covered with synthetic JSON and, when
@@ -459,6 +505,10 @@ weights, code or media.
 - **Sub-pixel SRCNN ×3**: ONNX Model Zoo, Apache-2.0 licence.
 - **1× RealPLKSR denoising**: Philip Hofmann, CC-BY-4.0 licence.
 - **Real-ESRGAN general ×4**: xinntao/Real-ESRGAN, ONNX export, BSD-3-Clause licence.
+- **Real-ESRGAN Anime 6B ×4**: xinntao/Real-ESRGAN, SkillSafe ONNX export,
+  BSD-3-Clause licence.
+- **Real-ESRGAN AnimeVideo v3 ×4**: xinntao/Real-ESRGAN, SkillSafe ONNX export,
+  BSD-3-Clause licence.
 - **ONNX Runtime and DirectML**: Microsoft, MIT licence.
 - **FFmpeg**: BtbN build under GNU GPL v3; provenance, hashes and licence in
   `ffmpeg/README.md` and `ffmpeg/LICENSE.txt`.

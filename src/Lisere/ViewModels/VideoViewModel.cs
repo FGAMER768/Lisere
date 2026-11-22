@@ -497,6 +497,14 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedEngineChanged(VideoEngineOption? value)
     {
+        if (value is not null &&
+            value.Enhancer.Id.Contains("anime", StringComparison.OrdinalIgnoreCase) &&
+            SelectedPreset is { Mode: EnhancementMode.ChromaEnhanceMain })
+        {
+            SelectedPreset = Presets.FirstOrDefault(
+                preset => preset.Mode is EnhancementMode.Auto) ?? SelectedPreset;
+        }
+
         UpdateEngineNote();
         UpdatePendingStatus();
         NotifyCommandStates();

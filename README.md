@@ -115,6 +115,8 @@ sautées au lieu de ralentir le clip, et l'avant comme l'après restent sur la m
 - Cinq étalonnages After Effects reproduits : **Ultron CC**, **Matrix CC**,
   **Infinity CC**, **Nebulus CC** et **Splendida CC**, plus un mode manuel.
 - Preset complet importable et exportable (curseurs, colorimétrie, moteur, visages).
+- Moteur neuronal **Anime ×4** dédié au dessin, à l'animation et à l'art digital,
+  en plus du pipeline classique et du moteur général.
 - Estimation automatique, avertissements hors plage, estimation de durée avant un
   rendu long, annulation et export JPEG de qualité 92.
 
@@ -125,7 +127,8 @@ sautées au lieu de ralentir le clip, et l'avant comme l'après restent sur la m
   avant/après sur la frame choisie.
 - **Lecture temps réel** avec saut des frames que le moteur ne peut pas suivre.
 - Moteurs interchangeables : **Lisere Classic** (pipeline local déterministe) ou
-  modèles ONNX vérifiés par SHA-256, exécutés sur DirectML avec repli CPU.
+  modèles ONNX vérifiés par SHA-256, dont **Anime vidéo ×4** pour l'animation,
+  exécutés sur DirectML avec repli CPU.
 - Résolution source, 2×, 4×, 1080p ou 2160p ; cadence source, 30, 60 ou 120 i/s.
 - **Interpolation neuronale RIFE ×2**, désentrelacement `bwdif` et stabilisation
   `vidstab` en deux passes.
@@ -155,6 +158,9 @@ sautées au lieu de ralentir le clip, et l'avant comme l'après restent sur la m
 | **Manuel** | Applique directement les valeurs saisies. |
 | **Auto + relatif moyen** | Estimation automatique, puis ajustement relatif moyen. |
 | **Aucune** | Aucune correction : seuls la colorimétrie et l'export s'appliquent. |
+
+Quand un moteur anime est sélectionné, **Chroma** cède automatiquement la place à
+**Auto** ; un preset Manuel ou Auto déjà choisi n'est pas modifié.
 
 ### 🎨 Colorimétrie
 
@@ -277,6 +283,47 @@ portrait officiel de Barack Obama par **Pete Souza**, licence
 Bonus : photo de Danny Postma, CC0, via
 [AltPhotos](https://altphotos.com/photo/hooker-lake-at-the-bottom-of-mount-cook-new-zealand-1747/).
 
+### 🎞️ Anime 6B ou AnimeVideo v3 ?
+
+Le même extrait de **Namakura Gatana** (1917), 320 × 180 à 12 i/s sur 5 s, passé en
+×4 avec les deux moteurs anime. Les réglages sont identiques : préréglage **Manuel**
+à zéro, aucune colorimétrie, sortie 1280 × 720, 60 images. À gauche **AnimeVideo v3**,
+à droite **Anime 6B**.
+
+<img src="assets/demos/04-anime-6b-vs-animevideo.jpg" width="880" alt="Comparatif AnimeVideo v3 à gauche et Anime 6B à droite sur Namakura Gatana, avec un détail à 100 %">
+
+En haut, l'image entière ; en bas, un détail à 100 %. **AnimeVideo v3** garde davantage
+de grain et de micro-texture ; **Anime 6B** lisse plus franchement les aplats et les
+traits, au prix d'un rendu plus doux.
+
+<img src="assets/demos/05-anime-temporal-noise.jpg" width="880" alt="Cartes de bruit temporel sur les toits et le sol, AnimeVideo v3 à gauche et Anime 6B à droite">
+
+La seconde planche mesure la **différence moyenne entre images consécutives**,
+amplifiée ×200 : en haut les toits et le ciel, en bas un aplat de sol. Plus la carte est
+sombre, moins la zone change d'une image à l'autre.
+
+| Mesure (0–255) | Bicubique | AnimeVideo v3 | Anime 6B |
+|---|---:|---:|---:|
+| Delta global moyen | 1,501 | **1,617** | 1,741 |
+| Delta zone plate, moyenne | 0,068 | 0,177 | **0,093** |
+| Écart-type temporel par pixel, zone plate | 0,791 | 0,895 | **0,742** |
+| Écart-type temporel par pixel, texture p95 | 12,59 | **21,27** | 28,01 |
+
+**AnimeVideo v3 n'est donc pas universellement plus stable.** Il est plus stable
+globalement et sur les textures très détaillées, mais Anime 6B bouge moins sur les
+aplats. Le rendu 6B est aussi beaucoup plus lent : **72,3 s** contre **9,9 s** pour ces
+60 images sur DirectML. Les deux modèles traitent chaque image indépendamment ; aucun
+n'ajoute de cohérence temporelle explicite.
+
+Le même export complet lancé depuis la fenêtre Liseré (AnimeVideo v3, 4×, Manuel à
+zéro) donne exactement **1280 × 720, 60 images, 5,00 s**. Comparé au rendu du harness :
+**PSNR 40,67 dB**, **SSIM 0,991**, l'écart restant venant de la qualité d'encodage
+(651 296 octets contre 1 354 678).
+
+*Crédit.* Extrait de **Namakura Gatana** (『なまくら刀』, 1917) de **Jun'ichi Kōuchi**,
+film japonais du domaine public, via
+[Internet Archive](https://archive.org/details/1917-the-dull-sword-namakura-gatana).
+
 <a id="raccourcis"></a>
 ## ⌨️ Raccourcis
 
@@ -398,7 +445,7 @@ scripts/           ffmpeg, publication, installateur, signature
 <details>
 <summary>🧪 Tests et publication</summary>
 
-La suite compte **463 tests** (125 Core, 24 Ai, 53 Video, 261 App) avec 0 avertissement
+La suite compte **468 tests** (125 Core, 27 Ai, 53 Video, 263 App) avec 0 avertissement
 de build. Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le
 rendu, l'audio, le désentrelacement, la taille, l'annulation et l'extraction d'aperçu ;
 ils sont ignorés si FFmpeg est introuvable. Les presets sont couverts sur des JSON
@@ -470,6 +517,10 @@ ou média propriétaire.
 - **SRCNN sous-pixel ×3** : ONNX Model Zoo, licence Apache-2.0.
 - **Nettoyage 1× RealPLKSR** : Philip Hofmann, licence CC-BY-4.0.
 - **Real-ESRGAN général ×4** : xinntao/Real-ESRGAN, export ONNX, licence BSD-3-Clause.
+- **Real-ESRGAN Anime 6B ×4** : xinntao/Real-ESRGAN, export ONNX SkillSafe,
+  licence BSD-3-Clause.
+- **Real-ESRGAN AnimeVideo v3 ×4** : xinntao/Real-ESRGAN, export ONNX SkillSafe,
+  licence BSD-3-Clause.
 - **ONNX Runtime et DirectML** : Microsoft, licence MIT.
 - **FFmpeg** : compilation BtbN sous GNU GPL v3 ; provenance, empreintes et licence
   dans `ffmpeg/README.md` et `ffmpeg/LICENSE.txt`.

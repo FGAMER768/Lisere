@@ -323,6 +323,8 @@ Le menu **Moteur** propose les moteurs installés :
 | **Nettoyage photo 1×** | Réseau RVB qui retire le bruit et une partie des artefacts JPEG sans changer la taille. Le plus lent des moteurs : environ une minute pour une photo 900×900. | Dépend de la présence et de l'intégrité du modèle. |
 | **Super-Resolution CNN ×3** | Modèle ONNX local vérifié par SHA-256, inférence DirectML sur iGPU compatible avec repli CPU. | Dépend de la présence et de l'intégrité du modèle. |
 | **Real-ESRGAN général ×4** | Réseau RVB : la couleur est reconstruite avec la netteté, sur des tuiles de taille libre, puis ramenée à la résolution de sortie choisie. Plus lent qu'un modèle de luminance. | Dépend de la présence et de l'intégrité du modèle. |
+| **Anime ×4 (Real-ESRGAN 6B)** | Réseau RVB spécialisé animation, dessin et art digital : traits et aplats plus propres, plus lent que le général. À éviter sur les photos. | Dépend de la présence et de l'intégrité du modèle. |
+| **Anime vidéo ×4 (Real-ESRGAN v3)** | Version rapide pour les frames d'animation, plus douce que le modèle image. | Dépend de la présence et de l'intégrité du modèle. |
 
 La note sous le menu indique si le moteur est prêt ou pourquoi il est indisponible. Si un moteur neuronal est indisponible, choisissez **Classic** : le reste de l'application continue de fonctionner.
 

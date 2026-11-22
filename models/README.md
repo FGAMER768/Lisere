@@ -13,7 +13,9 @@ découvert automatiquement (dossier de l'application, variable
 | `onnx/super-resolution-10.onnx` | SRCNN sous-pixel ×3 (Shi et al., 2016), ONNX Model Zoo. |
 | `onnx/LICENSE` | Apache License 2.0 du modèle SRCNN. |
 | `onnx/realesr-general-x4v3.onnx` | Real-ESRGAN général ×4 (SRVGGNetCompact), super-résolution RVB. |
-| `onnx/LICENSE-real-esrgan` | Licence BSD-3-Clause des poids Real-ESRGAN. |
+| `onnx/realesrgan-x4plus-anime-6b.onnx` | Real-ESRGAN Anime 6B ×4, spécialisé animation et art digital. |
+| `onnx/realesr-animevideov3-x4.onnx` | Real-ESRGAN AnimeVideo v3 ×4, version rapide pour la vidéo. |
+| `onnx/LICENSE-real-esrgan` | Licence BSD-3-Clause des poids Real-ESRGAN (général, anime et vidéo). |
 | `onnx/1xDeNoise_realplksr_otf_fp32.onnx` | Nettoyage 1× RealPLKSR : débruit sans changer la taille. |
 | `onnx/LICENSE-realplksr` | Licence CC-BY-4.0 du modèle RealPLKSR. |
 | `onnx/rife49.onnx` | RIFE 4.9 (Practical-RIFE), interpolation d'images, export ONNX communautaire. |
@@ -61,6 +63,57 @@ rapide pour l'aperçu en direct. Pour une qualité supérieure, `RealESRGAN_x4pl
 même contrat `1×3×H×W → 1×3×4H×4W` : déposer le fichier sous `models/onnx/`,
 ajouter une entrée `plane: "rgb"` dans `catalog.json`, et le moteur RVB s'en sert
 sans changement de code.
+
+## Modèle Anime 6B (image)
+
+- **Source** : <https://huggingface.co/skillsafe-ai/realesrgan-x4plus-anime-6b>
+  (`model.onnx`), export des poids officiels `RealESRGAN_x4plus_anime_6B.pth`
+  de <https://github.com/xinntao/Real-ESRGAN> (release v0.2.2.4, empreinte
+  amont `f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da`).
+- **Auteur / licence** : Xintao Wang, BSD-3-Clause (`onnx/LICENSE-real-esrgan`).
+- **Entrée** : `input`, tenseur `1×3×H×W`, RVB planaire dans `[0,1]`, `H` et `W`
+  libres.
+- **Sortie** : `output`, tenseur `1×3×4H×4W`, facteur ×4.
+- **SHA-256** : `9a029dae374b2cd4c3eb2dbbed857e22e6d785687c767aa12828e7356b9fb378`
+- **Taille** : 17,1 Mo environ.
+- **Architecture** : RRDBNet à 6 blocs, la variante anime officielle de
+  Real-ESRGAN.
+
+Le réseau est spécialisé dans les traits, les aplats et les cheveux de
+l'animation et de l'art digital. Il tient mieux les hachures et les contours
+que le modèle général, au prix d'un rendu de peau lissé : **ne pas l'utiliser
+sur des photos**. Coût mesuré sur l'iGPU de référence (DirectML) : environ
+**22,5 s par mégapixel source**, soit **20,5 s pour une frame 1280×720 en 4×**.
+Il passe par le même `OnnxRgbSuperResolutionEnhancer` que les autres modèles
+RVB (tuiles de 256 px, 8 px de contexte) et ne demande aucune classe dédiée.
+
+## Modèle AnimeVideo v3 (vidéo)
+
+- **Source** : <https://huggingface.co/skillsafe-ai/realesr-animevideov3>
+  (`model.onnx`), export des poids officiels `realesr-animevideov3.pth` de
+  <https://github.com/xinntao/Real-ESRGAN> (release v0.2.5.0, empreinte amont
+  `b8a8376811077954d82ca3fcf476f1ac3da3e8a68a4f4d71363008000a18b75d`).
+- **Auteur / licence** : Xintao Wang, BSD-3-Clause (`onnx/LICENSE-real-esrgan`).
+- **Entrée** : `input`, tenseur `1×3×H×W`, RVB planaire dans `[0,1]`, `H` et `W`
+  libres.
+- **Sortie** : `output`, tenseur `1×3×4H×4W`, facteur ×4.
+- **SHA-256** : `78baa685a1a92cac6e14ab2af2a8ad0ef56fa48629563b1414e3a7acc54d86e2`
+- **Taille** : 2,4 Mo environ.
+- **Architecture** : SRVGGNetCompact (`num_feat` 64, `num_conv` 16), ×4.
+
+C'est la version rapide, pensée pour les frames d'animation : plus douce que
+le modèle image, mais beaucoup plus économe. Coût mesuré (DirectML) : environ
+**2,5 s par mégapixel source**, soit **2,3 s pour une frame 1280×720 en 4×**,
+1,7× plus rapide que le Real-ESRGAN général x4v3. C'est le moteur à choisir
+pour les aperçus et les exports vidéo d'animation ; il passe aussi par
+`OnnxRgbSuperResolutionEnhancer`.
+
+### Pourquoi pas le « Digital Art » d'Upscayl ?
+
+Le modèle `digital-art-4x` d'Upscayl a été mesuré sur le même protocole : sa
+sortie est à **59,2 dB / SSIM 0,9996** de celle d'Anime 6B. Il n'apporte aucun
+détail supplémentaire et la licence de ses poids n'est pas documentée. Les deux
+poids ci-dessus, issus des releases officielles Real-ESRGAN, sont donc préférés.
 
 ## Modèles locaux
 
@@ -182,6 +235,8 @@ Pour revérifier manuellement :
 ```powershell
 Get-FileHash models\onnx\super-resolution-10.onnx -Algorithm SHA256
 Get-FileHash models\onnx\realesr-general-x4v3.onnx -Algorithm SHA256
+Get-FileHash models\onnx\realesrgan-x4plus-anime-6b.onnx -Algorithm SHA256
+Get-FileHash models\onnx\realesr-animevideov3-x4.onnx -Algorithm SHA256
 Get-FileHash models\onnx\1xDeNoise_realplksr_otf_fp32.onnx -Algorithm SHA256
 Get-FileHash models\onnx\rife49.onnx -Algorithm SHA256
 Get-FileHash models\onnx\face_detection_yunet_2023mar.onnx -Algorithm SHA256

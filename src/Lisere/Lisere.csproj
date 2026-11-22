@@ -9,7 +9,7 @@
     <AssemblyName>Lisere</AssemblyName>
     <RootNamespace>Lisere</RootNamespace>
     <ApplicationIcon>..\..\assets\Lisere.ico</ApplicationIcon>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>FGAMER768</Authors>
     <Company>FGAMER768</Company>
     <Product>Liseré</Product>
@@ -36,7 +36,11 @@
 
   <ItemGroup>
     <Content Include="..\..\models\catalog.json" Link="models\catalog.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\models\README.md" Link="models\README.md" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\models\onnx\*.onnx" Link="models\onnx\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\models\onnx\LICENSE*" Link="models\onnx\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\models\rife\LICENSE" Link="models\rife\LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\models\yunet\LICENSE" Link="models\yunet\LICENSE" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup Condition="Exists('..\..\tools\ffmpeg\ffmpeg.exe')">

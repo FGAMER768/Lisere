@@ -323,6 +323,8 @@ The **Engine** menu offers the installed engines:
 | **1x photo cleaning** | Colour network that removes noise and part of the JPEG artifacts without changing the size. The slowest engine: about one minute for a 900×900 photo. | Depends on the model being present and intact. |
 | **Super-Resolution CNN x3** | Local ONNX model verified by SHA-256, DirectML inference on a compatible iGPU with CPU fallback. | Depends on the model being present and intact. |
 | **Real-ESRGAN general x4** | Colour network: all three planes are rebuilt with the detail, on free-size tiles, then brought back to the chosen output resolution. Slower than a luma model. | Depends on the model being present and intact. |
+| **Anime x4 (Real-ESRGAN 6B)** | Colour network specialised for animation, drawing and digital art: cleaner lines and flat colours, slower than the general engine. Avoid on photographs. | Depends on the model being present and intact. |
+| **Anime video x4 (Real-ESRGAN v3)** | Fast version for animation frames, softer than the image model. | Depends on the model being present and intact. |
 
 The note below the menu indicates whether the engine is ready or why it is unavailable. If a neural engine is unavailable, choose **Classic**: the rest of the application keeps working.
 

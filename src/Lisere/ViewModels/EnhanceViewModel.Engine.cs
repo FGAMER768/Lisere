@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Lisere.Ai.Enhancement;
+using Lisere.Models;
 using Lisere.Services;
 
 namespace Lisere.ViewModels;
@@ -47,5 +48,18 @@ public sealed partial class EnhanceViewModel
         SelectedEngine =
             Engines.FirstOrDefault(engine => engine.Family is EnhancementEngineFamily.Classical) ??
             Engines.FirstOrDefault();
+    }
+
+    partial void OnSelectedEngineChanged(IFrameEnhancer? value)
+    {
+        if (value is null ||
+            !value.Id.Contains("anime", StringComparison.OrdinalIgnoreCase) ||
+            SelectedPreset is not { Mode: EnhancementMode.ChromaEnhanceMain })
+        {
+            return;
+        }
+
+        SelectedPreset = Presets.FirstOrDefault(
+            preset => preset.Mode is EnhancementMode.Auto) ?? SelectedPreset;
     }
 }

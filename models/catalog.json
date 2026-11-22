@@ -34,6 +34,38 @@
       "description": "Real-ESRGAN general x4v3 (SRVGGNetCompact) exécuté en RVB sur des tuiles de taille libre : la couleur est reconstruite par le réseau, pas seulement la luminance. Poids officiels xinntao/Real-ESRGAN (BSD-3-Clause) exportés en ONNX."
     },
     {
+      "id": "realesrgan-anime-6b",
+      "displayName": "Anime ×4 (Real-ESRGAN 6B)",
+      "family": "super-resolution",
+      "file": "onnx/realesrgan-x4plus-anime-6b.onnx",
+      "sha256": "9a029dae374b2cd4c3eb2dbbed857e22e6d785687c767aa12828e7356b9fb378",
+      "scale": 4,
+      "inputName": "input",
+      "outputName": "output",
+      "tileSize": 256,
+      "plane": "rgb",
+      "secondsPerMegapixel": 22.5,
+      "license": "BSD-3-Clause",
+      "source": "https://huggingface.co/skillsafe-ai/realesrgan-x4plus-anime-6b",
+      "description": "Real-ESRGAN Anime 6B (RRDBNet, 6 blocs) pour l'animation, le dessin et l'art digital : traits, aplats et cheveux mieux tenus que le moteur général. À éviter sur les photos."
+    },
+    {
+      "id": "realesr-animevideov3",
+      "displayName": "Anime vidéo ×4 (Real-ESRGAN v3)",
+      "family": "super-resolution",
+      "file": "onnx/realesr-animevideov3-x4.onnx",
+      "sha256": "78baa685a1a92cac6e14ab2af2a8ad0ef56fa48629563b1414e3a7acc54d86e2",
+      "scale": 4,
+      "inputName": "input",
+      "outputName": "output",
+      "tileSize": 256,
+      "plane": "rgb",
+      "secondsPerMegapixel": 2.5,
+      "license": "BSD-3-Clause",
+      "source": "https://huggingface.co/skillsafe-ai/realesr-animevideov3",
+      "description": "Real-ESRGAN AnimeVideo v3 (SRVGGNetCompact) : version rapide pour les frames d'animation, plus douce que le modèle image. Conçue pour la vidéo."
+    },
+    {
       "id": "realplksr-denoise-1x",
       "displayName": "Nettoyage photo 1×",
       "family": "restoration",
