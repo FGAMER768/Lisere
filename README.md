@@ -19,7 +19,7 @@ des moteurs qui tournent en local et des exports prêts à garder.
 > [!WARNING]
 > **Projet à l'arrêt : il manque un GPU exploitable pour expérimenter.**
 >
-> Dernier test effectué : upscale **×2 vers 4K** avec **Lisere Classic**, le
+> Dernier test effectué : upscale **×2 vers 8K** avec **Lisere Classic**, le
 > préréglage **Chroma** et l'étalonnage **Ultron**, sur une **RTX 4070**. Constat :
 > **le GPU n'est pas sollicité** et la consommation part dans la **RAM**. Les essais
 > 4K ne sont donc pas exploitables pour itérer.
