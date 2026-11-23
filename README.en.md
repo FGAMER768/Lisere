@@ -17,7 +17,7 @@ engines that run locally, and exports ready to keep.
 </div>
 
 > [!WARNING]
-> **Project on hold — no usable GPU for experiments.**
+> **Project on hold: no usable GPU for experiments.**
 >
 > Latest test: **4K ×2** upscale with **Lisere Classic**, the **Chroma** preset
 > and the **Ultron** grade, on an **RTX 4070**. Result: **the GPU is not being
