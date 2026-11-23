@@ -19,7 +19,7 @@ engines that run locally, and exports ready to keep.
 > [!WARNING]
 > **Project on hold: no usable GPU for experiments.**
 >
-> Latest test: **4K ×2** upscale with **Lisere Classic**, the **Chroma** preset
+> Latest test: **8K ×2** upscale with **Lisere Classic**, the **Chroma** preset
 > and the **Ultron** grade, on an **RTX 4070**. Result: **the GPU is not being
 > used**, the load goes to **RAM**, and 4K rendering therefore cannot be
 > iterated on under proper conditions.
