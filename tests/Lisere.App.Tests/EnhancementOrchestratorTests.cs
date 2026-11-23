@@ -40,6 +40,72 @@ public class EnhancementOrchestratorTests
     }
 
     [Fact]
+    public async Task OutputScaleResizesTheClassicalPipeline()
+    {
+        var request = new EnhancementRequest(
+            new RgbImage(32, 24),
+            EnhancementMode.None,
+            EnhancementParameters.Zero,
+            0,
+            0,
+            ColorPreset.None,
+            OutputScale: 2);
+
+        var result = await new EnhancementOrchestrator().EnhanceAsync(
+            request,
+            CancellationToken.None);
+
+        Assert.Equal(64, result.Image.Width);
+        Assert.Equal(48, result.Image.Height);
+    }
+
+    [Fact]
+    public async Task ExplicitTargetSizeWinsOverTheScale()
+    {
+        var request = new EnhancementRequest(
+            new RgbImage(32, 24),
+            EnhancementMode.None,
+            EnhancementParameters.Zero,
+            0,
+            0,
+            ColorPreset.None,
+            OutputScale: 4,
+            TargetWidth: 48,
+            TargetHeight: 36);
+
+        var result = await new EnhancementOrchestrator().EnhanceAsync(
+            request,
+            CancellationToken.None);
+
+        Assert.Equal(48, result.Image.Width);
+        Assert.Equal(36, result.Image.Height);
+    }
+
+    [Fact]
+    public async Task NeuralEngineReceivesTheRequestedOutputSize()
+    {
+        var engine = new ReportingEngine();
+        var request = new EnhancementRequest(
+            new RgbImage(40, 30),
+            EnhancementMode.Manual,
+            new EnhancementParameters(0, 0, 0, 20, 0, 0),
+            0,
+            0,
+            ColorPreset.None,
+            Engine: engine,
+            TargetWidth: 80,
+            TargetHeight: 60);
+
+        var result = await new EnhancementOrchestrator().EnhanceAsync(
+            request,
+            CancellationToken.None);
+
+        Assert.Equal((80, 60), engine.LastRequest!.ResolveSize(40, 30));
+        Assert.Equal(80, result.Image.Width);
+        Assert.Equal(60, result.Image.Height);
+    }
+
+    [Fact]
     public async Task ImageEnhancementSynthesizesSkinTexture()
     {
         var source = new RgbImage(96, 96);
@@ -218,6 +284,8 @@ public class EnhancementOrchestratorTests
     {
         public int Calls { get; private set; }
 
+        public FrameEnhancementRequest? LastRequest { get; private set; }
+
         public EngineMeasurement? LastMeasurement { get; private set; }
 
         public string Id => "test.reporting";
@@ -241,6 +309,7 @@ public class EnhancementOrchestratorTests
             CancellationToken cancellationToken)
         {
             Calls++;
+            LastRequest = request;
 
             foreach (var percent in new[] { 25.0, 50.0, 75.0 })
             {

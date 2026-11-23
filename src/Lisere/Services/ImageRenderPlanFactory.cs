@@ -22,7 +22,8 @@ public static class ImageRenderPlanFactory
         ImageSource? beforeImage,
         IFrameEnhancer? engine = null,
         string? knownProvider = null,
-        EstimationBasis? basis = null)
+        EstimationBasis? basis = null,
+        (int Width, int Height)? outputSize = null)
     {
         ArgumentNullException.ThrowIfNull(strings);
         ArgumentNullException.ThrowIfNull(source);
@@ -41,6 +42,11 @@ public static class ImageRenderPlanFactory
                 new RenderPlanLine(
                     strings["videoPlanSettings"],
                     $"{presetLabel} · {colorLabel}"),
+                .. (outputSize is { } size
+                    ? [new RenderPlanLine(
+                        strings["videoLabelResolution"],
+                        $"{size.Width} × {size.Height}")]
+                    : Array.Empty<RenderPlanLine>()),
                 new RenderPlanLine(
                     strings["videoEstimateLabel"],
                     strings.Format(

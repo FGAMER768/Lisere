@@ -197,6 +197,16 @@ public sealed partial class UpdateViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Starts the check automatically when the updates page opens. If another
+    /// check is still finishing, the page keeps its current state instead of
+    /// starting a second concurrent request.
+    /// </summary>
+    public Task CheckOnOpenAsync() =>
+        CheckCommand.CanExecute(null)
+            ? CheckCommand.ExecuteAsync(null)
+            : Task.CompletedTask;
+
     public void Cancel()
     {
         _operation?.Cancel();

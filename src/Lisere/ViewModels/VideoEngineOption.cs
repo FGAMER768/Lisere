@@ -9,15 +9,19 @@ namespace Lisere.ViewModels;
 /// </summary>
 public sealed class VideoEngineOption
 {
-    public VideoEngineOption(IFrameEnhancer enhancer, string availabilityText)
+    public VideoEngineOption(
+        IFrameEnhancer enhancer,
+        string availabilityText,
+        string? displayName = null)
     {
         Enhancer = enhancer;
         AvailabilityText = availabilityText;
+        DisplayName = displayName ?? enhancer.DisplayName;
     }
 
     public IFrameEnhancer Enhancer { get; }
 
-    public string DisplayName => Enhancer.DisplayName;
+    public string DisplayName { get; }
 
     public string AvailabilityText { get; }
 

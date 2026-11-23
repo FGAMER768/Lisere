@@ -13,6 +13,7 @@ using Lisere.Services;
 using Lisere.Video.Preview;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
+using Lisere.Video.TikTok;
 using Lisere.ViewModels;
 
 namespace Lisere.App.Tests;
@@ -37,6 +38,113 @@ public class VideoViewModelTests
         Assert.Equal(1, viewModel.DurationSeconds, 3);
         Assert.True(viewModel.RenderCommand.CanExecute(null));
         Assert.False(viewModel.HasWarnings);
+    }
+
+    [Fact]
+    public async Task TikTokExportForces1080pAndPatchesTheRenderedFile()
+    {
+        var patcher = new FakeTikTokPatcher();
+        var dialogs = new FakeDialogService();
+        var files = new FakeFileDialogService
+        {
+            VideoPath = "clip.mp4",
+            VideoTarget = "clip-tiktok.mp4"
+        };
+        var probe = new FakeVideoProbe
+        {
+            Handler = (_, _) => Task.FromResult(new VideoInfo(
+                "clip.mp4",
+                3840,
+                2160,
+                30,
+                2,
+                "h264",
+                "yuv420p",
+                8_000_000,
+                30,
+                true,
+                "aac"))
+        };
+        var renderer = new FakeVideoRenderer();
+        var viewModel = CreateViewModel(
+            dialogs: dialogs,
+            renderer: renderer,
+            files: files,
+            probe: probe,
+            tikTokPatcher: patcher);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        Assert.True(viewModel.ExportTikTokCommand.CanExecute(null));
+        await viewModel.ExportTikTokCommand.ExecuteAsync(null);
+
+        Assert.NotNull(renderer.Request);
+        Assert.Equal(1920, renderer.Request!.Frame.ResolveSize(3840, 2160).Width);
+        Assert.Equal(1080, renderer.Request.Frame.ResolveSize(3840, 2160).Height);
+        var plan = Assert.Single(dialogs.Plans);
+        Assert.Contains("TikTok", plan.Title, StringComparison.Ordinal);
+        Assert.Equal(new[] { "clip-tiktok.mp4" }, patcher.Paths);
+        Assert.Contains("TikTok", viewModel.StatusMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TikTokExportWorksWithoutAnEngine()
+    {
+        var patcher = new FakeTikTokPatcher();
+        var renderer = new FakeVideoRenderer();
+        var files = new FakeFileDialogService
+        {
+            VideoPath = "clip.mp4",
+            VideoTarget = "clip-tiktok.mp4"
+        };
+        var viewModel = CreateViewModel(
+            renderer: renderer,
+            files: files,
+            engines: [],
+            tikTokPatcher: patcher);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.SelectedEngine);
+        var passthrough = Assert.Single(
+            viewModel.Engines,
+            engine => engine.Enhancer.Id == "lisere.passthrough");
+        Assert.True(viewModel.ExportTikTokCommand.CanExecute(null));
+
+        viewModel.SelectedEngine = passthrough;
+        Assert.Contains("Aucune amélioration", viewModel.EngineNote, StringComparison.Ordinal);
+        await viewModel.ExportTikTokCommand.ExecuteAsync(null);
+
+        Assert.NotNull(renderer.Request);
+        Assert.Equal("lisere.passthrough", renderer.Request!.Engine.Id);
+        Assert.Equal(new[] { "clip-tiktok.mp4" }, patcher.Paths);
+        Assert.Contains("TikTok", viewModel.StatusMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TikTokExportIsDisabledWithoutAudio()
+    {
+        var probe = new FakeVideoProbe
+        {
+            Handler = (_, _) => Task.FromResult(new VideoInfo(
+                "clip.mp4",
+                640,
+                360,
+                10,
+                1,
+                "h264",
+                "yuv420p",
+                500_000,
+                10,
+                false,
+                null))
+        };
+        var viewModel = CreateViewModel(
+            probe: probe,
+            tikTokPatcher: new FakeTikTokPatcher());
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.ExportTikTokCommand.CanExecute(null));
     }
 
     [Fact]
@@ -1080,7 +1188,8 @@ public class VideoViewModelTests
         IVideoFrameExtractor? extractor = null,
         FakeEngine? engine = null,
         IImageCodec? codec = null,
-        IReadOnlyList<IFrameEnhancer>? engines = null)
+        IReadOnlyList<IFrameEnhancer>? engines = null,
+        ITikTokVideoPatcher? tikTokPatcher = null)
     {
         engines ??= new List<IFrameEnhancer>
         {
@@ -1096,7 +1205,8 @@ public class VideoViewModelTests
             dialogs ?? new FakeDialogService(),
             new LocalizationService(),
             engines,
-            rife is null ? [] : [rife]);
+            rife is null ? [] : [rife],
+            tikTokPatcher: tikTokPatcher);
     }
 
     private sealed class FakeInterpolator : IFrameInterpolator
@@ -1172,6 +1282,19 @@ public class VideoViewModelTests
 
         public void Dispose()
         {
+        }
+    }
+
+    private sealed class FakeTikTokPatcher : ITikTokVideoPatcher
+    {
+        public List<string> Paths { get; } = [];
+
+        public Task<TikTokPatchResult> PatchInPlaceAsync(
+            string path,
+            CancellationToken cancellationToken)
+        {
+            Paths.Add(path);
+            return Task.FromResult(new TikTokPatchResult(4));
         }
     }
 

@@ -102,6 +102,63 @@
   <data name="presetNoneNote" xml:space="preserve">
     <value>No correction: only the color preset applies. The six sliders and the two extra settings are ignored.</value>
   </data>
+  <data name="imageOutputInfo" xml:space="preserve">
+    <value>Output: {0} × {1}</value>
+  </data>
+  <data name="imageSectionQueue" xml:space="preserve">
+    <value>Image queue</value>
+  </data>
+  <data name="imageQueueEmpty" xml:space="preserve">
+    <value>No image queued. Add the current result to export several images one after another.</value>
+  </data>
+  <data name="imageActionAddQueue" xml:space="preserve">
+    <value>Add to queue</value>
+  </data>
+  <data name="imageActionRunQueue" xml:space="preserve">
+    <value>Run queue</value>
+  </data>
+  <data name="imageActionStopQueue" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="imageActionClearQueue" xml:space="preserve">
+    <value>Clear queue</value>
+  </data>
+  <data name="imageQueuePending" xml:space="preserve">
+    <value>Pending</value>
+  </data>
+  <data name="imageQueueRunning" xml:space="preserve">
+    <value>Exporting…</value>
+  </data>
+  <data name="imageQueueCompleted" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="imageQueueFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="imageQueueCancelled" xml:space="preserve">
+    <value>Cancelled</value>
+  </data>
+  <data name="imageStatusQueued" xml:space="preserve">
+    <value>Added to queue: {0}</value>
+  </data>
+  <data name="imageStatusQueueRunning" xml:space="preserve">
+    <value>Exporting the queue…</value>
+  </data>
+  <data name="imageStatusQueueCanceled" xml:space="preserve">
+    <value>Image queue stopped.</value>
+  </data>
+  <data name="imageStatusQueueCanceling" xml:space="preserve">
+    <value>Stopping the queue…</value>
+  </data>
+  <data name="imageStatusQueueDone" xml:space="preserve">
+    <value>{0} image(s) exported, {1} failed.</value>
+  </data>
+  <data name="imageStatusQueueCleared" xml:space="preserve">
+    <value>Image queue cleared.</value>
+  </data>
+  <data name="imageErrorQueueDuplicate" xml:space="preserve">
+    <value>This image is already in the queue.</value>
+  </data>
   <data name="sectionParameters" xml:space="preserve">
     <value>Parameters</value>
   </data>
@@ -507,6 +564,9 @@
   <data name="videoOpenAction" xml:space="preserve">
     <value>Open a video</value>
   </data>
+  <data name="videoSectionPreview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
   <data name="videoSectionModel" xml:space="preserve">
     <value>Engine and model</value>
   </data>
@@ -539,6 +599,45 @@
   </data>
   <data name="videoActionCancel" xml:space="preserve">
     <value>Cancel the render</value>
+  </data>
+  <data name="videoActionTikTok" xml:space="preserve">
+    <value>Prepare for TikTok…</value>
+  </data>
+  <data name="videoTikTokNote" xml:space="preserve">
+    <value>1080p maximum, AAC audio required. Also works without an engine: the video is then simply conformed. CompressBase's OBX method is applied locally after rendering; TikTok may still recompress the result.</value>
+  </data>
+  <data name="videoTikTokNoAudio" xml:space="preserve">
+    <value>The TikTok method requires an AAC audio track. This video has none.</value>
+  </data>
+  <data name="videoErrorTikTok" xml:space="preserve">
+    <value>The TikTok patch could not be applied. The normal render was kept.</value>
+  </data>
+  <data name="videoStatusTikTokExported" xml:space="preserve">
+    <value>TikTok version exported: {0}</value>
+  </data>
+  <data name="tiktokPlanTitle" xml:space="preserve">
+    <value>Prepare the TikTok version</value>
+  </data>
+  <data name="tiktokPlanIntro" xml:space="preserve">
+    <value>Lisere renders the video, then applies CompressBase's OBX method locally (compressbase.com/method-api) to the AAC audio. No file is sent to CompressBase.</value>
+  </data>
+  <data name="tiktokPlanFormat" xml:space="preserve">
+    <value>Output format</value>
+  </data>
+  <data name="tiktokFormatValue" xml:space="preserve">
+    <value>≤ 1080p · {0} × {1} · H.264 · AAC</value>
+  </data>
+  <data name="tiktokPlanMethod" xml:space="preserve">
+    <value>Method</value>
+  </data>
+  <data name="tiktokMethodValue" xml:space="preserve">
+    <value>Local OBX · compressbase.com/method-api</value>
+  </data>
+  <data name="tiktokPlanConfirm" xml:space="preserve">
+    <value>Create the TikTok version</value>
+  </data>
+  <data name="tiktokPlanReassurance" xml:space="preserve">
+    <value>The patch is written directly into the exported file. Nothing is uploaded; TikTok may still recompress the result.</value>
   </data>
   <data name="videoSectionOutput" xml:space="preserve">
     <value>Processing and export</value>
@@ -746,6 +845,12 @@
   </data>
   <data name="engineUnavailable" xml:space="preserve">
     <value>Unavailable: {0}</value>
+  </data>
+  <data name="enginePassthrough" xml:space="preserve">
+    <value>No enhancement</value>
+  </data>
+  <data name="enginePassthroughNote" xml:space="preserve">
+    <value>No enhancement: the video is only resized and exported as-is. Suitable for TikTok preparation.</value>
   </data>
   <data name="engineMissing" xml:space="preserve">
     <value>model not installed</value>

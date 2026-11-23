@@ -10,6 +10,7 @@ using Lisere.Video.Ffmpeg;
 using Lisere.Video.Preview;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
+using Lisere.Video.TikTok;
 using Lisere.ViewModels;
 using Lisere.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,6 +48,7 @@ public partial class App : Application
                 services.AddSingleton<IVideoProbe, FfprobeVideoProbe>();
                 services.AddSingleton<IVideoFrameExtractor, VideoFrameExtractor>();
                 services.AddSingleton<IVideoRenderService, VideoRenderService>();
+                services.AddSingleton<ITikTokVideoPatcher, TikTokVideoPatcher>();
                 services.AddSingleton<IReadOnlyList<IFrameEnhancer>>(
                     _ => FrameEnhancerCatalog.Create(catalog));
                 services.AddSingleton<IReadOnlyList<IFrameInterpolator>>(_ =>

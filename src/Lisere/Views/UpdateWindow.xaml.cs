@@ -19,7 +19,11 @@ public partial class UpdateWindow : FluentWindow
         Closed += OnClosed;
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e) => CheckButton.Focus();
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        CheckButton.Focus();
+        await _viewModel.CheckOnOpenAsync();
+    }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {

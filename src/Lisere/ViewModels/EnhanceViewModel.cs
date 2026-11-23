@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -36,6 +36,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     private bool _switchingToManual;
     private string _statusKey = "statusStart";
     private object? _statusArgument;
+    private object?[]? _statusArguments;
     private IReadOnlyList<ParameterWarning> _warnings = [];
 
     [ObservableProperty]
@@ -151,6 +152,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         _fileDialogService = fileDialogService;
         _imageCodec = imageCodec;
         _orchestrator = orchestrator;
+        _queueRunner = new ImageQueueRunner(imageCodec);
         _dialogService = dialogService;
         _localization = localization;
         _calibration = calibration ?? new EngineCalibrationStore();
@@ -168,8 +170,10 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
         ColorPresets = ColorPresetCatalog.Create(Strings);
 
+        RebuildOutputOptions();
         SelectedPreset = Presets[0];
         SelectedColorPreset = ColorPresets[0];
+        Queue.CollectionChanged += OnQueueChanged;
         _localization.LanguageChanged += OnLanguageChanged;
         _dialogService.DialogOpenStateChanged += OnDialogOpenStateChanged;
 
@@ -353,6 +357,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         }
 
         var mode = SelectedPreset?.Mode ?? EnhancementMode.Manual;
+        var (targetWidth, targetHeight) = ResolveOutputSize();
+        var explicitSize = SelectedOutput?.TargetHeight is not null;
         var request = new EnhancementRequest(
             _source,
             mode,
@@ -362,7 +368,10 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             SelectedColorPreset?.Preset ?? ColorPreset.None,
             SelectedColorPreset?.Preset is ColorPreset.UltronCc ? CurrentColorSettings : null,
             RefineFaces: RefineFaces,
-            Engine: SelectedEngine);
+            Engine: SelectedEngine,
+            OutputScale: SelectedOutput?.Scale ?? 1,
+            TargetWidth: explicitSize ? targetWidth : null,
+            TargetHeight: explicitSize ? targetHeight : null);
 
         // Le détail multi-échelles coûte ~2,4 s par mégapixel : sur une grande
         // image, on annonce la durée avant de lancer plutôt que de la subir, en
@@ -384,7 +393,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
                 BeforeImage,
                 SelectedEngine,
                 SelectedEngine is { } engine ? _calibration.Latest(engine.Id)?.Provider : null,
-                estimate.Basis)))
+                estimate.Basis,
+                (targetWidth, targetHeight))))
         {
             return;
         }
@@ -644,6 +654,9 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         OpenCommand.NotifyCanExecuteChanged();
         EnhanceCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
+        AddToQueueCommand.NotifyCanExecuteChanged();
+        RunQueueCommand.NotifyCanExecuteChanged();
+        ClearQueueCommand.NotifyCanExecuteChanged();
         ImportPresetCommand.NotifyCanExecuteChanged();
         ExportPresetCommand.NotifyCanExecuteChanged();
     }
@@ -653,6 +666,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         OpenCommand.NotifyCanExecuteChanged();
         EnhanceCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
+        AddToQueueCommand.NotifyCanExecuteChanged();
+        RunQueueCommand.NotifyCanExecuteChanged();
         ImportPresetCommand.NotifyCanExecuteChanged();
         ExportPresetCommand.NotifyCanExecuteChanged();
     }
@@ -671,10 +686,12 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             preset.Label = Strings[ColorPresetCatalog.LabelKey(preset.Preset)];
         }
 
+        RebuildOutputOptions();
         UpdatePresetNote();
         UpdateColorNote();
         RenderWarnings();
         UpdateImageInfo();
+        RefreshQueueStatuses();
         RenderStatus();
     }
 
@@ -701,11 +718,14 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     partial void OnHasEnhancedChanged(bool value)
     {
         SaveCommand.NotifyCanExecuteChanged();
+        AddToQueueCommand.NotifyCanExecuteChanged();
+        RunQueueCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnIsResultStaleChanged(bool value)
     {
         SaveCommand.NotifyCanExecuteChanged();
+        AddToQueueCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedPresetChanged(PresetOption? value)
@@ -1015,11 +1035,26 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
     {
         _statusKey = key;
         _statusArgument = argument;
+        _statusArguments = null;
+        RenderStatus();
+    }
+
+    private void SetStatus(string key, object? first, object? second)
+    {
+        _statusKey = key;
+        _statusArgument = null;
+        _statusArguments = [first, second];
         RenderStatus();
     }
 
     private void RenderStatus()
     {
+        if (_statusArguments is { } arguments)
+        {
+            StatusMessage = Strings.Format(_statusKey, arguments);
+            return;
+        }
+
         if (_statusKey == "statusApplied" && _statusArgument is EnhancementMode mode)
         {
             var color = ActiveColorPreset;
@@ -1042,10 +1077,13 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         StatusMessage = Strings.Format(_statusKey, _statusArgument);
     }
 
-    private void UpdateImageInfo() =>
+    private void UpdateImageInfo()
+    {
         ImageInfo = _source is null
             ? Strings["imageNone"]
             : $"{_sourceName} | {_source.Width} x {_source.Height}";
+        UpdateOutputInfo();
+    }
 
     private void UpdateWarnings()
     {
@@ -1184,6 +1222,10 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         _presetCancellation?.Cancel();
         _presetCancellation?.Dispose();
         _presetCancellation = null;
+        _queueCancellation?.Cancel();
+        _queueCancellation?.Dispose();
+        _queueCancellation = null;
+        Queue.CollectionChanged -= OnQueueChanged;
         _dialogService.DialogOpenStateChanged -= OnDialogOpenStateChanged;
         _localization.LanguageChanged -= OnLanguageChanged;
     }

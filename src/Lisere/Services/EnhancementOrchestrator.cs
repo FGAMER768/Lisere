@@ -58,6 +58,21 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
                     synthesizeSkinTexture: true,
                     faces: DetectFaces(request, cancellationToken));
 
+            // Le moteur neuronal rend déjà la taille demandée ; le pipeline
+            // classique, non. Une seule règle ici garantit que l'aperçu et
+            // l'export ont exactement la résolution annoncée.
+            var (targetWidth, targetHeight) = request.ResolveOutputSize();
+            if (output.Width != targetWidth || output.Height != targetHeight)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                output = ImageResampler.Resize(
+                    output,
+                    targetWidth,
+                    targetHeight,
+                    ResampleMethod.Bicubic,
+                    new ImagingWork(cancellationToken));
+            }
+
             // Ce que le modèle a réellement coûté, à confier au cache local.
             var measurement = engine?.LastMeasurement;
 
@@ -128,6 +143,9 @@ public sealed class EnhancementOrchestrator : IEnhancementOrchestrator
             parameters,
             request.RecoverOriginalDetail,
             request.AddNoise,
+            OutputScale: request.OutputScale,
+            TargetWidth: request.TargetWidth,
+            TargetHeight: request.TargetHeight,
             Progress: progress is null
                 ? null
                 : new DirectProgress<double>(percent =>

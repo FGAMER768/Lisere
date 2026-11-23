@@ -472,14 +472,14 @@ public sealed partial class VideoViewModel
 
     private static int Even(int value) => value % 2 == 0 ? value : value - 1;
 
-    private VideoRenderSettings BuildSettings(string outputPath) => new(
+    private VideoRenderSettings BuildSettings(string outputPath, bool allowRife = true) => new(
         outputPath,
         SelectedCodec?.Codec ?? VideoCodec.H264,
         Quality,
         Stabilize,
         Deinterlace,
         SelectedFrameRate?.FrameRate,
-        InterpolationEngine: UseRife
+        InterpolationEngine: allowRife && UseRife
             ? FrameInterpolationEngine.Rife
             : FrameInterpolationEngine.Ffmpeg);
 
@@ -496,5 +496,48 @@ public sealed partial class VideoViewModel
             BuildFrameRequest(),
             BuildSettings(outputPath),
             UseRife ? _rife : null);
+    }
+
+    /// <summary>
+    /// TikTok accepts at most 1080p on the short side. Keep smaller sources at
+    /// their native size instead of inventing detail by upscaling them.
+    /// </summary>
+    private VideoRenderRequest BuildTikTokRequest(VideoInfo source, string outputPath)
+    {
+        // L'export TikTok ne dépend pas d'un moteur : sans moteur disponible,
+        // un rendu de conformité sans amélioration prépare le fichier.
+        var hasEngine = SelectedEngine is { IsAvailable: true };
+        var enhancer = hasEngine ? SelectedEngine!.Enhancer : _tikTokFallback;
+
+        var (width, height) = ResolveTikTokSize(source);
+        var frame = BuildFrameRequest() with
+        {
+            OutputScale = 1,
+            TargetWidth = width,
+            TargetHeight = height
+        };
+
+        return new VideoRenderRequest(
+            source,
+            enhancer,
+            frame,
+            BuildSettings(outputPath, allowRife: hasEngine) with
+            {
+                Quality = Math.Min(Quality, 20)
+            },
+            hasEngine && UseRife ? _rife : null);
+    }
+
+    private static (int? Width, int? Height) ResolveTikTokSize(VideoInfo source)
+    {
+        if (Math.Min(source.Width, source.Height) <= 1080)
+        {
+            return (null, null);
+        }
+
+        var width = (int)Math.Round(
+            source.Width * 1080.0 / source.Height,
+            MidpointRounding.AwayFromZero);
+        return (Math.Max(2, Even(width)), 1080);
     }
 }

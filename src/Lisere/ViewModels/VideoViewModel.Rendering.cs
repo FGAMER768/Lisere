@@ -16,6 +16,7 @@ using Lisere.Video.Preview;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
 using Lisere.Video.Presets;
+using Lisere.Video.TikTok;
 
 namespace Lisere.ViewModels;
 
@@ -52,6 +53,75 @@ public sealed partial class VideoViewModel
         }
 
         await RunRenderAsync(request, RenderPurpose.FullVideo);
+    }
+
+    /// <summary>
+    /// Exports a TikTok-oriented copy: at most 1080p, with the local OBX audio
+    /// patch from CompressBase applied after the normal render. The confirmation
+    /// dialog is the same one used by a regular render, so the source, format
+    /// and destination are visible before minutes of compute are spent.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanExportTikTok), AllowConcurrentExecutions = false)]
+    private async Task ExportTikTokAsync()
+    {
+        var source = _video;
+        if (source is null || _tikTokPatcher is null)
+        {
+            return;
+        }
+
+        if (!source.HasAudio)
+        {
+            await _dialogService.ShowMessageAsync(
+                Strings["videoTikTokNoAudio"],
+                DialogKind.Error);
+            return;
+        }
+
+        var target = _fileDialogService.PickVideoTarget(
+            Path.GetFileNameWithoutExtension(source.Path) + "-tiktok.mp4");
+        if (target is null)
+        {
+            return;
+        }
+
+        var request = BuildTikTokRequest(source, target);
+        var (width, height) = request.Frame.ResolveSize(source.Width, source.Height);
+        var estimate = RenderEstimator.Estimate(request);
+        var plan = new RenderPlan(
+            Strings["tiktokPlanTitle"],
+            Strings["tiktokPlanIntro"],
+            BeforeImage,
+            AfterImage,
+            Strings["videoPlanSource"],
+            string.Join(
+                " · ",
+                Path.GetFileName(source.Path),
+                source.Resolution,
+                source.DurationText),
+            [
+                new RenderPlanLine(
+                    Strings["tiktokPlanFormat"],
+                    Strings.Format("tiktokFormatValue", width, height)),
+                new RenderPlanLine(
+                    Strings["tiktokPlanMethod"],
+                    Strings["tiktokMethodValue"]),
+                new RenderPlanLine(
+                    Strings["videoEstimateLabel"],
+                    VideoRenderPlanFactory.FormatEstimate(Strings, estimate))
+            ],
+            Strings["videoPlanDestination"],
+            target,
+            Strings["tiktokPlanConfirm"],
+            Strings["videoPlanCancel"],
+            Strings["tiktokPlanReassurance"]);
+
+        if (!await _dialogService.ConfirmRenderAsync(plan))
+        {
+            return;
+        }
+
+        await RunRenderAsync(request, RenderPurpose.TikTok);
     }
 
     [RelayCommand(CanExecute = nameof(CanRenderPreview), AllowConcurrentExecutions = false)]
@@ -123,7 +193,7 @@ public sealed partial class VideoViewModel
 
     private async Task RunRenderAsync(VideoRenderRequest request, RenderPurpose purpose)
     {
-        var isPreview = purpose != RenderPurpose.FullVideo;
+        var isPreview = purpose is RenderPurpose.Preview or RenderPurpose.PreviewExport;
         _renderCancellation?.Cancel();
         var cancellation = new CancellationTokenSource();
         _renderCancellation = cancellation;
@@ -171,7 +241,18 @@ public sealed partial class VideoViewModel
                     "videoProgressDone",
                     result.FramesWritten,
                     VideoRenderPlanFactory.FormatDuration(result.Elapsed, Strings));
-                SetStatus("videoStatusRendered", Path.GetFileName(result.OutputPath));
+
+                if (purpose == RenderPurpose.TikTok)
+                {
+                    await _tikTokPatcher!.PatchInPlaceAsync(
+                        result.OutputPath,
+                        cancellation.Token);
+                    SetStatus("videoStatusTikTokExported", Path.GetFileName(result.OutputPath));
+                }
+                else
+                {
+                    SetStatus("videoStatusRendered", Path.GetFileName(result.OutputPath));
+                }
             }
         }
         catch (OperationCanceledException)
@@ -200,7 +281,9 @@ public sealed partial class VideoViewModel
 
         if (error is not null)
         {
-            await ShowErrorAsync("videoErrorRender", LocalizeRenderError(error));
+            await ShowErrorAsync(
+                error is TikTokPatchException ? "videoErrorTikTok" : "videoErrorRender",
+                LocalizeRenderError(error));
             return;
         }
 

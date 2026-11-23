@@ -16,8 +16,26 @@ public sealed record EnhancementRequest(
     UltronCcSettings? ColorSettings = null,
     IProgress<EnhancementProgress>? Progress = null,
     bool RefineFaces = false,
-    IFrameEnhancer? Engine = null)
+    IFrameEnhancer? Engine = null,
+    int OutputScale = 1,
+    int? TargetWidth = null,
+    int? TargetHeight = null)
 {
+    /// <summary>
+    /// Taille réelle de l'image rendue. Les cibles explicites (1080p/2160p)
+    /// gagnent sur l'échelle entière, comme sur la page Vidéo.
+    /// </summary>
+    public (int Width, int Height) ResolveOutputSize()
+    {
+        if (TargetWidth is > 0 && TargetHeight is > 0)
+        {
+            return (TargetWidth.Value, TargetHeight.Value);
+        }
+
+        var scale = Math.Clamp(OutputScale, 1, 4);
+        return (checked(Source.Width * scale), checked(Source.Height * scale));
+    }
+
     /// <summary>
     /// Le moteur qui rendra réellement l'image. L'estimation et l'exécution
     /// lisent cette même règle : sinon la durée annoncée peut porter sur un

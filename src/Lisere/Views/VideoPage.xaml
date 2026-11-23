@@ -180,84 +180,6 @@
                     <StackPanel Margin="0,0,18,0">
                         <Border Style="{StaticResource SettingsCardBorder}">
                             <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[videoSectionModel]}" />
-
-                                <TextBlock Margin="0,0,0,4"
-                                           FontSize="12"
-                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding Strings[videoLabelEngine]}" />
-                                <ComboBox AutomationProperties.Name="{Binding Strings[videoLabelEngine]}"
-                                          DisplayMemberPath="DisplayName"
-                                          ItemsSource="{Binding Engines}"
-                                          SelectedItem="{Binding SelectedEngine, Mode=TwoWay}" />
-                                <TextBlock Margin="0,6,0,0"
-                                           FontSize="12"
-                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding EngineNote}"
-                                           TextWrapping="Wrap" />
-
-                                <TextBlock Margin="0,12,0,4"
-                                           FontSize="12"
-                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding Strings[sectionPreset]}" />
-                                <ComboBox AutomationProperties.Name="{Binding Strings[sectionPreset]}"
-                                          DisplayMemberPath="Label"
-                                          ItemsSource="{Binding Presets}"
-                                          SelectedItem="{Binding SelectedPreset, Mode=TwoWay}" />
-
-                                <ui:Button Margin="0,8,0,0"
-                                           HorizontalAlignment="Stretch"
-                                           HorizontalContentAlignment="Center"
-                                           Appearance="Secondary"
-                                           Command="{Binding ImportVideoPresetCommand}"
-                                           Content="{Binding Strings[videoActionImportPreset]}" />
-
-                                <Grid Margin="0,12,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="120" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Style="{StaticResource ParameterLabel}" Text="{Binding Strings[videoLabelResolution]}" />
-                                    <ComboBox Grid.Column="1"
-                                              AutomationProperties.Name="{Binding Strings[videoLabelResolution]}"
-                                              DisplayMemberPath="Label"
-                                              ItemsSource="{Binding OutputOptions}"
-                                              SelectedItem="{Binding SelectedOutput, Mode=TwoWay}" />
-                                </Grid>
-
-                                <ui:Button Margin="0,8,0,0"
-                                           HorizontalAlignment="Stretch"
-                                           HorizontalContentAlignment="Center"
-                                           AutomationProperties.AcceleratorKey="Ctrl+Entrée"
-                                           Appearance="Secondary"
-                                           Command="{Binding RefreshPreviewCommand}"
-                                           Content="{Binding Strings[videoActionPreview]}"
-                                           Icon="{ui:SymbolIcon Eye24}" />
-                                <ui:Button Margin="0,6,0,0"
-                                           HorizontalAlignment="Stretch"
-                                           HorizontalContentAlignment="Center"
-                                           Appearance="Secondary"
-                                           Command="{Binding RenderPreviewCommand}"
-                                           Content="{Binding Strings[videoPreviewRender]}"
-                                           Icon="{ui:SymbolIcon Play24}" />
-                                <ui:Button Margin="0,6,0,0"
-                                           HorizontalAlignment="Stretch"
-                                           HorizontalContentAlignment="Center"
-                                           Appearance="Secondary"
-                                           Command="{Binding ExportPreviewCommand}"
-                                           Content="{Binding Strings[videoPreviewExport]}"
-                                           Icon="{ui:SymbolIcon Save24}" />
-                                                            <TextBlock Margin="0,6,0,0"
-                                       FontSize="12"
-                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                       Text="{Binding PreviewEstimateText}"
-                                       TextWrapping="Wrap"
-                                       Visibility="{Binding HasEstimate, Converter={StaticResource BooleanToVisibility}}" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
-                            <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionParameters]}" />
                                 <Border Padding="4"
                                         Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
@@ -282,10 +204,92 @@
                                                      Style="{StaticResource SegmentedTab}" />
                                     </Grid>
                                 </Border>
+
+                                <Grid Margin="0,12,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="170" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource ParameterLabel}" Text="{Binding Strings[videoLabelResolution]}" />
+                                    <ComboBox Grid.Column="1"
+                                              AutomationProperties.Name="{Binding Strings[videoLabelResolution]}"
+                                              DisplayMemberPath="Label"
+                                              ItemsSource="{Binding OutputOptions}"
+                                              SelectedItem="{Binding SelectedOutput, Mode=TwoWay}" />
+                                </Grid>
                             </StackPanel>
                         </Border>
 
-                        <ui:InfoBar Margin="0,12,0,0"
+                        <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[videoSectionModel]}" />
+
+                                <TextBlock Margin="0,0,0,4"
+                                           FontSize="12"
+                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding Strings[videoLabelEngine]}" />
+                                <ComboBox AutomationProperties.Name="{Binding Strings[videoLabelEngine]}"
+                                          DisplayMemberPath="DisplayName"
+                                          ItemsSource="{Binding Engines}"
+                                          SelectedItem="{Binding SelectedEngine, Mode=TwoWay}" />
+                                <TextBlock Margin="0,6,0,0"
+                                           FontSize="12"
+                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding EngineNote}"
+                                           TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionPreset]}" />
+                            <ComboBox AutomationProperties.Name="{Binding Strings[sectionPreset]}"
+                                      DisplayMemberPath="Label"
+                                      ItemsSource="{Binding Presets}"
+                                      SelectedItem="{Binding SelectedPreset, Mode=TwoWay}" />
+                            <ui:Button Margin="0,8,0,0"
+                                       HorizontalAlignment="Stretch"
+                                       HorizontalContentAlignment="Center"
+                                       Appearance="Secondary"
+                                       Command="{Binding ImportVideoPresetCommand}"
+                                       Content="{Binding Strings[videoActionImportPreset]}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[videoSectionPreview]}" />
+                            <ui:Button HorizontalAlignment="Stretch"
+                                       HorizontalContentAlignment="Center"
+                                       AutomationProperties.AcceleratorKey="Ctrl+Entrée"
+                                       Appearance="Secondary"
+                                       Command="{Binding RefreshPreviewCommand}"
+                                       Content="{Binding Strings[videoActionPreview]}"
+                                       Icon="{ui:SymbolIcon Eye24}" />
+                            <ui:Button Margin="0,6,0,0"
+                                       HorizontalAlignment="Stretch"
+                                       HorizontalContentAlignment="Center"
+                                       Appearance="Secondary"
+                                       Command="{Binding RenderPreviewCommand}"
+                                       Content="{Binding Strings[videoPreviewRender]}"
+                                       Icon="{ui:SymbolIcon Play24}" />
+                            <ui:Button Margin="0,6,0,0"
+                                       HorizontalAlignment="Stretch"
+                                       HorizontalContentAlignment="Center"
+                                       Appearance="Secondary"
+                                       Command="{Binding ExportPreviewCommand}"
+                                       Content="{Binding Strings[videoPreviewExport]}"
+                                       Icon="{ui:SymbolIcon Save24}" />
+                            <TextBlock Margin="0,6,0,0"
+                                       FontSize="12"
+                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding PreviewEstimateText}"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding HasEstimate, Converter={StaticResource BooleanToVisibility}}" />
+                        </StackPanel>
+                    </Border>
+
+                    <ui:InfoBar Margin="0,12,0,0"
                                     IsClosable="False"
                                     IsOpen="{Binding HasWarnings, Mode=OneWay}"
                                     Message="{Binding WarningsText}"
@@ -493,7 +497,7 @@
                                 Style="{StaticResource SettingsCardBorder}"
                                 Visibility="{Binding IsColorTab, Converter={StaticResource BooleanToVisibility}}">
                             <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[videoSectionColor]}" />
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[colorSectionPreset]}" />
                                 <ComboBox AutomationProperties.AutomationId="VideoColorPreset"
                                           AutomationProperties.Name="{Binding Strings[videoSectionColor]}"
                                           DisplayMemberPath="Label"
@@ -810,6 +814,17 @@
                                    Command="{Binding RenderCommand}"
                                    Content="{Binding Strings[videoActionRender]}"
                                    Icon="{ui:SymbolIcon Save24}" />
+                        <ui:Button Margin="0,8,0,0"
+                                   HorizontalAlignment="Stretch"
+                                   HorizontalContentAlignment="Center"
+                                   Appearance="Secondary"
+                                   Command="{Binding ExportTikTokCommand}"
+                                   Content="{Binding Strings[videoActionTikTok]}" />
+                        <TextBlock Margin="0,6,0,0"
+                                   FontSize="12"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding Strings[videoTikTokNote]}"
+                                   TextWrapping="Wrap" />
                         <ui:Button Margin="0,8,0,0"
                                    HorizontalAlignment="Stretch"
                                    HorizontalContentAlignment="Center"

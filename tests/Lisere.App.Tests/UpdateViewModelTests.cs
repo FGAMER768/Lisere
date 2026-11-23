@@ -7,6 +7,24 @@ namespace Lisere.App.Tests;
 public class UpdateViewModelTests
 {
     [Fact]
+    public async Task OpeningTheUpdatesPageStartsTheCheckAutomatically()
+    {
+        var service = new FakeUpdateService
+        {
+            Check = new UpdateCheckResult(
+                UpdateCheckStatus.UpdateAvailable,
+                Info("1.2.0"))
+        };
+        var viewModel = new UpdateViewModel(service, new LocalizationService());
+
+        await viewModel.CheckOnOpenAsync();
+
+        Assert.Equal(1, service.CheckCalls);
+        Assert.True(viewModel.CanInstall);
+        Assert.Contains("1.2.0", viewModel.StatusTitle, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AnAvailableVersionEnablesInstallation()
     {
         var service = new FakeUpdateService
@@ -147,9 +165,14 @@ public class UpdateViewModelTests
 
         public Func<IProgress<UpdateProgress>?, CancellationToken, Task>? Install { get; init; }
 
+        public int CheckCalls { get; private set; }
+
         public Task<UpdateCheckResult> CheckForUpdatesAsync(
-            CancellationToken cancellationToken) =>
-            Task.FromResult(Check);
+            CancellationToken cancellationToken)
+        {
+            CheckCalls++;
+            return Task.FromResult(Check);
+        }
 
         public Task DownloadAndInstallAsync(
             UpdateInfo info,

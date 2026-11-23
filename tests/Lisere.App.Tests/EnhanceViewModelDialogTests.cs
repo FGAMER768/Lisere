@@ -462,6 +462,98 @@ public class EnhanceViewModelDialogTests
     }
 
     [Fact]
+    public async Task OutputResolutionSelectionIsSentToTheRenderer()
+    {
+        var orchestrator = new FakeOrchestrator();
+        var viewModel = CreateViewModel(
+            new FakeDialogService(),
+            new FakeImageCodec { Width = 300, Height = 200 },
+            orchestrator);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        viewModel.SelectedOutput = Assert.Single(
+            viewModel.OutputOptions,
+            option => option.TargetHeight == 1080);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+
+        Assert.NotNull(orchestrator.LastRequest);
+        Assert.Equal(1620, orchestrator.LastRequest.TargetWidth);
+        Assert.Equal(1080, orchestrator.LastRequest.TargetHeight);
+        Assert.Equal(1, orchestrator.LastRequest.OutputScale);
+        Assert.Contains("1080", viewModel.OutputInfo, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ChangingTheOutputAfterARenderBlocksExportUntilTheNextRender()
+    {
+        var viewModel = CreateViewModel(
+            new FakeDialogService(),
+            new FakeImageCodec(),
+            new FakeOrchestrator());
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+        Assert.True(viewModel.SaveCommand.CanExecute(null));
+
+        viewModel.SelectedOutput = Assert.Single(
+            viewModel.OutputOptions,
+            option => option.TargetHeight == 2160);
+
+        Assert.True(viewModel.IsResultStale);
+        Assert.False(viewModel.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task QueueKeepsTheRenderedPixelsAndExportsThem()
+    {
+        var rendered = new RgbImage(8, 8);
+        var codec = new FakeImageCodec();
+        var files = new FakeFileDialogService { JpegTarget = "queued.jpg" };
+        var orchestrator = new FakeOrchestrator
+        {
+            Result = new EnhancementResult(
+                rendered,
+                EnhancementParameters.Zero,
+                EnhancementMode.ChromaEnhanceMain,
+                [])
+        };
+        var viewModel = CreateViewModel(new FakeDialogService(), codec, orchestrator, files);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+        Assert.True(viewModel.AddToQueueCommand.CanExecute(null));
+
+        viewModel.AddToQueueCommand.Execute(null);
+        var job = Assert.Single(viewModel.Queue);
+        Assert.Same(rendered, job.Image);
+
+        await viewModel.RunQueueCommand.ExecuteAsync(null);
+
+        Assert.Equal(ImageQueueState.Completed, job.State);
+        Assert.Equal(new[] { "queued.jpg" }, codec.SavedPaths);
+        Assert.Same(rendered, Assert.Single(codec.SavedImages));
+    }
+
+    [Fact]
+    public async Task QueueRejectsASecondExportToTheSamePath()
+    {
+        var codec = new FakeImageCodec();
+        var dialogs = new FakeDialogService();
+        var files = new FakeFileDialogService { JpegTarget = "same.jpg" };
+        var viewModel = CreateViewModel(dialogs, codec, new FakeOrchestrator(), files);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+        viewModel.AddToQueueCommand.Execute(null);
+        viewModel.AddToQueueCommand.Execute(null);
+
+        Assert.Single(viewModel.Queue);
+        Assert.Contains(
+            dialogs.Events,
+            entry => entry.Contains("déjà dans la file", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task OpeningANewImageResetsTheComparisonPosition()
     {
         var viewModel = CreateViewModel(
@@ -645,6 +737,10 @@ public class EnhanceViewModelDialogTests
 
         public int LoadCalls { get; private set; }
 
+        public List<string> SavedPaths { get; } = [];
+
+        public List<RgbImage> SavedImages { get; } = [];
+
         public Task<RgbImage> LoadAsync(string path, CancellationToken cancellationToken)
         {
             LoadCalls++;
@@ -656,6 +752,8 @@ public class EnhanceViewModelDialogTests
         public Task SaveJpegAsync(RgbImage image, string path, CancellationToken cancellationToken)
         {
             SaveCalls++;
+            SavedPaths.Add(path);
+            SavedImages.Add(image);
             return SaveException is null
                 ? Task.CompletedTask
                 : Task.FromException(SaveException);
@@ -700,6 +798,8 @@ public class EnhanceViewModelDialogTests
 
         public int Calls { get; private set; }
 
+        public EnhancementRequest? LastRequest { get; private set; }
+
         public IReadOnlyList<EnhancementProgress> Progress { get; init; } = [];
 
         public Task<EnhancementResult> EnhanceAsync(
@@ -707,6 +807,7 @@ public class EnhanceViewModelDialogTests
             CancellationToken cancellationToken)
         {
             Calls++;
+            LastRequest = request;
 
             foreach (var progress in Progress)
             {

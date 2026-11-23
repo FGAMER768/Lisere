@@ -19,6 +19,7 @@ using Lisere.Video.Preview;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
 using Lisere.Video.Presets;
+using Lisere.Video.TikTok;
 
 namespace Lisere.ViewModels;
 
@@ -32,10 +33,12 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private readonly IVideoRenderService _renderService;
     private readonly VideoPreviewRenderer _previewRenderer;
     private readonly VideoQueueRunner _queueRunner;
+    private readonly ITikTokVideoPatcher? _tikTokPatcher;
     private readonly IDialogService _dialogService;
     private readonly ILocalizationService _localization;
     private readonly VideoToolchain? _toolchain;
     private readonly IFrameInterpolator? _rife;
+    private readonly IFrameEnhancer _tikTokFallback = new PassthroughFrameEnhancer();
     private readonly Stopwatch _renderWatch = new();
     private int _frameVersion;
 
@@ -207,13 +210,15 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         ILocalizationService localization,
         IReadOnlyList<IFrameEnhancer> engines,
         IReadOnlyList<IFrameInterpolator> interpolators,
-        VideoToolchain? toolchain = null)
+        VideoToolchain? toolchain = null,
+        ITikTokVideoPatcher? tikTokPatcher = null)
     {
         _fileDialogService = fileDialogService;
         _probe = probe;
         _renderService = renderService;
         _previewRenderer = new VideoPreviewRenderer(frameExtractor, imageCodec, probe);
         _queueRunner = new VideoQueueRunner(renderService);
+        _tikTokPatcher = tikTokPatcher;
         _dialogService = dialogService;
         _localization = localization;
         _toolchain = toolchain;
@@ -230,12 +235,21 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
         ColorPresets = ColorPresetCatalog.Create(Strings);
 
-        Engines = engines
+        var realEngines = engines
             .Select(enhancer => new VideoEngineOption(
                 enhancer,
                 enhancer.IsAvailable
                     ? Strings["engineAvailable"]
                     : Strings.Format("engineUnavailable", enhancer.UnavailableReason ?? Strings["engineMissing"])))
+            .ToArray();
+
+        // La conformité TikTok reste choisissable même quand un modèle est
+        // installé : l'utilisateur peut ainsi exporter uniquement pour TikTok.
+        Engines = realEngines
+            .Append(new VideoEngineOption(
+                _tikTokFallback,
+                Strings["engineAvailable"],
+                Strings["enginePassthrough"]))
             .ToArray();
 
         RebuildCodecs();
@@ -244,7 +258,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
         SelectedPreset = Presets[0];
         SelectedColorPreset = ColorPresets[0];
-        SelectedEngine = Engines.FirstOrDefault(engine => engine.IsAvailable) ?? Engines.FirstOrDefault();
+        SelectedEngine = realEngines.FirstOrDefault(engine => engine.IsAvailable) ?? realEngines.FirstOrDefault();
 
         Queue.CollectionChanged += OnQueueChanged;
         _localization.LanguageChanged += OnLanguageChanged;
@@ -418,6 +432,19 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     private bool CanRenderPreview() => CanRender();
 
+    private bool CanExportTikTok() =>
+        HasVideo &&
+        !IsBusy &&
+        !IsRendering &&
+        !IsQueueRunning &&
+        IsToolchainAvailable &&
+        _tikTokPatcher is not null &&
+        _video is { HasAudio: true } &&
+        // Sans moteur disponible, l'export TikTok reste possible : il passe par
+        // le rendu de conformité sans amélioration et ignore RIFE.
+        (SelectedEngine is not { IsAvailable: true } || !UseRife || IsRifeAvailable) &&
+        !_dialogService.IsAnyDialogOpen;
+
     private bool CanCancelRender() => IsRendering;
 
     private bool CanCancelBusy() => IsCancellableBusy;
@@ -478,6 +505,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         RenderCommand.NotifyCanExecuteChanged();
         RenderPreviewCommand.NotifyCanExecuteChanged();
         ExportPreviewCommand.NotifyCanExecuteChanged();
+        ExportTikTokCommand.NotifyCanExecuteChanged();
         CancelRenderCommand.NotifyCanExecuteChanged();
         CancelBusyCommand.NotifyCanExecuteChanged();
         TogglePlaybackCommand.NotifyCanExecuteChanged();
@@ -685,9 +713,11 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     {
         EngineNote = SelectedEngine is null
             ? Strings["engineMissing"]
-            : SelectedEngine.IsAvailable
-                ? Strings[SelectedEngine.IsNeural ? "engineNeuralReady" : "engineClassicReady"]
-                : Strings.Format("engineUnavailable", SelectedEngine.Enhancer.UnavailableReason ?? Strings["engineMissing"]);
+            : SelectedEngine.Enhancer is PassthroughFrameEnhancer
+                ? Strings["enginePassthroughNote"]
+                : SelectedEngine.IsAvailable
+                    ? Strings[SelectedEngine.IsNeural ? "engineNeuralReady" : "engineClassicReady"]
+                    : Strings.Format("engineUnavailable", SelectedEngine.Enhancer.UnavailableReason ?? Strings["engineMissing"]);
     }
 
     private void OnParameterChanged()
@@ -820,10 +850,13 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         _ => exception
     };
 
-    private Exception LocalizeRenderError(Exception exception) =>
-        exception is VideoRenderException or IOException or UnauthorizedAccessException
-            ? new UserMessageException(Strings["videoErrorRenderDetail"])
-            : exception;
+    private Exception LocalizeRenderError(Exception exception) => exception switch
+    {
+        TikTokPatchException patch => new UserMessageException(patch.Message),
+        VideoRenderException or IOException or UnauthorizedAccessException =>
+            new UserMessageException(Strings["videoErrorRenderDetail"]),
+        _ => exception
+    };
 
     private string DescribeRenderError(Exception exception) =>
         UserErrorDescriber.Describe(Strings, LocalizeRenderError(exception));
@@ -843,7 +876,8 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     {
         FullVideo,
         Preview,
-        PreviewExport
+        PreviewExport,
+        TikTok
     }
 
     public void Dispose()

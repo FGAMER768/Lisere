@@ -164,42 +164,28 @@
                                                  Style="{StaticResource SegmentedTab}" />
                                 </Grid>
                             </Border>
+
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="170" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Style="{StaticResource ParameterLabel}" Text="{Binding Strings[videoLabelResolution]}" />
+                                <ComboBox Grid.Column="1"
+                                          AutomationProperties.Name="{Binding Strings[videoLabelResolution]}"
+                                          DisplayMemberPath="Label"
+                                          ItemsSource="{Binding OutputOptions}"
+                                          SelectedItem="{Binding SelectedOutput, Mode=TwoWay}" />
+                            </Grid>
+                            <TextBlock Margin="0,4,0,0"
+                                       FontSize="12"
+                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding OutputInfo}"
+                                       TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>
 
                     <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionPresetFile]}" />
-                            <TextBlock FontSize="13"
-                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                       Text="{Binding Strings[presetFileNote]}"
-                                       TextWrapping="Wrap" />
-                            <Grid Margin="0,10,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="8" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <ui:Button Grid.Column="0"
-                                           HorizontalAlignment="Stretch"
-                                           HorizontalContentAlignment="Center"
-                                           Appearance="Secondary"
-                                           Command="{Binding ImportPresetCommand}"
-                                           Content="{Binding Strings[actionImportPreset]}"
-                                           Icon="{ui:SymbolIcon Open24}" />
-                                <ui:Button Grid.Column="2"
-                                           HorizontalAlignment="Stretch"
-                                           HorizontalContentAlignment="Center"
-                                           Appearance="Secondary"
-                                           Command="{Binding ExportPresetCommand}"
-                                           Content="{Binding Strings[actionExportPreset]}"
-                                           Icon="{ui:SymbolIcon Save24}" />
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <StackPanel Margin="0,12,0,0" Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
-                    <Border Style="{StaticResource SettingsCardBorder}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[imageSectionEngine]}" />
                             <ComboBox AutomationProperties.AutomationId="ImageEngine"
@@ -241,8 +227,41 @@
                         </StackPanel>
                     </Border>
 
-
                     <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionPresetFile]}" />
+                            <TextBlock FontSize="13"
+                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding Strings[presetFileNote]}"
+                                       TextWrapping="Wrap" />
+                            <Grid Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:Button Grid.Column="0"
+                                           HorizontalAlignment="Stretch"
+                                           HorizontalContentAlignment="Center"
+                                           Appearance="Secondary"
+                                           Command="{Binding ImportPresetCommand}"
+                                           Content="{Binding Strings[actionImportPreset]}"
+                                           Icon="{ui:SymbolIcon Open24}" />
+                                <ui:Button Grid.Column="2"
+                                           HorizontalAlignment="Stretch"
+                                           HorizontalContentAlignment="Center"
+                                           Appearance="Secondary"
+                                           Command="{Binding ExportPresetCommand}"
+                                           Content="{Binding Strings[actionExportPreset]}"
+                                           Icon="{ui:SymbolIcon Save24}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+
+                    <StackPanel Margin="0,12,0,0"
+                                Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
+                    <Border Style="{StaticResource SettingsCardBorder}">
                         <StackPanel IsEnabled="{Binding IsEnhancementActive}">
                             <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionSettings]}" />
 
@@ -580,6 +599,90 @@
                         </Border>
                     </StackPanel>
 
+                    <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[imageSectionQueue]}" />
+
+                            <TextBlock Margin="0,0,0,4"
+                                       FontSize="12"
+                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding Strings[imageQueueEmpty]}"
+                                       TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasQueue}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <ItemsControl ItemsSource="{Binding Queue}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock FontSize="12"
+                                                           Text="{Binding Label}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <ProgressBar Height="3"
+                                                             Margin="0,4,0,0"
+                                                             Maximum="100"
+                                                             Value="{Binding ProgressPercent}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1"
+                                                       Margin="8,0,0,0"
+                                                       VerticalAlignment="Top"
+                                                       FontSize="11"
+                                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                                       Text="{Binding StatusText}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <ui:Button Margin="0,8,0,0"
+                                       HorizontalAlignment="Stretch"
+                                       HorizontalContentAlignment="Center"
+                                       Appearance="Secondary"
+                                       Command="{Binding AddToQueueCommand}"
+                                       Content="{Binding Strings[imageActionAddQueue]}" />
+
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:Button Grid.Column="0"
+                                           HorizontalAlignment="Stretch"
+                                           HorizontalContentAlignment="Center"
+                                           Appearance="Primary"
+                                           Command="{Binding RunQueueCommand}"
+                                           Content="{Binding Strings[imageActionRunQueue]}" />
+                                <ui:Button Grid.Column="2"
+                                           HorizontalAlignment="Stretch"
+                                           HorizontalContentAlignment="Center"
+                                           Appearance="Secondary"
+                                           Command="{Binding StopQueueCommand}"
+                                           Content="{Binding Strings[imageActionStopQueue]}" />
+                            </Grid>
+
+                            <ui:Button Margin="0,8,0,0"
+                                       HorizontalAlignment="Stretch"
+                                       HorizontalContentAlignment="Center"
+                                       Appearance="Secondary"
+                                       Command="{Binding ClearQueueCommand}"
+                                       Content="{Binding Strings[imageActionClearQueue]}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
 
