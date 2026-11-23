@@ -16,6 +16,18 @@ engines that run locally, and exports ready to keep.
 
 </div>
 
+> [!WARNING]
+> **Project on hold — no usable GPU for experiments.**
+>
+> Latest test: **4K ×2** upscale with **Lisere Classic**, the **Chroma** preset
+> and the **Ultron** grade, on an **RTX 4070**. Result: **the GPU is not being
+> used**, the load goes to **RAM**, and 4K rendering therefore cannot be
+> iterated on under proper conditions.
+>
+> Development is **paused** until a GPU usable for these experiments is
+> available. Existing releases remain downloadable, but no performance
+> improvement is promised in the near term.
+
 <img src="assets/screenshots/image-en.png" alt="Liseré Image space: before/after comparison with Ultron CC grading">
 
 ## 📖 Contents
@@ -469,8 +481,11 @@ and extraction safeguards are in [`Update/README.md`](Update/README.md).
 No. All processing is local. Only the update check, when you ask for it, contacts GitHub.
 
 **Do I need a GPU?**
-No. ONNX engines use DirectML when possible, otherwise the CPU. The CPU fallback is much
-slower, and the engine note says which one is active.
+Not to launch the app: ONNX engines use DirectML when possible, otherwise the CPU. The
+CPU fallback is much slower, and the engine note says which one is active. 4K
+experiments, however, are blocked: on an RTX 4070, a ×2 upscale to 4K with **Lisere
+Classic + Chroma + Ultron** did not use the GPU and mostly consumed RAM. The project is
+paused until a usable GPU is available for these tests.
 
 **Why does Windows warn me on launch?**
 The binary is not signed with a commercial certificate. Check the SHA-256 published with

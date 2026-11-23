@@ -16,6 +16,19 @@ des moteurs qui tournent en local et des exports prêts à garder.
 
 </div>
 
+> [!WARNING]
+> **Projet à l'arrêt — il manque un GPU exploitable pour expérimenter.**
+>
+> Dernier test effectué : upscale **×2 vers 4K** avec **Lisere Classic**, le
+> préréglage **Chroma** et l'étalonnage **Ultron**, sur une **RTX 4070**. Constat :
+> **le GPU n'est pas sollicité** et la consommation part dans la **RAM**. Les essais
+> 4K ne sont donc pas exploitables pour itérer.
+>
+> Le développement est **suspendu** tant qu'un GPU utilisable pour ces
+> expérimentations n'est pas disponible. Les releases existantes restent
+> téléchargeables, mais aucune amélioration de performance n'est promise dans
+> l'immédiat.
+
 <img src="assets/screenshots/image-fr.png" alt="Espace Image de Liseré : comparaison avant/après avec l'étalonnage Ultron CC">
 
 ## 📖 Sommaire
@@ -481,8 +494,12 @@ Non. Tout le traitement est local. Seule la vérification de mise à jour, quand
 demandez, interroge GitHub.
 
 **Faut-il un GPU ?**
-Non. Les moteurs ONNX utilisent DirectML quand c'est possible, sinon le CPU. Le repli
-CPU est nettement plus lent, et la note du moteur indique lequel est actif.
+Pas pour lancer l'application : les moteurs ONNX utilisent DirectML quand c'est
+possible, sinon le CPU. Le repli CPU est nettement plus lent, et la note du moteur
+indique lequel est actif. En revanche, les expérimentations 4K sont bloquées : sur
+une RTX 4070, un upscale **×2 vers 4K** en **Lisere Classic + Chroma + Ultron** n'a pas
+sollicité le GPU et a surtout consommé de la RAM. Le projet est à l'arrêt tant qu'un
+GPU exploitable n'est pas disponible pour ces essais.
 
 **Pourquoi Windows affiche-t-il un avertissement au lancement ?**
 Le binaire n'est pas signé avec un certificat commercial. Vérifiez l'empreinte SHA-256
