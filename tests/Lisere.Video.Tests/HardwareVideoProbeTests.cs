@@ -151,6 +151,75 @@ public class HardwareVideoProbeTests
         Assert.Equal(calls, runner.Calls.Count);
     }
 
+    /// <summary>
+    /// Test matériel réel, volontairement ignoré par défaut : il exige une
+    /// GeForce et le pilote NVIDIA. Lancez-le avec LISERE_TEST_NVENC=1.
+    /// </summary>
+    [Fact]
+    public async Task RealNvencEncodesWhenRequested()
+    {
+        if (!string.Equals(
+            Environment.GetEnvironmentVariable("LISERE_TEST_NVENC"),
+            "1",
+            StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var toolchain = Lisere.Video.Ffmpeg.VideoToolchain.Locate();
+        Assert.True(toolchain.IsAvailable, "ffmpeg est requis pour le test NVENC.");
+        var ffmpeg = toolchain.RequireTools().FfmpegPath;
+
+        var capabilities = await HardwareVideoProbe.Default.ProbeAsync(ffmpeg);
+        var encoder = Assert.Single(
+            capabilities.Encoders.Where(candidate => candidate.Vendor == HardwareEncoderVendor.Nvidia));
+        Assert.Equal("h264_nvenc", encoder.Name);
+
+        var directory = Path.Combine(
+            Path.GetTempPath(),
+            "Lisere",
+            "nvenc-test",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+
+        try
+        {
+            var output = Path.Combine(directory, "nvenc.mp4");
+            var result = await new VideoProcessRunner().RunAsync(
+                ffmpeg,
+                [
+                    "-hide_banner",
+                    "-v", "error",
+                    "-f", "lavfi",
+                    "-i", "testsrc2=size=256x256:rate=30",
+                    "-frames:v", "30",
+                    .. VideoCommandBuilder.BuildHardwareEncoderOptions(
+                        "h264_nvenc",
+                        VideoCodec.H264,
+                        quality: 20,
+                        preset: "medium"),
+                    "-movflags", "+faststart",
+                    "-y", output
+                ],
+                TimeSpan.FromSeconds(30),
+                CancellationToken.None);
+
+            Assert.True(result.Succeeded, result.StandardError);
+            Assert.True(File.Exists(output));
+            Assert.True(new FileInfo(output).Length > 0);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
+    }
+
     [Fact]
     public async Task TheEmbeddedToolchainCanBeProbed()
     {
