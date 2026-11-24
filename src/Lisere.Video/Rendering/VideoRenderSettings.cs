@@ -62,7 +62,10 @@ public sealed record VideoRenderResult(
     TimeSpan Elapsed,
     int OutputWidth,
     int OutputHeight,
-    double OutputFrameRate);
+    double OutputFrameRate,
+    // Ligne de résumé du dernier rendu (adaptateur, encodeur, goulot, débit),
+    // nulle pour un service qui ne l'a pas produite.
+    string? Diagnostics = null);
 
 public enum VideoRenderStage
 {

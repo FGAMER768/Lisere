@@ -15,6 +15,13 @@
     <Product>Liseré</Product>
     <Description>Amélioration d'images et de vidéos, colorimétrie et rendu local.</Description>
     <Copyright>Copyright © 2026 FGAMER768</Copyright>
+    <!-- Rendu vidéo long : le pool supprime les allocations par frame, ces
+         réglages empêchent le GC de retenir les segments du LOH et rendent la
+         mémoire au système quand le rendu retombe. -->
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <RetainVMGarbageCollection>false</RetainVMGarbageCollection>
+    <TieredPGO>true</TieredPGO>
   </PropertyGroup>
 
   <ItemGroup>

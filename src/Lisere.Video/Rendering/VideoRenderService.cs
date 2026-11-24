@@ -23,20 +23,24 @@ public interface IVideoRenderService
 /// Decodes frames with FFmpeg, applies an engine to each frame, encodes the result
 /// and keeps the original audio track. Stabilisation and interpolation are optional
 /// whole-file passes around the frame loop.
+/// <para>
+/// Le cœur du rendu est un pipeline à trois étages (décodage, traitement,
+/// écriture) relié par des canaux bornés : le décodeur et l'encodeur peuvent
+/// travailler pendant que le moteur calcule, au lieu de faire attendre le GPU
+/// derrière chaque écriture. Les tampons viennent d'une réserve bornée, donc la
+/// mémoire atteint un plateau au lieu de croître avec la durée du clip.
+/// </para>
 /// </summary>
 public sealed class VideoRenderService : IVideoRenderService
 {
-    private static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(1);
-
-    // The live preview is displayed at 1600 x 900 by the video page. Keeping a
-    // full 8K snapshot copied 100 MB per second into the heap for a thumbnail.
-    private const int SnapshotMaximumWidth = 1600;
-    private const int SnapshotMaximumHeight = 900;
-
     // A one-second preview with stabilisation must not analyse the whole clip:
     // a short lead-in gives vidstab enough context and keeps the preview quick.
     private const double PreviewStabilizationLeadSeconds = 1.0;
     private const double PreviewStabilizationTailSeconds = 1.0;
+
+    // Une frame en vol coûte trois tampons (décodée, rendue, intermédiaires) :
+    // au-delà de quatre, une frame 4K immobiliserait des centaines de Mo.
+    private const int MaximumFramesInFlight = 4;
 
     private readonly VideoToolchain _toolchain;
     private readonly VideoPasses _passes;
@@ -148,8 +152,11 @@ public sealed class VideoRenderService : IVideoRenderService
 
             var renderedPath = Path.Combine(temporaryDirectory, "rendered.mp4");
 
-            var frames = await Task.Run(
-                () => RenderFrames(
+            // Le démarrage des processus et la préparation du pipeline restent
+            // hors du fil UI : une fenêtre qui se figerait au clic contredirait
+            // la promesse de fluidité.
+            var (frames, diagnostics) = await Task.Run(
+                () => RenderFramesAsync(
                     tools,
                     working,
                     request.Engine,
@@ -208,7 +215,8 @@ public sealed class VideoRenderService : IVideoRenderService
                 started.Elapsed,
                 outputWidth,
                 outputHeight,
-                settings.ResolveFrameRate(source.FrameRate));
+                settings.ResolveFrameRate(source.FrameRate),
+                diagnostics);
         }
         finally
         {
@@ -232,7 +240,12 @@ public sealed class VideoRenderService : IVideoRenderService
         return (start, Math.Max(0.1, end - start));
     }
 
-    private static int RenderFrames(
+    /// <summary>
+    /// Mène le rendu image par image. Le décodeur, le moteur et l'encodeur
+    /// travaillent en même temps ; chaque frame passe par les trois étages dans
+    /// l'ordre, et une erreur n'importe où arrête les trois.
+    /// </summary>
+    private async Task<(int Frames, string Diagnostics)> RenderFramesAsync(
         FfmpegTools tools,
         VideoInfo source,
         IFrameEnhancer engine,
@@ -245,7 +258,16 @@ public sealed class VideoRenderService : IVideoRenderService
         IProgress<VideoRenderProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var frameBytes = checked(source.Width * source.Height * 3);
+        // Une sortie 4× occupe seize fois plus qu'une frame source : la
+        // capacité doit se fonder sur la plus grosse des deux, sinon un rendu
+        // 4K vers 4× garderait plusieurs centaines de Mo par frame en vol.
+        var sourceFrameBytes = checked(source.Width * source.Height * 3);
+        var outputFrameBytes = (long)outputWidth * outputHeight * 3;
+        var budgetFrameBytes = Math.Max(sourceFrameBytes, outputFrameBytes);
+        var capacity = ResolveCapacity(budgetFrameBytes);
+        var pool = new RgbImagePool(ResolvePoolBudget(budgetFrameBytes, capacity));
+        frameRequest = frameRequest with { BufferPool = pool };
+
         var interpolationFactor = settings.UsesRife ? 2 : 1;
         var segmentSeconds = settings.PreviewDurationSeconds ?? source.DurationSeconds;
         var totalFrames = (int)Math.Min(
@@ -305,99 +327,48 @@ public sealed class VideoRenderService : IVideoRenderService
             FfmpegRunner.Kill(encoder);
         });
 
-        var stopwatch = Stopwatch.StartNew();
-        var lastReport = TimeSpan.Zero;
-        var lastSnapshot = TimeSpan.Zero;
-        VideoFrameSnapshot? snapshot = null;
+        var trace = new RenderTrace(
+            $"{source.Width}×{source.Height} @ {source.FrameRate:0.##} i/s",
+            $"{outputWidth}×{outputHeight} @ {encoderFrameRate:0.##} i/s",
+            settings.Codec == VideoCodec.H265 ? "libx265 (CPU)" : "libx264 (CPU)",
+            "logiciel (CPU)",
+            engine.ProviderFallbackReason is { } reason ? [reason] : null)
+        {
+            Adapter = engine.ActiveProvider ?? "CPU (aucun adaptateur D3D12)"
+        };
+
+        var pipeline = new FrameRenderPipeline(
+            engine,
+            frameRequest,
+            interpolator,
+            settings.UsesRife,
+            source.Width,
+            source.Height,
+            outputWidth,
+            outputHeight,
+            capacity,
+            totalFrames,
+            pool,
+            trace,
+            progress,
+            abort: () =>
+            {
+                FfmpegRunner.Kill(decoder);
+                FfmpegRunner.Kill(encoder);
+            });
+
+        var clock = Stopwatch.StartNew();
         var frames = 0;
         var completed = false;
-        RgbImage? previous = null;
-
-        // Reuse the decode buffer between frames. RIFE keeps the previous frame
-        // for the next interpolation, so that mode allocates per frame instead
-        // of handing it a buffer the next decode would overwrite.
-        var reusableBuffer = settings.UsesRife ? null : new byte[frameBytes];
+        string? failure = null;
+        string diagnostics;
 
         try
         {
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var buffer = reusableBuffer ?? new byte[frameBytes];
-                if (!ReadFrame(decoder.StandardOutput.BaseStream, buffer))
-                {
-                    break;
-                }
-
-                var image = new RgbImage(source.Width, source.Height, buffer);
-                var enhanced = engine.Enhance(image, frameRequest, cancellationToken);
-
-                if (enhanced.Width != outputWidth || enhanced.Height != outputHeight)
-                {
-                    throw new VideoRenderException(
-                        $"Le moteur a produit une image {enhanced.Width}×{enhanced.Height} " +
-                        $"au lieu de {outputWidth}×{outputHeight}.");
-                }
-
-                if (settings.UsesRife && interpolator is not null)
-                {
-                    if (previous is not null)
-                    {
-                        var middle = interpolator.Interpolate(
-                            previous,
-                            enhanced,
-                            0.5,
-                            cancellationToken);
-
-                        if (middle.Width != outputWidth || middle.Height != outputHeight)
-                        {
-                            throw new VideoRenderException(
-                                $"L'interpolateur a produit une image {middle.Width}×{middle.Height} " +
-                                $"au lieu de {outputWidth}×{outputHeight}.");
-                        }
-
-                        WriteFrame(encoder, middle);
-                        frames++;
-                    }
-
-                    previous = enhanced;
-                }
-
-                WriteFrame(encoder, enhanced);
-                frames++;
-
-                if (stopwatch.Elapsed - lastReport >= TimeSpan.FromMilliseconds(80))
-                {
-                    lastReport = stopwatch.Elapsed;
-                    var percent = totalFrames > 0
-                        ? Math.Clamp(frames * 100.0 / totalFrames, 0, 99.5)
-                        : 0;
-
-                    if (stopwatch.Elapsed - lastSnapshot >= SnapshotInterval)
-                    {
-                        lastSnapshot = stopwatch.Elapsed;
-                        snapshot = CreateSnapshot(enhanced);
-                    }
-
-                    progress?.Report(new VideoRenderProgress(
-                        VideoRenderStage.Rendering,
-                        percent,
-                        StageRange.Map(VideoRenderStage.Rendering, percent),
-                        frames,
-                        totalFrames > 0 ? totalFrames : null,
-                        DescribeThroughput(frames, stopwatch.Elapsed),
-                        snapshot));
-                }
-            }
-
-            if (settings.UsesRife && previous is not null)
-            {
-                // 2N-1 frames were produced; repeat the last one so the output
-                // duration matches the source instead of losing half a frame.
-                WriteFrame(encoder, previous);
-                frames++;
-            }
+            frames = await pipeline.RunAsync(
+                new StreamFrameSource(decoder.StandardOutput.BaseStream),
+                new StreamFrameSink(encoder.StandardInput.BaseStream),
+                cancellationToken).ConfigureAwait(false);
 
             TryClose(encoder.StandardInput);
             WaitForExit(encoder, cancellationToken);
@@ -424,8 +395,14 @@ public sealed class VideoRenderService : IVideoRenderService
 
             completed = true;
         }
+        catch (OperationCanceledException)
+        {
+            failure = "annulé";
+            throw;
+        }
         catch (IOException) when (cancellationToken.IsCancellationRequested)
         {
+            failure = "annulé";
             throw new OperationCanceledException(cancellationToken);
         }
         catch (IOException exception)
@@ -434,11 +411,42 @@ public sealed class VideoRenderService : IVideoRenderService
             FfmpegRunner.Kill(decoder);
             var encoderError = encoderErrors.GetAwaiter().GetResult();
 
+            // La trace ne garde qu'une catégorie : le message de FFmpeg peut
+            // contenir le chemin du fichier de sortie.
+            failure = "encodage interrompu";
             throw new VideoRenderException(
                 $"L'encodage s'est interrompu : {VideoPasses.FirstLine(encoderError)}", exception);
         }
+        catch (Exception exception)
+        {
+            failure = exception switch
+            {
+                VideoRenderException => "échec du rendu",
+                UnauthorizedAccessException => "accès refusé",
+                _ => exception.GetType().Name
+            };
+            throw;
+        }
         finally
         {
+            // Un moteur neural ne connaît son provider qu'après la première
+            // frame : la trace le relit ici, une fois la session ouverte.
+            trace.Adapter = engine.ActiveProvider ?? trace.Adapter;
+            trace.UpdatePeakWorkingSet();
+
+            if (engine is IFrameStageTimingsProvider provider)
+            {
+                trace.AddStageTimings(provider.TakeStageTimings());
+            }
+
+            diagnostics = trace.BuildSummary(
+                frames,
+                clock.Elapsed,
+                completed,
+                failure,
+                pool.GetStatistics());
+            RenderTrace.WriteToDisk(diagnostics);
+
             TryClose(encoder.StandardInput);
 
             if (!completed)
@@ -450,50 +458,37 @@ public sealed class VideoRenderService : IVideoRenderService
             Drain(encoderOutput);
         }
 
-        progress?.Report(new VideoRenderProgress(
-            VideoRenderStage.Rendering,
-            100,
-            StageRange.Map(VideoRenderStage.Rendering, 100),
-            frames,
-            frames,
-            DescribeThroughput(frames, stopwatch.Elapsed),
-            snapshot));
-
-        return frames;
+        return (frames, diagnostics);
     }
 
-    private static void WriteFrame(Process encoder, RgbImage image) =>
-        encoder.StandardInput.BaseStream.Write(image.Pixels, 0, image.Pixels.Length);
-
-    /// <summary>
-    /// Downsamples the live frame to the size the video page actually shows.
-    /// Without this, every 8K render kept a 100 MB copy per reported second.
-    /// </summary>
-    private static VideoFrameSnapshot CreateSnapshot(RgbImage image)
+    private static int ResolveCapacity(long frameBytes)
     {
-        var scale = Math.Min(
-            1.0,
-            Math.Min(
-                (double)SnapshotMaximumWidth / image.Width,
-                (double)SnapshotMaximumHeight / image.Height));
+        var available = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
 
-        if (scale >= 1.0)
+        if (available <= 0)
         {
-            return new VideoFrameSnapshot(
-                image.Width,
-                image.Height,
-                image.Pixels.ToArray());
+            return 2;
         }
 
-        var width = Math.Max(1, (int)Math.Round(image.Width * scale));
-        var height = Math.Max(1, (int)Math.Round(image.Height * scale));
-        var resized = ImageResampler.Resize(
-            image,
-            width,
-            height,
-            ResampleMethod.Bilinear);
+        // Trois tampons par frame en vol, et jamais plus d'un huitième de la
+        // mémoire disponible : sur une machine à 16 Go, une 4K garde quatre
+        // frames en vol, jamais des dizaines.
+        var perFrame = Math.Max(1L, frameBytes * 3);
+        var capacity = available / 8 / perFrame;
+        return (int)Math.Clamp(capacity, 1, MaximumFramesInFlight);
+    }
 
-        return new VideoFrameSnapshot(width, height, resized.Pixels);
+    private static long ResolvePoolBudget(long frameBytes, int capacity)
+    {
+        var desired = Math.Max(frameBytes * 4, frameBytes * ((capacity * 3L) + 3));
+        var available = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+
+        // Une sortie 4× de 4K pèse près de 400 Mo par tampon : sans plafond,
+        // la réserve retiendrait des gigaoctets alors que le rendu n'en a
+        // jamais besoin en même temps.
+        return available > 0
+            ? Math.Min(desired, Math.Max(frameBytes * 2, available / 8))
+            : desired;
     }
 
     private static void WaitForExit(Process process, CancellationToken cancellationToken)
@@ -508,7 +503,7 @@ public sealed class VideoRenderService : IVideoRenderService
         }
     }
 
-    private static bool ReadFrame(Stream stream, byte[] buffer)
+    private static bool ReadExactly(Stream stream, byte[] buffer)
     {
         var offset = 0;
 
@@ -539,11 +534,6 @@ public sealed class VideoRenderService : IVideoRenderService
         }
     }
 
-    private static string DescribeThroughput(int frames, TimeSpan elapsed) =>
-        elapsed.TotalSeconds > 0
-            ? $"{frames / elapsed.TotalSeconds:0.##} i/s"
-            : string.Empty;
-
     private static void TryClose(StreamWriter writer)
     {
         try
@@ -567,6 +557,19 @@ public sealed class VideoRenderService : IVideoRenderService
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
         }
+    }
+
+    /// <summary>Lit le tuyau du décodeur comme une source de frames brutes.</summary>
+    private sealed class StreamFrameSource(Stream stream) : IRenderFrameSource
+    {
+        public bool ReadFrame(byte[] buffer) => ReadExactly(stream, buffer);
+    }
+
+    /// <summary>Écrit une frame rendue dans le tuyau de l'encodeur.</summary>
+    private sealed class StreamFrameSink(Stream stream) : IRenderFrameSink
+    {
+        public void WriteFrame(RgbImage image) =>
+            stream.Write(image.Pixels, 0, image.Pixels.Length);
     }
 }
 
