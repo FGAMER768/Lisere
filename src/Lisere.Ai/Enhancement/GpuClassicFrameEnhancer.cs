@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ComputeSharp;
 using Lisere.Ai.Enhancement.Gpu;
 using Lisere.Core.Enhancement;
@@ -12,7 +13,7 @@ namespace Lisere.Ai.Enhancement;
 /// disparaît ou si le rendu échoue, la frame est recalculée par le pipeline
 /// CPU, sans jamais rendre un fichier différent en silence.
 /// </summary>
-public sealed class GpuClassicFrameEnhancer : IFrameEnhancer
+public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimingsProvider
 {
     private readonly GpuClassicRenderer? _renderer;
     private readonly GraphicsDevice? _device;
@@ -21,6 +22,8 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer
     private string? _disabledReason;
     private bool _disabled;
     private bool _disposed;
+    private long _gradingTicks;
+    private long _chromaTicks;
 
     private GpuClassicFrameEnhancer(
         GpuClassicRenderer? renderer,
@@ -108,19 +111,44 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer
 
         try
         {
-            var output = _renderer.Render(source, request, cancellationToken);
+            var pool = request.BufferPool;
+            var output = _renderer.Render(source, request, pool, cancellationToken);
 
             if (request.Grading is not ColorPreset.None)
             {
-                output = ColorGrading.Apply(
+                var started = Stopwatch.GetTimestamp();
+                var graded = ColorGrading.Apply(
                     output,
                     request.Grading,
-                    request.GradingSettings);
+                    request.GradingSettings,
+                    work: null,
+                    pool,
+                    cancellationToken);
+                Interlocked.Add(ref _gradingTicks, Stopwatch.GetElapsedTime(started).Ticks);
+
+                if (!ReferenceEquals(graded, output))
+                {
+                    pool?.Return(output);
+                }
+
+                output = graded;
             }
 
-            return request.ApplyChromaTone
-                ? ChromaTone.Apply(output)
-                : output;
+            if (request.ApplyChromaTone)
+            {
+                var started = Stopwatch.GetTimestamp();
+                var toned = ChromaTone.Apply(output, pool, cancellationToken);
+                Interlocked.Add(ref _chromaTicks, Stopwatch.GetElapsedTime(started).Ticks);
+
+                if (!ReferenceEquals(toned, output))
+                {
+                    pool?.Return(output);
+                }
+
+                output = toned;
+            }
+
+            return output;
         }
         catch (OperationCanceledException)
         {
@@ -136,6 +164,16 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer
             _renderer.Dispose();
             return _cpuFallback.Enhance(source, request, cancellationToken);
         }
+    }
+
+    public FrameStageTimings TakeStageTimings()
+    {
+        var renderer = _renderer?.TakeStageTimings() ?? FrameStageTimings.Empty;
+        return renderer with
+        {
+            Grading = TimeSpan.FromTicks(Interlocked.Exchange(ref _gradingTicks, 0)),
+            ChromaTone = TimeSpan.FromTicks(Interlocked.Exchange(ref _chromaTicks, 0))
+        };
     }
 
     public void Dispose()

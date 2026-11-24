@@ -11,7 +11,7 @@ namespace Lisere.Ai.Enhancement;
 /// <c>EnhancementOrchestrator</c> does for a photo, so a neural model and the
 /// classical pipeline both produce the same colors.
 /// </summary>
-public sealed class FrameLookEnhancer : IFrameEnhancer
+public sealed class FrameLookEnhancer : IFrameEnhancer, IFrameStageTimingsProvider
 {
     private readonly IFrameEnhancer _inner;
 
@@ -59,20 +59,47 @@ public sealed class FrameLookEnhancer : IFrameEnhancer
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var enhanced = _inner.Enhance(source, request, cancellationToken);
+        var pool = request.BufferPool;
+        var output = _inner.Enhance(source, request, cancellationToken);
 
         if (request.Grading is not ColorPreset.None)
         {
-            enhanced = ColorGrading.Apply(
-                enhanced,
+            var graded = ColorGrading.Apply(
+                output,
                 request.Grading,
-                request.GradingSettings);
+                request.GradingSettings,
+                work: null,
+                pool,
+                cancellationToken);
+
+            if (!ReferenceEquals(graded, output) &&
+                !ReferenceEquals(output, source))
+            {
+                pool?.Return(output);
+            }
+
+            output = graded;
         }
 
-        return request.ApplyChromaTone
-            ? ChromaTone.Apply(enhanced)
-            : enhanced;
+        if (request.ApplyChromaTone)
+        {
+            var toned = ChromaTone.Apply(output, pool, cancellationToken);
+
+            if (!ReferenceEquals(toned, output) &&
+                !ReferenceEquals(output, source))
+            {
+                pool?.Return(output);
+            }
+
+            output = toned;
+        }
+
+        return output;
     }
+
+    public FrameStageTimings TakeStageTimings() =>
+        (_inner as IFrameStageTimingsProvider)?.TakeStageTimings()
+        ?? FrameStageTimings.Empty;
 
     public void Dispose() => _inner.Dispose();
 }

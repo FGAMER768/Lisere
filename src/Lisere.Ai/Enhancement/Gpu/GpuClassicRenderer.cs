@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using ComputeSharp;
 using Lisere.Core.Enhancement;
 using Lisere.Core.Imaging;
@@ -27,6 +28,11 @@ internal sealed class GpuClassicRenderer : IDisposable
     private int _sourceHeight;
     private int _sourceCount;
     private bool _disposed;
+    private long _packTicks;
+    private long _uploadTicks;
+    private long _computeTicks;
+    private long _readbackTicks;
+    private int _timedFrames;
 
     public GpuClassicRenderer(GraphicsDevice device)
     {
@@ -39,6 +45,7 @@ internal sealed class GpuClassicRenderer : IDisposable
     public RgbImage Render(
         RgbImage source,
         FrameEnhancementRequest request,
+        RgbImagePool? pool,
         CancellationToken cancellationToken)
     {
         lock (_gate)
@@ -47,20 +54,60 @@ internal sealed class GpuClassicRenderer : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
 
             var workspace = EnsureWorkspace(source.Width, source.Height);
-            Pack(source, workspace);
+            var started = Stopwatch.GetTimestamp();
+            RgbaPacking.Pack(source, workspace.Packed, cancellationToken);
+            Interlocked.Add(ref _packTicks, Stopwatch.GetElapsedTime(started).Ticks);
+            started = Stopwatch.GetTimestamp();
             workspace.Image.CopyFrom(workspace.Packed);
+            Interlocked.Add(ref _uploadTicks, Stopwatch.GetElapsedTime(started).Ticks);
 
+            started = Stopwatch.GetTimestamp();
             var output = Enhance(workspace, request, cancellationToken);
             var (targetWidth, targetHeight) = request.ResolveSize(source.Width, source.Height);
+            ReadWriteBuffer<uint> readback;
+            uint[] packed;
 
             if (targetWidth == source.Width && targetHeight == source.Height)
             {
-                return Unpack(output, workspace.Packed, workspace.Width, workspace.Height);
+                readback = output;
+                packed = workspace.Packed;
+            }
+            else
+            {
+                var target = EnsureTargetImage(source.Width, source.Height, targetWidth, targetHeight);
+                Resize(workspace, output, target, targetWidth, targetHeight, cancellationToken);
+                readback = target;
+                packed = _targetPacked!;
             }
 
-            var target = EnsureTargetImage(source.Width, source.Height, targetWidth, targetHeight);
-            Resize(workspace, output, target, targetWidth, targetHeight, cancellationToken);
-            return Unpack(target, _targetPacked!, targetWidth, targetHeight);
+            Interlocked.Add(ref _computeTicks, Stopwatch.GetElapsedTime(started).Ticks);
+            started = Stopwatch.GetTimestamp();
+            var image = Unpack(readback, packed, targetWidth, targetHeight, pool, cancellationToken);
+            Interlocked.Add(ref _readbackTicks, Stopwatch.GetElapsedTime(started).Ticks);
+            _timedFrames++;
+            return image;
+        }
+    }
+
+    /// <summary>Lit les temps d'étage et les remet à zéro.</summary>
+    public FrameStageTimings TakeStageTimings()
+    {
+        lock (_gate)
+        {
+            var timings = new FrameStageTimings(
+                TimeSpan.FromTicks(_packTicks),
+                TimeSpan.FromTicks(_uploadTicks),
+                TimeSpan.FromTicks(_computeTicks),
+                TimeSpan.FromTicks(_readbackTicks),
+                TimeSpan.Zero,
+                TimeSpan.Zero,
+                _timedFrames);
+            _packTicks = 0;
+            _uploadTicks = 0;
+            _computeTicks = 0;
+            _readbackTicks = 0;
+            _timedFrames = 0;
+            return timings;
         }
     }
 
@@ -720,40 +767,18 @@ internal sealed class GpuClassicRenderer : IDisposable
         throw new InvalidOperationException("Tampons GPU insuffisants pour l'étage demandé.");
     }
 
-    private static void Pack(RgbImage source, GpuWorkspace workspace)
-    {
-        var pixels = source.Pixels;
-        var packed = workspace.Packed;
-
-        for (var index = 0; index < packed.Length; index++)
-        {
-            var offset = index * 3;
-            packed[index] = (uint)pixels[offset] |
-                ((uint)pixels[offset + 1] << 8) |
-                ((uint)pixels[offset + 2] << 16) |
-                0xFF000000u;
-        }
-    }
-
     private static RgbImage Unpack(
         ReadWriteBuffer<uint> output,
         uint[] packed,
         int width,
-        int height)
+        int height,
+        RgbImagePool? pool,
+        CancellationToken cancellationToken)
     {
         output.CopyTo(packed);
-        var pixels = new byte[checked(width * height * 3)];
-
-        for (var index = 0; index < packed.Length; index++)
-        {
-            var pixel = packed[index];
-            var offset = index * 3;
-            pixels[offset] = (byte)(pixel & 0xFF);
-            pixels[offset + 1] = (byte)((pixel >> 8) & 0xFF);
-            pixels[offset + 2] = (byte)((pixel >> 16) & 0xFF);
-        }
-
-        return new RgbImage(width, height, pixels);
+        var image = pool?.Rent(width, height) ?? new RgbImage(width, height);
+        RgbaPacking.Unpack(packed, image.Pixels, width, height, cancellationToken);
+        return image;
     }
 
     private static float GaussianBlurRadius(float radius, int passes)

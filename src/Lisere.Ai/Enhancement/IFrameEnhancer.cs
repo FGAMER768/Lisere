@@ -19,7 +19,11 @@ public sealed record FrameEnhancementRequest(
     UltronCcSettings? GradingSettings = null,
     // Avancement du moteur, de 0 à 100, pour les moteurs qui travaillent par
     // tuiles ; le pipeline classique n'en a pas besoin, il est trop court.
-    IProgress<double>? Progress = null)
+    IProgress<double>? Progress = null,
+    // Réserve de tampons du rendu en cours : les moteurs qui le peuvent y
+    // louent leurs images de sortie et leurs intermédiaires, au lieu d'allouer
+    // plusieurs tableaux de 25 Mo par frame 4K.
+    RgbImagePool? BufferPool = null)
 {
     public EnhancementParameters ClampedParameters => Parameters.Clamp();
 
