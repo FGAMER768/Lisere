@@ -183,6 +183,58 @@ public class VideoCommandBuilderTests
     }
 
     [Fact]
+    public void IntermediatePassesUseTheHardwareEncoder()
+    {
+        var plan = new VideoEncoderPlan(
+            "hevc_nvenc",
+            "NVENC · RTX 4070",
+            IsHardware: true,
+            VideoCodec.H265);
+
+        var deinterlace = VideoCommandBuilder.BuildDeinterlaceArguments(
+            "in.mp4",
+            "out.mp4",
+            "fast",
+            plan);
+        var stabilize = VideoCommandBuilder.BuildStabilizeTransformArguments(
+            "in.mp4",
+            "t.trf",
+            "out.mp4",
+            "fast",
+            encoder: plan);
+        var interpolation = VideoCommandBuilder.BuildInterpolationArguments(
+            "in.mp4",
+            "out.mp4",
+            60,
+            "fast",
+            plan);
+
+        foreach (var arguments in new[] { deinterlace, stabilize, interpolation })
+        {
+            Assert.Contains("hevc_nvenc", arguments);
+            Assert.Contains("hvc1", arguments);
+            Assert.DoesNotContain("libx264", arguments);
+            Assert.DoesNotContain("libx265", arguments);
+        }
+    }
+
+    [Fact]
+    public void CpuIntermediatePassesKeepTheirLibx264Reference()
+    {
+        var plan = VideoEncoderPlan.Cpu(VideoCodec.H265);
+        var arguments = VideoCommandBuilder.BuildDeinterlaceArguments(
+            "in.mp4",
+            "out.mp4",
+            "fast",
+            plan);
+
+        // Le CPU garde exactement la passe historique : libx264, même CRF.
+        Assert.Contains("libx264", arguments);
+        Assert.DoesNotContain("libx265", arguments);
+        Assert.Contains("16", arguments);
+    }
+
+    [Fact]
     public void FrameExtractionSeeksBeforeOpeningTheInput()
     {
         var arguments = VideoCommandBuilder.BuildExtractFrameArguments("in.mp4", 2.5);

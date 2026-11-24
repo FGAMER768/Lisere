@@ -1,4 +1,5 @@
 using Lisere.Video.Ffmpeg;
+using Lisere.Video.Hardware;
 using Lisere.Video.Probing;
 
 namespace Lisere.Video.Rendering;
@@ -22,7 +23,8 @@ public sealed class VideoPasses
         string destination,
         IProgress<VideoRenderProgress>? progress,
         string encodingPreset,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        VideoEncoderPlan? encoder = null)
     {
         var tools = _toolchain.RequireTools();
 
@@ -31,7 +33,8 @@ public sealed class VideoPasses
             VideoCommandBuilder.BuildDeinterlaceArguments(
                 source.Path,
                 destination,
-                encodingPreset),
+                encodingPreset,
+                encoder),
             value => Report(progress, VideoRenderStage.Deinterlacing, source, value, 0, 98),
             cancellationToken).ConfigureAwait(false);
 
@@ -57,7 +60,8 @@ public sealed class VideoPasses
         string encodingPreset,
         CancellationToken cancellationToken,
         double? startSeconds = null,
-        double? durationSeconds = null)
+        double? durationSeconds = null,
+        VideoEncoderPlan? encoder = null)
     {
         var tools = _toolchain.RequireTools();
         var workingDirectory = Path.GetDirectoryName(Path.GetFullPath(destination))!;
@@ -103,7 +107,8 @@ public sealed class VideoPasses
                     destination,
                     encodingPreset,
                     startSeconds,
-                    durationSeconds),
+                    durationSeconds,
+                    encoder),
                 value => Report(
                     progress,
                     VideoRenderStage.Stabilizing,
@@ -141,7 +146,8 @@ public sealed class VideoPasses
         double targetFrameRate,
         IProgress<VideoRenderProgress>? progress,
         string encodingPreset,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        VideoEncoderPlan? encoder = null)
     {
         var tools = _toolchain.RequireTools();
 
@@ -151,7 +157,8 @@ public sealed class VideoPasses
                 source.Path,
                 destination,
                 targetFrameRate,
-                encodingPreset),
+                encodingPreset,
+                encoder),
             value => Report(progress, VideoRenderStage.Interpolating, source, value, 0, 98),
             cancellationToken).ConfigureAwait(false);
 

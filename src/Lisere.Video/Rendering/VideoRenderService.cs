@@ -126,6 +126,21 @@ public sealed class VideoRenderService : IVideoRenderService
         {
             progress?.Report(VideoRenderProgress.Start(VideoRenderStage.Preparing));
 
+            // Le plan final dépend de la sortie, les passes intermédiaires de la
+            // source : une source 8K vers 1080p doit encoder la passe 8K en HEVC
+            // matériel sans jamais retomber sur x264.
+            var (outputWidth, outputHeight) = request.Frame.ResolveSize(
+                source.Width,
+                source.Height);
+            var encoderPlan = VideoEncoderSelector.Select(
+                settings,
+                hardware,
+                outputWidth,
+                outputHeight);
+            var passEncoderPlan = settings.Deinterlace || settings.Stabilize
+                ? VideoEncoderSelector.Select(settings, hardware, source.Width, source.Height)
+                : encoderPlan;
+
             var workingPath = source.Path;
             double? stabilizationStart = null;
 
@@ -137,7 +152,8 @@ public sealed class VideoRenderService : IVideoRenderService
                     workingPath,
                     progress,
                     settings.EncodingPreset,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    passEncoderPlan).ConfigureAwait(false);
             }
 
             if (settings.Stabilize)
@@ -155,7 +171,8 @@ public sealed class VideoRenderService : IVideoRenderService
                     settings.EncodingPreset,
                     cancellationToken,
                     window?.StartSeconds,
-                    window?.DurationSeconds).ConfigureAwait(false);
+                    window?.DurationSeconds,
+                    passEncoderPlan).ConfigureAwait(false);
                 workingPath = stabilizedPath;
                 stabilizationStart = window?.StartSeconds;
             }
@@ -172,9 +189,6 @@ public sealed class VideoRenderService : IVideoRenderService
                         (settings.PreviewStartSeconds ?? 0) - windowStart)
                 }
                 : settings;
-            var (outputWidth, outputHeight) = request.Frame.ResolveSize(
-                source.Width,
-                source.Height);
 
             var renderedPath = Path.Combine(temporaryDirectory, "rendered.mp4");
 
@@ -192,6 +206,7 @@ public sealed class VideoRenderService : IVideoRenderService
                     outputWidth,
                     outputHeight,
                     hardware,
+                    encoderPlan,
                     renderedPath,
                     progress,
                     cancellationToken),
@@ -208,7 +223,8 @@ public sealed class VideoRenderService : IVideoRenderService
                     settings.ResolveFrameRate(source.FrameRate),
                     progress,
                     settings.EncodingPreset,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    encoderPlan).ConfigureAwait(false);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -284,6 +300,7 @@ public sealed class VideoRenderService : IVideoRenderService
         int outputWidth,
         int outputHeight,
         HardwareVideoCapabilities hardware,
+        VideoEncoderPlan encoderPlan,
         string outputPath,
         IProgress<VideoRenderProgress>? progress,
         CancellationToken cancellationToken)
@@ -307,11 +324,6 @@ public sealed class VideoRenderService : IVideoRenderService
             ? source.FrameRate * 2
             : source.FrameRate;
 
-        var encoderPlan = VideoEncoderSelector.Select(
-            settings,
-            hardware,
-            outputWidth,
-            outputHeight);
         var decodePlan = VideoEncoderSelector.SelectDecoder(hardware, source.VideoCodec);
 
         using var decoder = FfmpegRunner.Start(

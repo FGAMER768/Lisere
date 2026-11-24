@@ -137,16 +137,14 @@ public static class VideoCommandBuilder
     public static IReadOnlyList<string> BuildDeinterlaceArguments(
         string sourcePath,
         string outputPath,
-        string encodingPreset) =>
+        string encodingPreset,
+        VideoEncoderPlan? encoder = null) =>
     [
         "-v", "error",
         "-y",
         "-i", sourcePath,
         "-vf", "bwdif=mode=send_frame:parity=auto:deint=all",
-        "-c:v", "libx264",
-        "-preset", encodingPreset,
-        "-crf", "16",
-        "-pix_fmt", "yuv420p",
+        .. BuildPassEncoderArguments(encoder, 16, encodingPreset),
         "-c:a", "aac",
         "-b:a", "192k",
         "-movflags", "+faststart",
@@ -178,16 +176,14 @@ public static class VideoCommandBuilder
         string outputPath,
         string encodingPreset,
         double? startSeconds = null,
-        double? durationSeconds = null) =>
+        double? durationSeconds = null,
+        VideoEncoderPlan? encoder = null) =>
     [
         .. StartArguments(sourcePath, startSeconds, durationSeconds),
         "-vf",
         $"vidstabtransform=input={transformsFileName}:smoothing=10:zoom=0:optzoom=1:interpol=bicubic," +
         "unsharp=5:5:0.4",
-        "-c:v", "libx264",
-        "-preset", encodingPreset,
-        "-crf", "18",
-        "-pix_fmt", "yuv420p",
+        .. BuildPassEncoderArguments(encoder, 18, encodingPreset),
         "-c:a", "aac",
         "-b:a", "192k",
         "-movflags", "+faststart",
@@ -199,7 +195,8 @@ public static class VideoCommandBuilder
         string sourcePath,
         string outputPath,
         double targetFrameRate,
-        string encodingPreset) =>
+        string encodingPreset,
+        VideoEncoderPlan? encoder = null) =>
     [
         "-v", "error",
         "-y",
@@ -210,10 +207,7 @@ public static class VideoCommandBuilder
         // and makes the stream constant-rate, keeping the source duration.
         $"minterpolate=fps={Format(targetFrameRate)}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1," +
         $"fps={Format(targetFrameRate)}",
-        "-c:v", "libx264",
-        "-preset", encodingPreset,
-        "-crf", "18",
-        "-pix_fmt", "yuv420p",
+        .. BuildPassEncoderArguments(encoder, 18, encodingPreset),
         "-c:a", "copy",
         "-movflags", "+faststart",
         "-progress", "pipe:1",
@@ -233,6 +227,42 @@ public static class VideoCommandBuilder
         "-pix_fmt", "rgb24",
         "pipe:1"
     ];
+
+    /// <summary>
+    /// Encodeur d'une passe intermédiaire. Le chemin CPU garde exactement
+    /// libx264 et les mêmes réglages qu'avant ; le matériel prend le relais dès
+    /// qu'il est disponible, sans changer le codec de référence des passes.
+    /// </summary>
+    private static IReadOnlyList<string> BuildPassEncoderArguments(
+        VideoEncoderPlan? encoder,
+        int quality,
+        string preset)
+    {
+        if (encoder is not { IsHardware: true })
+        {
+            return
+            [
+                "-c:v", "libx264",
+                "-preset", preset,
+                "-crf", quality.ToString(CultureInfo.InvariantCulture),
+                "-pix_fmt", "yuv420p"
+            ];
+        }
+
+        var arguments = new List<string>(
+            BuildHardwareEncoderOptions(
+                encoder.EncoderName,
+                encoder.EffectiveCodec,
+                quality,
+                preset));
+
+        if (encoder.EffectiveCodec == VideoCodec.H265)
+        {
+            arguments.AddRange(["-tag:v", "hvc1"]);
+        }
+
+        return arguments;
+    }
 
     /// <summary>
     /// Options du codec matériel, sans option de conteneur : la sonde les
