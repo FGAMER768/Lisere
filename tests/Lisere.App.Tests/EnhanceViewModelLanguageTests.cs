@@ -11,6 +11,37 @@ namespace Lisere.App.Tests;
 public class EnhanceViewModelLanguageTests
 {
     [Fact]
+    public async Task ChoosingNoEngineSkipsEnhancementButKeepsColorGrading()
+    {
+        var localization = new LocalizationService();
+        var orchestrator = new FakeOrchestrator();
+        var viewModel = CreateViewModel(localization, orchestrator);
+        var noEngine = Assert.Single(
+            viewModel.Engines,
+            engine => engine.Id == "lisere.passthrough");
+
+        Assert.Equal("Aucun", noEngine.DisplayName);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        viewModel.SelectedEngine = noEngine;
+        viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+            option => option.Preset == ColorPreset.UltronCc);
+
+        Assert.True(viewModel.HasNoEngine);
+        Assert.False(viewModel.CanUseEnhancement);
+        Assert.False(viewModel.CanAdjustEnhancement);
+        Assert.False(viewModel.CanRefineFaces);
+        Assert.Equal(EnhancementMode.None, viewModel.SelectedPreset?.Mode);
+
+        await viewModel.EnhanceCommand.ExecuteAsync(null);
+
+        Assert.Equal(EnhancementMode.None, orchestrator.LastRequest?.Mode);
+        Assert.Null(orchestrator.LastRequest?.Engine);
+        Assert.Equal(ColorPreset.UltronCc, orchestrator.LastRequest?.Color);
+        Assert.False(orchestrator.LastRequest?.RefineFaces);
+    }
+
+    [Fact]
     public async Task SwitchingLanguageUpdatesStatusPresetLabelsAndWarnings()
     {
         var localization = new LocalizationService();
@@ -299,6 +330,8 @@ public class EnhanceViewModelLanguageTests
         public string? PickVideoTarget(string suggestedFileName) => null;
 
         public string? PickVideoPreset() => null;
+
+        public string? PickVideoPresetTarget(string suggestedFileName) => null;
 
         public string? PickEnhancePreset() => null;
 

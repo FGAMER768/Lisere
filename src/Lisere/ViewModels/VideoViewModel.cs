@@ -129,6 +129,9 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private PresetOption? _selectedPreset;
 
     [ObservableProperty]
+    private string _presetNote = string.Empty;
+
+    [ObservableProperty]
     private ColorPresetOption? _selectedColorPreset;
 
     [ObservableProperty]
@@ -352,6 +355,10 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     private bool HasAvailableEngine => SelectedEngine is { IsAvailable: true };
 
+    public bool HasNoEngine => SelectedEngine?.Enhancer is PassthroughFrameEnhancer;
+
+    public bool CanUseEnhancement => HasAvailableEngine && !HasNoEngine;
+
     private string EngineUnavailableReason =>
         SelectedEngine?.Enhancer.UnavailableReason ?? Strings["engineMissing"];
 
@@ -497,6 +504,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     {
         OpenCommand.NotifyCanExecuteChanged();
         ImportVideoPresetCommand.NotifyCanExecuteChanged();
+        ExportVideoPresetCommand.NotifyCanExecuteChanged();
         AddToQueueCommand.NotifyCanExecuteChanged();
         RunQueueCommand.NotifyCanExecuteChanged();
         StopQueueCommand.NotifyCanExecuteChanged();
@@ -534,12 +542,16 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         }
 
         UpdateEngineNote();
+        OnPropertyChanged(nameof(HasNoEngine));
+        OnPropertyChanged(nameof(CanUseEnhancement));
         UpdatePendingStatus();
         NotifyCommandStates();
     }
 
     partial void OnSelectedPresetChanged(PresetOption? value)
     {
+        UpdatePresetNote();
+
         if (value is null || _switchingToManual || !_initialized)
         {
             return;
@@ -637,6 +649,8 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
             preset.Label = Strings[PresetLabelKey(preset.Mode)];
         }
 
+        UpdatePresetNote();
+
         foreach (var color in ColorPresets)
         {
             color.Label = Strings[ColorPresetCatalog.LabelKey(color.Preset)];
@@ -715,9 +729,17 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
             ? Strings["engineMissing"]
             : SelectedEngine.Enhancer is PassthroughFrameEnhancer
                 ? Strings["enginePassthroughNote"]
-                : SelectedEngine.IsAvailable
-                    ? Strings[SelectedEngine.IsNeural ? "engineNeuralReady" : "engineClassicReady"]
-                    : Strings.Format("engineUnavailable", SelectedEngine.Enhancer.UnavailableReason ?? Strings["engineMissing"]);
+                : !SelectedEngine.IsAvailable
+                    ? Strings.Format("engineUnavailable", SelectedEngine.Enhancer.UnavailableReason ?? Strings["engineMissing"])
+                    : SelectedEngine.Enhancer.ProviderFallbackReason is { } reason
+                        ? Strings.Format(
+                            SelectedEngine.IsNeural ? "engineNeuralFallback" : "engineClassicFallback",
+                            reason)
+                        : SelectedEngine.Enhancer.ActiveProvider is { } provider
+                            ? Strings.Format(
+                                SelectedEngine.IsNeural ? "engineNeuralActive" : "engineClassicGpu",
+                                provider)
+                            : Strings[SelectedEngine.IsNeural ? "engineNeuralReady" : "engineClassicReady"];
     }
 
     private void OnParameterChanged()
@@ -864,12 +886,25 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private PresetOption CreatePreset(EnhancementMode mode) =>
         new(Strings[PresetLabelKey(mode)], mode);
 
+    private void UpdatePresetNote() =>
+        PresetNote = SelectedPreset is null
+            ? string.Empty
+            : Strings[PresetNoteKey(SelectedPreset.Mode)];
+
     private static string PresetLabelKey(EnhancementMode mode) => mode switch
     {
         EnhancementMode.ChromaEnhanceMain => "presetChroma",
         EnhancementMode.Auto => "presetAuto",
         EnhancementMode.AutoRelativeMedium => "presetAutoRelative",
         _ => "presetManual"
+    };
+
+    private static string PresetNoteKey(EnhancementMode mode) => mode switch
+    {
+        EnhancementMode.ChromaEnhanceMain => "presetChromaNote",
+        EnhancementMode.Auto => "presetAutoNote",
+        EnhancementMode.AutoRelativeMedium => "presetAutoRelativeNote",
+        _ => "presetManualNote"
     };
 
     private enum RenderPurpose

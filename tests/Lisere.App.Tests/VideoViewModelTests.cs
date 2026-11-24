@@ -87,6 +87,23 @@ public class VideoViewModelTests
     }
 
     [Fact]
+    public void SelectingNoneDisablesTheEnhancementControls()
+    {
+        var viewModel = CreateViewModel();
+        var noEngine = Assert.Single(
+            viewModel.Engines,
+            engine => engine.Enhancer.Id == "lisere.passthrough");
+
+        Assert.Equal("Aucun", noEngine.DisplayName);
+        Assert.True(viewModel.CanUseEnhancement);
+
+        viewModel.SelectedEngine = noEngine;
+
+        Assert.True(viewModel.HasNoEngine);
+        Assert.False(viewModel.CanUseEnhancement);
+    }
+
+    [Fact]
     public async Task TikTokExportWorksWithoutAnEngine()
     {
         var patcher = new FakeTikTokPatcher();
@@ -582,6 +599,86 @@ public class VideoViewModelTests
             await viewModel.OpenCommand.ExecuteAsync(null);
             Assert.Equal(12, viewModel.FixCompression);
             Assert.Equal(1080, viewModel.SelectedOutput?.TargetHeight);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task ExportingThenImportingACompletePresetRestoresTheLook()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"lisere-video-look-{Guid.NewGuid():N}.json");
+        var files = new FakeFileDialogService
+        {
+            VideoPath = "clip.mp4",
+            VideoTarget = "export.mp4",
+            PresetTarget = path,
+            PresetPath = path
+        };
+
+        try
+        {
+            var viewModel = CreateViewModel(files: files);
+            viewModel.FixCompression = 61;
+            viewModel.ReduceNoise = 39;
+            viewModel.Sharpen = 12;
+            viewModel.RecoverDetails = 86;
+            viewModel.Dehalo = 11;
+            viewModel.AntialiasDeblur = 94;
+            viewModel.RecoverOriginalDetail = 17;
+            viewModel.AddNoise = 0.015;
+            viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+                option => option.Preset == ColorPreset.UltronCc);
+            viewModel.ColorSaturation = 150;
+            viewModel.ColorBrightness = 10;
+            viewModel.ColorContrast = 12;
+            viewModel.ColorVibrance = 60;
+
+            await viewModel.ExportVideoPresetCommand.ExecuteAsync(null);
+
+            Assert.True(File.Exists(path));
+            var exported = LiserePresetSerializer.Load(path);
+            Assert.Equal("fake", exported.EngineId);
+            Assert.Equal(
+                new EnhancementParameters(61, 39, 12, 86, 11, 94),
+                exported.Parameters);
+            Assert.Equal(17, exported.RecoverOriginalDetail);
+            Assert.Equal(0.015, exported.AddNoise, 6);
+            Assert.Equal(ColorPreset.UltronCc, exported.ColorPreset);
+            Assert.Equal(150, exported.ColorSettings.SaturationPercent);
+            Assert.Equal(60, exported.ColorSettings.Vibrance);
+            Assert.Contains("Preset exporté", viewModel.StatusMessage, StringComparison.Ordinal);
+
+            viewModel.FixCompression = 0;
+            viewModel.ReduceNoise = 0;
+            viewModel.Sharpen = 0;
+            viewModel.RecoverDetails = 0;
+            viewModel.Dehalo = 0;
+            viewModel.AntialiasDeblur = 0;
+            viewModel.RecoverOriginalDetail = 0;
+            viewModel.AddNoise = 0;
+            viewModel.SelectedColorPreset = viewModel.ColorPresets.First(
+                option => option.Preset == ColorPreset.None);
+
+            await viewModel.ImportVideoPresetCommand.ExecuteAsync(null);
+
+            Assert.Equal(61, viewModel.FixCompression);
+            Assert.Equal(39, viewModel.ReduceNoise);
+            Assert.Equal(12, viewModel.Sharpen);
+            Assert.Equal(86, viewModel.RecoverDetails);
+            Assert.Equal(11, viewModel.Dehalo);
+            Assert.Equal(94, viewModel.AntialiasDeblur);
+            Assert.Equal(17, viewModel.RecoverOriginalDetail);
+            Assert.Equal(0.015, viewModel.AddNoise, 6);
+            Assert.Equal(EnhancementMode.Manual, viewModel.SelectedPreset?.Mode);
+            Assert.Equal(ColorPreset.UltronCc, viewModel.SelectedColorPreset?.Preset);
+            Assert.Equal(150, viewModel.ColorSaturation);
+            Assert.Equal(60, viewModel.ColorVibrance);
+            Assert.Contains("Preset importé", viewModel.StatusMessage, StringComparison.Ordinal);
         }
         finally
         {
@@ -1544,6 +1641,8 @@ public class VideoViewModelTests
 
         public string? PresetPath { get; init; }
 
+        public string? PresetTarget { get; init; }
+
         public IReadOnlyList<string>? VideoTargets { get; init; }
 
         private int _targetIndex;
@@ -1566,6 +1665,8 @@ public class VideoViewModelTests
         }
 
         public string? PickVideoPreset() => PresetPath;
+
+        public string? PickVideoPresetTarget(string suggestedFileName) => PresetTarget;
 
         public string? PickEnhancePreset() => null;
 

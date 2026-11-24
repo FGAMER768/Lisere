@@ -588,6 +588,9 @@
   <data name="videoActionImportPreset" xml:space="preserve">
     <value>Import a preset...</value>
   </data>
+  <data name="videoPresetFileNote" xml:space="preserve">
+    <value>A single JSON file holds the enhancement, colour grading and engine. Existing video presets are still accepted.</value>
+  </data>
   <data name="videoLabelPreviewPosition" xml:space="preserve">
     <value>Preview position</value>
   </data>
@@ -685,7 +688,7 @@
     <value>RIFE ×2 interpolation</value>
   </data>
   <data name="videoRifeReady" xml:space="preserve">
-    <value>RIFE 4.9 (ONNX Runtime, DirectML on Intel iGPU or CPU fallback). Doubles the frame rate, slower in HD.</value>
+    <value>RIFE 4.9 (ONNX Runtime, DirectML on the GPU with the most dedicated VRAM, CPU fallback). Doubles the frame rate, slower in HD.</value>
   </data>
   <data name="videoRifeMissing" xml:space="preserve">
     <value>RIFE model missing: neural interpolation is unavailable.</value>
@@ -847,19 +850,31 @@
     <value>Unavailable: {0}</value>
   </data>
   <data name="enginePassthrough" xml:space="preserve">
-    <value>No enhancement</value>
+    <value>None</value>
   </data>
   <data name="enginePassthroughNote" xml:space="preserve">
-    <value>No enhancement: the video is only resized and exported as-is. Suitable for TikTok preparation.</value>
+    <value>No enhancement: the video is only resized and exported; color grading still applies. Suitable for TikTok preparation.</value>
   </data>
   <data name="engineMissing" xml:space="preserve">
     <value>model not installed</value>
   </data>
   <data name="engineClassicReady" xml:space="preserve">
-    <value>Deterministic local pipeline, no external model.</value>
+    <value>Deterministic local pipeline, D3D12 GPU compute when available, CPU fallback.</value>
+  </data>
+  <data name="engineClassicGpu" xml:space="preserve">
+    <value>GPU compute: {0}.</value>
+  </data>
+  <data name="engineClassicFallback" xml:space="preserve">
+    <value>CPU compute: {0}</value>
   </data>
   <data name="engineNeuralReady" xml:space="preserve">
-    <value>Local ONNX model verified by SHA-256, DirectML on iGPU or CPU fallback.</value>
+    <value>Local ONNX model verified by SHA-256, DirectML on the GPU with the most dedicated VRAM, CPU fallback.</value>
+  </data>
+  <data name="engineNeuralActive" xml:space="preserve">
+    <value>Actual inference: {0}.</value>
+  </data>
+  <data name="engineNeuralFallback" xml:space="preserve">
+    <value>CPU fallback: {0}</value>
   </data>
   <data name="fileOpenVideoTitle" xml:space="preserve">
     <value>Open a video</value>
@@ -884,6 +899,9 @@
   </data>
   <data name="fileSaveEnhancePresetTitle" xml:space="preserve">
     <value>Export the preset (AI + color grading)</value>
+  </data>
+  <data name="fileSaveVideoPresetTitle" xml:space="preserve">
+    <value>Export the video preset (AI + colour grading)</value>
   </data>
   <data name="fileFilterMp4" xml:space="preserve">
     <value>MP4 video</value>

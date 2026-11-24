@@ -10,9 +10,12 @@ public static class FrameEnhancerCatalog
 {
     public static IReadOnlyList<IFrameEnhancer> Create(ModelCatalog? catalog)
     {
+        // Classic porte lui-même l'étage colorimétrique : il exécute le
+        // pipeline sur GPU puis applique le look, au lieu d'être enveloppé par
+        // FrameLookEnhancer (qui relancerait le pipeline CPU).
         var engines = new List<IFrameEnhancer>
         {
-            new FrameLookEnhancer(new ClassicFrameEnhancer())
+            GpuClassicFrameEnhancer.Create()
         };
 
         if (catalog is not null)

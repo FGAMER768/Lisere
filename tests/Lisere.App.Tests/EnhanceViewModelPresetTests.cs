@@ -469,6 +469,8 @@ public class EnhanceViewModelPresetTests
 
         public string? PickVideoPreset() => null;
 
+        public string? PickVideoPresetTarget(string suggestedFileName) => null;
+
         public string? PickEnhancePreset() => PresetPath;
 
         public string? PickEnhancePresetTarget(string suggestedFileName) => PresetTarget;

@@ -75,11 +75,18 @@ public interface IFrameEnhancer : IDisposable
     double SecondsPerMegapixel => 0.0;
 
     /// <summary>
-    /// Provider réellement chargé, une fois la session ouverte. Nul tant que le
-    /// modèle n'a pas tourné : on ne prétend pas savoir à l'avance sur quoi il
-    /// tombera.
+    /// Provider réellement chargé, une fois la session ouverte, avec l'adaptateur
+    /// quand il est connu (« DirectML · NVIDIA GeForce RTX 4070 »). Nul tant que
+    /// le modèle n'a pas tourné : on ne prétend pas savoir à l'avance sur quoi
+    /// il tombera.
     /// </summary>
     string? ActiveProvider => null;
+
+    /// <summary>
+    /// Raison du repli CPU, quand le backend GPU n'a pas pu démarrer. La note
+    /// du moteur l'affiche au lieu de laisser croire que le GPU a tourné.
+    /// </summary>
+    string? ProviderFallbackReason => null;
 
     /// <summary>Clé de la mesure de coût sur cette machine, nulle sans modèle.</summary>
     EngineCalibrationKey? CalibrationKey => null;

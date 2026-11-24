@@ -12,6 +12,8 @@ public interface IFileDialogService
 
     string? PickVideoPreset();
 
+    string? PickVideoPresetTarget(string suggestedFileName);
+
     string? PickEnhancePreset();
 
     string? PickEnhancePresetTarget(string suggestedFileName);

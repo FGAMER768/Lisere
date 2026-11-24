@@ -319,14 +319,14 @@ The **Engine** menu offers the installed engines:
 
 | Engine | Description | Availability |
 |---|---|---|
-| **Lisere Classic** | Deterministic local pipeline, no external model. | Always available. |
+| **Lisere Classic** | Deterministic local pipeline, D3D12 GPU compute when available, CPU fallback. | Always available. |
 | **1x photo cleaning** | Colour network that removes noise and part of the JPEG artifacts without changing the size. The slowest engine: about one minute for a 900×900 photo. | Depends on the model being present and intact. |
-| **Super-Resolution CNN x3** | Local ONNX model verified by SHA-256, DirectML inference on a compatible iGPU with CPU fallback. | Depends on the model being present and intact. |
+| **Super-Resolution CNN x3** | Local ONNX model verified by SHA-256, DirectML inference on the adapter with the most dedicated VRAM, with CPU fallback. | Depends on the model being present and intact. |
 | **Real-ESRGAN general x4** | Colour network: all three planes are rebuilt with the detail, on free-size tiles, then brought back to the chosen output resolution. Slower than a luma model. | Depends on the model being present and intact. |
 | **Anime x4 (Real-ESRGAN 6B)** | Colour network specialised for animation, drawing and digital art: cleaner lines and flat colours, slower than the general engine. Avoid on photographs. | Depends on the model being present and intact. |
 | **Anime video x4 (Real-ESRGAN v3)** | Fast version for animation frames, softer than the image model. | Depends on the model being present and intact. |
 
-The note below the menu indicates whether the engine is ready or why it is unavailable. If a neural engine is unavailable, choose **Classic**: the rest of the application keeps working.
+The note below the menu indicates whether the engine is ready, which GPU it actually uses, or why it is unavailable. If a neural engine is unavailable, choose **Classic**: the rest of the application keeps working.
 
 The same choice is offered on the **Image** page, with **Lisere Classic** as the default. A neural engine replaces the whole pipeline for the frame, at its original size, and disables **Refine faces**: that texture belongs to the classical pipeline.
 
@@ -544,7 +544,7 @@ Check that **Enhance faces** is enabled and that detail recovery is not `0`. The
 
 ### Video rendering is very slow
 
-Main factors: neural engine, 4K output, RIFE, stabilisation, deinterlacing and recreated frame rate. To iterate, use **Render 1 second**, a lower resolution and the **Classic** engine. The CPU fallback of ONNX engines is much slower than DirectML.
+Main factors: neural engine, 4K output, RIFE, stabilisation, deinterlacing and recreated frame rate. To iterate, use **Render 1 second**, a lower resolution and the **Classic** engine, which computes enhancement on the D3D12 GPU when available. The CPU fallback of ONNX engines is much slower than DirectML.
 
 ### The video preview does not change
 

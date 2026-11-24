@@ -94,7 +94,7 @@ public sealed class RifeFrameInterpolator : IFrameInterpolator
             timestepInput,
             new long[] { 1 });
 
-        float[] prediction;
+        var output = new RgbImage(width, height);
 
         lock (_sessionGate)
         {
@@ -106,29 +106,28 @@ public sealed class RifeFrameInterpolator : IFrameInterpolator
                 [firstValue, secondValue, timestepValue],
                 [_model.Manifest.OutputName]);
 
-            prediction = results[0].GetTensorDataAsSpan<float>().ToArray();
-        }
-
-        var expected = checked(3 * planeSize);
-        if (prediction.Length != expected)
-        {
-            throw new InvalidOperationException(
-                $"RIFE a produit {prediction.Length} valeurs au lieu de {expected}.");
-        }
-
-        var output = new RgbImage(width, height);
-
-        for (var y = 0; y < height; y++)
-        {
-            for (var x = 0; x < width; x++)
+            // Read the tensor in place: copying a 1080p frame's three planes
+            // added roughly 12 MB of garbage per interpolated frame.
+            var prediction = results[0].GetTensorDataAsSpan<float>();
+            var expected = checked(3 * planeSize);
+            if (prediction.Length != expected)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                throw new InvalidOperationException(
+                    $"RIFE a produit {prediction.Length} valeurs au lieu de {expected}.");
+            }
 
-                var index = (y * paddedWidth) + x;
-                var destination = ((y * width) + x) * 3;
-                output.Pixels[destination] = ToByte(prediction[index]);
-                output.Pixels[destination + 1] = ToByte(prediction[planeSize + index]);
-                output.Pixels[destination + 2] = ToByte(prediction[(2 * planeSize) + index]);
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var index = (y * paddedWidth) + x;
+                    var destination = ((y * width) + x) * 3;
+                    output.Pixels[destination] = ToByte(prediction[index]);
+                    output.Pixels[destination + 1] = ToByte(prediction[planeSize + index]);
+                    output.Pixels[destination + 2] = ToByte(prediction[(2 * planeSize) + index]);
+                }
             }
         }
 

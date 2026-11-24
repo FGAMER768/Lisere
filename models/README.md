@@ -213,12 +213,22 @@ texture revient au masque de peau global.
 Citation : Wu, W., Peng, H., Yu, S. (2023). *YuNet: A Tiny Millisecond-level
 Face Detector.* Machine Intelligence Research, 20(5), 656–665.
 
-## DirectML et repli CPU
+## DirectML, choix du GPU et repli CPU
 
 Le paquet NuGet `Microsoft.ML.OnnxRuntime.DirectML` fournit à la fois l'API
-managée et le provider DirectML. Liseré tente DirectML (adaptateur 0, l'iGPU
-Intel sur cette machine) puis retombe sur le CPU si la session ne peut pas être
-créée. Le provider réellement utilisé est exposé par les moteurs ; aucune
+managée et le provider DirectML. Le `device_id` de DirectML est un index DXGI ;
+l'adaptateur 0 est celui qui pilote l'affichage, souvent l'iGPU sur un portable
+hybride. Liseré énumère donc les adaptateurs DXGI et retient celui qui possède le
+plus de **mémoire vidéo dédiée** : la carte dédiée passe devant l'iGPU, dont la
+mémoire est partagée avec la RAM système. Les adaptateurs logiciels
+(`Microsoft Basic Render Driver`) sont écartés. `LISERE_DML_ADAPTER` accepte un
+index (`0`, `1`, ...) ou un fragment de nom (`RTX 4070`) pour forcer un choix.
+
+La session DirectML désactive les optimisations de motif mémoire et impose
+l'exécution séquentielle, comme l'exige ONNX Runtime. Si aucun adaptateur
+matériel n'est disponible, ou si la session ne peut pas être créée, Liseré
+retombe sur le CPU et affiche la raison. Le moteur expose le provider et le GPU
+réellement utilisés (« DirectML · NVIDIA GeForce RTX 4070 ») ; aucune
 accélération n'est supposée.
 
 Mesure locale (Iris Xe, RIFE, après chauffe) : **37 ms** en 192×192,

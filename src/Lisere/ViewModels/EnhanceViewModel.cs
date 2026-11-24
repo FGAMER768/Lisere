@@ -156,7 +156,12 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         _dialogService = dialogService;
         _localization = localization;
         _calibration = calibration ?? new EngineCalibrationStore();
-        Engines = engines ?? [];
+        var availableEngines = engines ?? [];
+        Engines = availableEngines.Any(engine => engine is PassthroughFrameEnhancer)
+            ? availableEngines
+            : availableEngines
+                .Append(new PassthroughFrameEnhancer(_localization["enginePassthrough"]))
+                .ToArray();
         SelectDefaultEngine();
 
         Presets =
@@ -193,6 +198,9 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
     /// <summary>Une amélioration autre que « Aucune » est sélectionnée.</summary>
     public bool IsEnhancementActive => SelectedPreset is not { Mode: EnhancementMode.None };
+
+    /// <summary>Les réglages d'amélioration ne servent à rien sans moteur ou sans preset.</summary>
+    public bool CanAdjustEnhancement => CanUseEnhancement && IsEnhancementActive;
 
     private ColorPresetOption? ActiveColorPreset =>
         SelectedColorPreset is { Preset: not ColorPreset.None } option ? option : null;
@@ -356,7 +364,11 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var mode = SelectedPreset?.Mode ?? EnhancementMode.Manual;
+        var engine = HasNoEngine ? null : SelectedEngine;
+        var mode = HasNoEngine
+            ? EnhancementMode.None
+            : SelectedPreset?.Mode ?? EnhancementMode.Manual;
+        var refineFaces = !HasNoEngine && RefineFaces && CanRefineFaces;
         var (targetWidth, targetHeight) = ResolveOutputSize();
         var explicitSize = SelectedOutput?.TargetHeight is not null;
         var request = new EnhancementRequest(
@@ -367,8 +379,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
             AddNoise,
             SelectedColorPreset?.Preset ?? ColorPreset.None,
             SelectedColorPreset?.Preset is ColorPreset.UltronCc ? CurrentColorSettings : null,
-            RefineFaces: RefineFaces,
-            Engine: SelectedEngine,
+            RefineFaces: refineFaces,
+            Engine: engine,
             OutputScale: SelectedOutput?.Scale ?? 1,
             TargetWidth: explicitSize ? targetWidth : null,
             TargetHeight: explicitSize ? targetHeight : null);
@@ -379,7 +391,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         var estimate = ImageRenderEstimator.Explain(
             _source,
             request.Mode,
-            SelectedEngine,
+            engine,
             _calibration);
         var isLongRender = estimate.Duration >= ImageRenderEstimator.ConfirmationThreshold;
         if (isLongRender &&
@@ -391,8 +403,8 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
                 SelectedColorPreset?.Label ?? string.Empty,
                 estimate.Duration,
                 BeforeImage,
-                SelectedEngine,
-                SelectedEngine is { } engine ? _calibration.Latest(engine.Id)?.Provider : null,
+                engine,
+                engine is { } activeEngine ? _calibration.Latest(activeEngine.Id)?.Provider : null,
                 estimate.Basis,
                 (targetWidth, targetHeight))))
         {
@@ -478,6 +490,10 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         {
             await _dialogService.HideWaitAsync();
 
+            // La session vient de s'ouvrir : la note peut enfin nommer le GPU
+            // réellement utilisé, ou la raison du repli CPU.
+            OnPropertyChanged(nameof(EngineNote));
+
             if (ReferenceEquals(_enhanceCancellation, cancellation))
             {
                 _enhanceCancellation = null;
@@ -503,6 +519,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         {
             await _dialogService.ShowMessageAsync(WarningsText, DialogKind.Warning);
         }
+
     }
 
     [RelayCommand(CanExecute = nameof(CanSave), AllowConcurrentExecutions = false)]
@@ -620,7 +637,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
                 AddNoise,
                 SelectedColorPreset?.Preset ?? ColorPreset.None,
                 CurrentColorSettings,
-                SelectedEngine?.Id,
+                HasNoEngine ? null : SelectedEngine?.Id,
                 RefineFaces && CanRefineFaces);
 
             await Task.Run(() => LiserePresetSerializer.Save(path, preset));
@@ -737,6 +754,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
 
         UpdatePresetNote();
         OnPropertyChanged(nameof(IsEnhancementActive));
+        OnPropertyChanged(nameof(CanAdjustEnhancement));
 
         if (_switchingToManual || _isImportingPreset)
         {
@@ -938,6 +956,7 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         UpdateColorNote();
         UpdateWarnings();
         OnPropertyChanged(nameof(IsEnhancementActive));
+        OnPropertyChanged(nameof(CanAdjustEnhancement));
         OnPropertyChanged(nameof(IsColorGradingActive));
         OnPropertyChanged(nameof(HasAdjustableColorSettings));
 

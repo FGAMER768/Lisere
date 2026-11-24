@@ -151,12 +151,14 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <RadioButton AutomationProperties.Name="{Binding Strings[tabEnhancement]}"
+                                    <RadioButton AutomationProperties.AutomationId="ImageEnhancementTab"
+                                                 AutomationProperties.Name="{Binding Strings[tabEnhancement]}"
                                                  Content="{Binding Strings[tabEnhancement]}"
                                                  GroupName="ParameterTabs"
                                                  IsChecked="{Binding IsEnhancementTab, Mode=TwoWay}"
                                                  Style="{StaticResource SegmentedTab}" />
                                     <RadioButton Grid.Column="1"
+                                                 AutomationProperties.AutomationId="ImageColorTab"
                                                  AutomationProperties.Name="{Binding Strings[tabColor]}"
                                                  Content="{Binding Strings[tabColor]}"
                                                  GroupName="ParameterTabs"
@@ -165,7 +167,8 @@
                                 </Grid>
                             </Border>
 
-                            <Grid Margin="0,12,0,0">
+                            <Grid Margin="0,12,0,0"
+                                  Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="170" />
@@ -181,53 +184,28 @@
                                        FontSize="12"
                                        Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                        Text="{Binding OutputInfo}"
-                                       TextWrapping="Wrap" />
+                                       TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsEnhancementTab}" Value="True" />
+                                                    <Condition Binding="{Binding HasOutputInfo}" Value="True" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </Border>
 
-                    <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[imageSectionEngine]}" />
-                            <ComboBox AutomationProperties.AutomationId="ImageEngine"
-                                      AutomationProperties.Name="{Binding Strings[imageLabelEngine]}"
-                                      DisplayMemberPath="DisplayName"
-                                      ItemsSource="{Binding Engines}"
-                                      SelectedItem="{Binding SelectedEngine, Mode=TwoWay}" />
-                            <TextBlock Margin="0,6,0,0"
-                                       FontSize="12"
-                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                       Text="{Binding EngineNote}"
-                                       TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionPreset]}" />
-                            <ComboBox AutomationProperties.Name="{Binding Strings[sectionPreset]}"
-                                      DisplayMemberPath="Label"
-                                      ItemsSource="{Binding Presets}"
-                                      SelectedItem="{Binding SelectedPreset, Mode=TwoWay}" />
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <ui:SymbolIcon Margin="0,1,8,0"
-                                               VerticalAlignment="Top"
-                                               FontSize="16"
-                                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                               Symbol="Info24" />
-                                <TextBlock Grid.Column="1"
-                                           FontSize="13"
-                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                           Text="{Binding PresetNote}"
-                                           TextWrapping="Wrap" />
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                    <Border Margin="0,12,0,0"
+                            Style="{StaticResource SettingsCardBorder}"
+                            Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionPresetFile]}" />
                             <TextBlock FontSize="13"
@@ -258,11 +236,56 @@
                         </StackPanel>
                     </Border>
 
+                    <Border Margin="0,12,0,0"
+                            Style="{StaticResource SettingsCardBorder}"
+                            Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[imageSectionEngine]}" />
+                            <ComboBox AutomationProperties.AutomationId="ImageEngine"
+                                      AutomationProperties.Name="{Binding Strings[imageLabelEngine]}"
+                                      DisplayMemberPath="DisplayName"
+                                      ItemsSource="{Binding Engines}"
+                                      SelectedItem="{Binding SelectedEngine, Mode=TwoWay}" />
+                            <TextBlock Margin="0,6,0,0"
+                                       FontSize="12"
+                                       Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding EngineNote}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Margin="0,12,0,0"
+                            Style="{StaticResource SettingsCardBorder}"
+                            Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
+                        <StackPanel IsEnabled="{Binding CanUseEnhancement}">
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionPreset]}" />
+                            <ComboBox AutomationProperties.Name="{Binding Strings[sectionPreset]}"
+                                      DisplayMemberPath="Label"
+                                      ItemsSource="{Binding Presets}"
+                                      SelectedItem="{Binding SelectedPreset, Mode=TwoWay}" />
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:SymbolIcon Margin="0,1,8,0"
+                                               VerticalAlignment="Top"
+                                               FontSize="16"
+                                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                               Symbol="Info24" />
+                                <TextBlock Grid.Column="1"
+                                           FontSize="13"
+                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding PresetNote}"
+                                           TextWrapping="Wrap" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
                     <StackPanel Margin="0,12,0,0"
                                 Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
                     <Border Style="{StaticResource SettingsCardBorder}">
-                        <StackPanel IsEnabled="{Binding IsEnhancementActive}">
+                        <StackPanel IsEnabled="{Binding CanAdjustEnhancement}">
                             <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[sectionSettings]}" />
 
                             <Grid Style="{StaticResource ParameterGroup}" Margin="0">
@@ -599,7 +622,9 @@
                         </Border>
                     </StackPanel>
 
-                    <Border Margin="0,12,0,0" Style="{StaticResource SettingsCardBorder}">
+                    <Border Margin="0,12,0,0"
+                            Style="{StaticResource SettingsCardBorder}"
+                            Visibility="{Binding IsEnhancementTab, Converter={StaticResource BooleanToVisibility}}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource SectionTitle}" Text="{Binding Strings[imageSectionQueue]}" />
 

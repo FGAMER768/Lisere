@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Text.Json;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -135,68 +136,191 @@ public sealed partial class VideoViewModel
 
         try
         {
-            var preset = await Task.Run(
-                () => VideoPresetImporter.ParseFile(path));
+            var json = await Task.Run(() => File.ReadAllText(path));
 
-            _applyingPreset = true;
-            try
+            if (IsLiserePreset(json))
             {
-                AssignParameters(preset.Parameters);
-                RecoverOriginalDetail = preset.RecoverOriginalDetail;
-                AddNoise = preset.AddNoise;
-                Stabilize = preset.Stabilize;
-                Deinterlace = preset.Deinterlace;
-
-                if (preset.TargetHeight is int height)
-                {
-                    _customTargetHeight = height;
-                    var output = OutputOptions.FirstOrDefault(
-                        option => option.TargetHeight == height);
-                    if (output is null)
-                    {
-                        output = new OutputOption($"{height}p", 1, height);
-                        OutputOptions.Add(output);
-                    }
-
-                    SelectedOutput = output;
-                }
-
-                if (preset.TargetFrameRate is double frameRate)
-                {
-                    _customFrameRate = frameRate;
-                    var cadence = FrameRates.FirstOrDefault(
-                        option => option.FrameRate is double value &&
-                            Math.Abs(value - frameRate) < 0.01);
-                    if (cadence is null)
-                    {
-                        cadence = new FrameRateOption($"{frameRate:0.###} i/s", frameRate);
-                        FrameRates.Add(cadence);
-                    }
-
-                    SelectedFrameRate = cadence;
-                }
-
-                _switchingToManual = true;
-                SelectedPreset = Presets.First(option =>
-                    option.Mode == (preset.Auto ? EnhancementMode.Auto : EnhancementMode.Manual));
-                _switchingToManual = false;
+                var preset = LiserePresetSerializer.Parse(
+                    json,
+                    Path.GetFileNameWithoutExtension(path));
+                ApplyLiserePreset(preset);
+                UpdateWarnings();
+                UpdateEstimate();
+                SetStatus("statusPresetImported", preset.Name);
             }
-            finally
+            else
             {
-                _applyingPreset = false;
+                var preset = VideoPresetImporter.Parse(
+                    json,
+                    Path.GetFileNameWithoutExtension(path));
+                ApplyVideoPreset(preset);
+                UpdateWarnings();
+                UpdateEstimate();
+                SetStatus(
+                    "videoStatusPresetImported",
+                    $"{preset.Name} · {preset.ModelId ?? Strings["videoPresetUnknownModel"]}");
             }
-
-            UpdateWarnings();
-            UpdateEstimate();
-            SetStatus(
-                "videoStatusPresetImported",
-                $"{preset.Name} · {preset.ModelId ?? Strings["videoPresetUnknownModel"]}");
         }
         catch (Exception exception)
         {
             await ShowErrorAsync("videoErrorPreset", LocalizePresetError(exception));
         }
     }
+
+    [RelayCommand(CanExecute = nameof(CanImportPreset), AllowConcurrentExecutions = false)]
+    private async Task ExportVideoPresetAsync()
+    {
+        var suggested = string.IsNullOrWhiteSpace(_video?.Path)
+            ? "lisere-video-preset"
+            : $"{Path.GetFileNameWithoutExtension(_video.Path)}-lisere";
+        var path = _fileDialogService.PickVideoPresetTarget(suggested);
+        if (path is null)
+        {
+            return;
+        }
+
+        ClearError();
+
+        try
+        {
+            var preset = new LiserePreset(
+                Path.GetFileNameWithoutExtension(path),
+                SelectedPreset?.Mode ?? EnhancementMode.Manual,
+                CurrentParameters,
+                RecoverOriginalDetail,
+                AddNoise,
+                SelectedColorPreset?.Preset ?? ColorPreset.None,
+                CurrentColorSettings,
+                HasNoEngine ? null : SelectedEngine?.Enhancer.Id,
+                RefineFaces: null);
+
+            await Task.Run(() => LiserePresetSerializer.Save(path, preset));
+            SetStatus("statusPresetExported", Path.GetFileName(path));
+        }
+        catch (Exception exception)
+        {
+            await ShowErrorAsync("videoErrorPreset", LocalizePresetError(exception));
+        }
+    }
+
+    private static bool IsLiserePreset(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty("format", out var format) &&
+                format.ValueKind == JsonValueKind.String &&
+                string.Equals(
+                    format.GetString(),
+                    LiserePreset.FormatName,
+                    StringComparison.OrdinalIgnoreCase);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private void ApplyLiserePreset(LiserePreset preset)
+    {
+        _applyingPreset = true;
+        _switchingToManual = true;
+
+        try
+        {
+            if (preset.EngineId is { } engineId &&
+                Engines.FirstOrDefault(engine =>
+                    engine.IsAvailable &&
+                    string.Equals(engine.Enhancer.Id, engineId, StringComparison.OrdinalIgnoreCase))
+                is { } engine)
+            {
+                SelectedEngine = engine;
+            }
+
+            SelectedPreset = Presets.First(option =>
+                option.Mode == ResolveImportedVideoMode(preset));
+            AssignParameters(preset.Parameters);
+            RecoverOriginalDetail = preset.RecoverOriginalDetail;
+            AddNoise = preset.AddNoise;
+
+            SelectedColorPreset = ColorPresets.First(
+                option => option.Preset == preset.ColorPreset);
+
+            if (preset.ColorPreset is ColorPreset.UltronCc or ColorPreset.Manual)
+            {
+                ColorSaturation = preset.ColorSettings.SaturationPercent;
+                ColorBrightness = preset.ColorSettings.Brightness;
+                ColorContrast = preset.ColorSettings.Contrast;
+                ColorVibrance = preset.ColorSettings.Vibrance;
+            }
+        }
+        finally
+        {
+            _switchingToManual = false;
+            _applyingPreset = false;
+            UpdatePresetNote();
+        }
+    }
+
+    private void ApplyVideoPreset(VideoPreset preset)
+    {
+        _applyingPreset = true;
+
+        try
+        {
+            AssignParameters(preset.Parameters);
+            RecoverOriginalDetail = preset.RecoverOriginalDetail;
+            AddNoise = preset.AddNoise;
+            Stabilize = preset.Stabilize;
+            Deinterlace = preset.Deinterlace;
+
+            if (preset.TargetHeight is int height)
+            {
+                _customTargetHeight = height;
+                var output = OutputOptions.FirstOrDefault(
+                    option => option.TargetHeight == height);
+                if (output is null)
+                {
+                    output = new OutputOption($"{height}p", 1, height);
+                    OutputOptions.Add(output);
+                }
+
+                SelectedOutput = output;
+            }
+
+            if (preset.TargetFrameRate is double frameRate)
+            {
+                _customFrameRate = frameRate;
+                var cadence = FrameRates.FirstOrDefault(
+                    option => option.FrameRate is double value &&
+                        Math.Abs(value - frameRate) < 0.01);
+                if (cadence is null)
+                {
+                    cadence = new FrameRateOption($"{frameRate:0.###} i/s", frameRate);
+                    FrameRates.Add(cadence);
+                }
+
+                SelectedFrameRate = cadence;
+            }
+
+            _switchingToManual = true;
+            SelectedPreset = Presets.First(option =>
+                option.Mode == (preset.Auto ? EnhancementMode.Auto : EnhancementMode.Manual));
+            _switchingToManual = false;
+        }
+        finally
+        {
+            _applyingPreset = false;
+            UpdatePresetNote();
+        }
+    }
+
+    private static EnhancementMode ResolveImportedVideoMode(LiserePreset preset) =>
+        preset.Mode is EnhancementMode.ChromaEnhanceMain &&
+        preset.Parameters == EnhancementPresets.ChromaEnhanceMain.Parameters
+            ? EnhancementMode.ChromaEnhanceMain
+            : EnhancementMode.Manual;
 
     [RelayCommand(CanExecute = nameof(CanPreview), AllowConcurrentExecutions = false)]
     private async Task RefreshPreviewAsync()
@@ -230,6 +354,7 @@ public sealed partial class VideoViewModel
             await RefreshPreviewCoreAsync(cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
             SetStatus("videoStatusPreviewReady");
+            UpdateEngineNote();
         }
         catch (OperationCanceledException)
         {

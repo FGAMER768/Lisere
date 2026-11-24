@@ -11,7 +11,11 @@ public sealed partial class EnhanceViewModel
     private OutputOption? _selectedOutput;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasOutputInfo))]
     private string _outputInfo = string.Empty;
+
+    /// <summary>L'info de sortie n'a de sens qu'une fois une image chargée.</summary>
+    public bool HasOutputInfo => !string.IsNullOrWhiteSpace(OutputInfo);
 
     public ObservableCollection<OutputOption> OutputOptions { get; } = [];
 

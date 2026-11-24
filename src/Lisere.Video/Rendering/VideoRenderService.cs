@@ -28,6 +28,11 @@ public sealed class VideoRenderService : IVideoRenderService
 {
     private static readonly TimeSpan SnapshotInterval = TimeSpan.FromSeconds(1);
 
+    // The live preview is displayed at 1600 x 900 by the video page. Keeping a
+    // full 8K snapshot copied 100 MB per second into the heap for a thumbnail.
+    private const int SnapshotMaximumWidth = 1600;
+    private const int SnapshotMaximumHeight = 900;
+
     // A one-second preview with stabilisation must not analyse the whole clip:
     // a short lead-in gives vidstab enough context and keeps the preview quick.
     private const double PreviewStabilizationLeadSeconds = 1.0;
@@ -308,13 +313,18 @@ public sealed class VideoRenderService : IVideoRenderService
         var completed = false;
         RgbImage? previous = null;
 
+        // Reuse the decode buffer between frames. RIFE keeps the previous frame
+        // for the next interpolation, so that mode allocates per frame instead
+        // of handing it a buffer the next decode would overwrite.
+        var reusableBuffer = settings.UsesRife ? null : new byte[frameBytes];
+
         try
         {
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var buffer = new byte[frameBytes];
+                var buffer = reusableBuffer ?? new byte[frameBytes];
                 if (!ReadFrame(decoder.StandardOutput.BaseStream, buffer))
                 {
                     break;
@@ -367,10 +377,7 @@ public sealed class VideoRenderService : IVideoRenderService
                     if (stopwatch.Elapsed - lastSnapshot >= SnapshotInterval)
                     {
                         lastSnapshot = stopwatch.Elapsed;
-                        snapshot = new VideoFrameSnapshot(
-                            enhanced.Width,
-                            enhanced.Height,
-                            enhanced.Pixels.ToArray());
+                        snapshot = CreateSnapshot(enhanced);
                     }
 
                     progress?.Report(new VideoRenderProgress(
@@ -457,6 +464,37 @@ public sealed class VideoRenderService : IVideoRenderService
 
     private static void WriteFrame(Process encoder, RgbImage image) =>
         encoder.StandardInput.BaseStream.Write(image.Pixels, 0, image.Pixels.Length);
+
+    /// <summary>
+    /// Downsamples the live frame to the size the video page actually shows.
+    /// Without this, every 8K render kept a 100 MB copy per reported second.
+    /// </summary>
+    private static VideoFrameSnapshot CreateSnapshot(RgbImage image)
+    {
+        var scale = Math.Min(
+            1.0,
+            Math.Min(
+                (double)SnapshotMaximumWidth / image.Width,
+                (double)SnapshotMaximumHeight / image.Height));
+
+        if (scale >= 1.0)
+        {
+            return new VideoFrameSnapshot(
+                image.Width,
+                image.Height,
+                image.Pixels.ToArray());
+        }
+
+        var width = Math.Max(1, (int)Math.Round(image.Width * scale));
+        var height = Math.Max(1, (int)Math.Round(image.Height * scale));
+        var resized = ImageResampler.Resize(
+            image,
+            width,
+            height,
+            ResampleMethod.Bilinear);
+
+        return new VideoFrameSnapshot(width, height, resized.Pixels);
+    }
 
     private static void WaitForExit(Process process, CancellationToken cancellationToken)
     {

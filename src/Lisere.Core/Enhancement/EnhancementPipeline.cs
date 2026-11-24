@@ -40,7 +40,12 @@ public static class EnhancementPipeline
 
         var clamped = parameters.Clamp();
         var model = clamped.ToModelScale();
-        var original = source.Clone();
+
+        // Le clone de référence ne sert qu'à « détails d'origine » : le garder
+        // toujours doublait inutilement la mémoire d'une frame vidéo 4K.
+        var recover = Math.Clamp(recoverOriginalDetail, 0.0, 100.0) / 100.0;
+        var keepOriginal = recover > EnhancementTuning.Pipeline.RecoverOriginalDetailThreshold;
+        var original = keepOriginal ? source.Clone() : null;
         var output = source.Clone();
 
         // Seules les passes réellement exécutées sont annoncées : un préréglage
@@ -274,10 +279,9 @@ public static class EnhancementPipeline
         }
 
         var finishWork = plan.Begin(EnhancementStage.Finish);
-        var recover = Math.Clamp(recoverOriginalDetail, 0.0, 100.0) / 100.0;
-        if (recover > EnhancementTuning.Pipeline.RecoverOriginalDetailThreshold)
+        if (keepOriginal)
         {
-            output = ImageFilters.BlendImages(output, original, recover);
+            output = ImageFilters.BlendImages(output, original!, recover);
         }
 
         output = ImageFilters.AddNoise(output, addNoise, finishWork);

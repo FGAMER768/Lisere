@@ -38,6 +38,8 @@ public sealed class FrameLookEnhancer : IFrameEnhancer
 
     public string? ActiveProvider => _inner.ActiveProvider;
 
+    public string? ProviderFallbackReason => _inner.ProviderFallbackReason;
+
     public EngineCalibrationKey? CalibrationKey => _inner.CalibrationKey;
 
     public EngineMeasurement? LastMeasurement => _inner.LastMeasurement;

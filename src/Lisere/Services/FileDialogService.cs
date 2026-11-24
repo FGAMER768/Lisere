@@ -115,6 +115,21 @@ public sealed class FileDialogService : IFileDialogService
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
+    public string? PickVideoPresetTarget(string suggestedFileName)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = _localization["fileSaveVideoPresetTitle"],
+            Filter = EnhancePresetFilter,
+            DefaultExt = ".json",
+            FileName = suggestedFileName,
+            AddExtension = true,
+            OverwritePrompt = true
+        };
+
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
     public string? PickEnhancePreset()
     {
         var dialog = new OpenFileDialog

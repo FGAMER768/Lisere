@@ -277,6 +277,9 @@ public sealed partial class VideoViewModel
             IsRendering = false;
             IsBusy = false;
             ProgressHint = string.Empty;
+
+            // La session est ouverte : la note peut nommer le GPU utilisé.
+            UpdateEngineNote();
         }
 
         if (error is not null)
@@ -297,6 +300,7 @@ public sealed partial class VideoViewModel
         {
             await _dialogService.ShowMessageAsync(WarningsText, DialogKind.Warning);
         }
+
     }
 
     /// <summary>

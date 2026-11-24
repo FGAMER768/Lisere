@@ -56,7 +56,7 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
 
     public double SecondsPerMegapixel => _model.Manifest.SecondsPerMegapixel;
 
-    public string? ActiveProvider => _host.ProviderName;
+    public string? ActiveProvider => _host.ProviderIdentity;
 
     public EngineCalibrationKey? CalibrationKey => MeasurementKey;
 
@@ -65,7 +65,7 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
     private EngineCalibrationKey MeasurementKey => new(
         _model.Manifest.Id,
         _model.Manifest.Sha256,
-        _host.ProviderName ?? "inconnu",
+        _host.ProviderIdentity ?? "inconnu",
         _tileSize,
         OnnxSessionFactory.RuntimeVersion);
 
@@ -170,9 +170,7 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
             cancellationToken.ThrowIfCancellationRequested();
 
             FillPatch(luma, tile, patch);
-            var prediction = RunTile(patch);
-
-            CopyTile(prediction, scale, tile, destination, outputWidth);
+            RunTileInto(patch, scale, tile, destination, outputWidth);
 
             progress?.Report((index + 1) * 100.0 / total);
         }
@@ -199,7 +197,7 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
     }
 
     private void CopyTile(
-        float[] prediction,
+        ReadOnlySpan<float> prediction,
         int scale,
         TilePlanner.Tile tile,
         byte[] destination,
@@ -230,7 +228,12 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
         }
     }
 
-    private float[] RunTile(float[] patch)
+    private void RunTileInto(
+        float[] patch,
+        int scale,
+        TilePlanner.Tile tile,
+        byte[] destination,
+        int destinationWidth)
     {
         var session = _host.Get(ValidateSession);
 
@@ -243,7 +246,8 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
         var outputs = new[] { _model.Manifest.OutputName };
         using var results = session.Run(runOptions, inputs, new[] { input }, outputs);
 
-        var prediction = results[0].GetTensorDataAsSpan<float>().ToArray();
+        // Consume the tensor in place instead of copying every tile first.
+        var prediction = results[0].GetTensorDataAsSpan<float>();
         var expected = checked(_tileSize * NativeScale * _tileSize * NativeScale);
 
         if (prediction.Length != expected)
@@ -252,7 +256,7 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
                 $"Le modèle a produit {prediction.Length} valeurs au lieu de {expected}.");
         }
 
-        return prediction;
+        CopyTile(prediction, scale, tile, destination, destinationWidth);
     }
 
     private void ValidateSession(InferenceSession session)

@@ -718,6 +718,8 @@ public class EnhanceViewModelDialogTests
 
         public string? PickVideoPreset() => null;
 
+        public string? PickVideoPresetTarget(string suggestedFileName) => null;
+
         public string? PickEnhancePreset() => EnhancePresetPath;
 
         public string? PickEnhancePresetTarget(string suggestedFileName) => EnhancePresetTarget;

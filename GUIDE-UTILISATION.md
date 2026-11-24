@@ -319,14 +319,14 @@ Le menu **Moteur** propose les moteurs installés :
 
 | Moteur | Description | Disponibilité |
 |---|---|---|
-| **Lisere Classic** | Pipeline local déterministe, sans modèle externe. | Toujours disponible. |
+| **Lisere Classic** | Pipeline local déterministe, calcul D3D12 sur GPU quand disponible, CPU en repli. | Toujours disponible. |
 | **Nettoyage photo 1×** | Réseau RVB qui retire le bruit et une partie des artefacts JPEG sans changer la taille. Le plus lent des moteurs : environ une minute pour une photo 900×900. | Dépend de la présence et de l'intégrité du modèle. |
-| **Super-Resolution CNN ×3** | Modèle ONNX local vérifié par SHA-256, inférence DirectML sur iGPU compatible avec repli CPU. | Dépend de la présence et de l'intégrité du modèle. |
+| **Super-Resolution CNN ×3** | Modèle ONNX local vérifié par SHA-256, inférence DirectML sur l'adaptateur disposant du plus de VRAM dédiée, avec repli CPU. | Dépend de la présence et de l'intégrité du modèle. |
 | **Real-ESRGAN général ×4** | Réseau RVB : la couleur est reconstruite avec la netteté, sur des tuiles de taille libre, puis ramenée à la résolution de sortie choisie. Plus lent qu'un modèle de luminance. | Dépend de la présence et de l'intégrité du modèle. |
 | **Anime ×4 (Real-ESRGAN 6B)** | Réseau RVB spécialisé animation, dessin et art digital : traits et aplats plus propres, plus lent que le général. À éviter sur les photos. | Dépend de la présence et de l'intégrité du modèle. |
 | **Anime vidéo ×4 (Real-ESRGAN v3)** | Version rapide pour les frames d'animation, plus douce que le modèle image. | Dépend de la présence et de l'intégrité du modèle. |
 
-La note sous le menu indique si le moteur est prêt ou pourquoi il est indisponible. Si un moteur neuronal est indisponible, choisissez **Classic** : le reste de l'application continue de fonctionner.
+La note sous le menu indique si le moteur est prêt, quel GPU il utilise réellement, ou pourquoi il est indisponible. Si un moteur neuronal est indisponible, choisissez **Classic** : le reste de l'application continue de fonctionner.
 
 Le même choix est proposé sur la page **Image**, avec **Lisere Classic** par défaut. Un moteur neuronal y remplace le pipeline complet pour toute l'image, à sa taille d'origine, et désactive l'option **Affiner les visages** : cette texture fait partie du pipeline classique.
 
@@ -544,7 +544,7 @@ Vérifiez que **Renforcer les visages** est activé et que la récupération des
 
 ### Le rendu vidéo est très lent
 
-Facteurs principaux : moteur neuronal, sortie 4K, RIFE, stabilisation, désentrelacement et cadence recréée. Pour itérer, utilisez **Rendre 1 seconde**, une résolution plus basse et le moteur **Classic**. Le repli CPU des moteurs ONNX est beaucoup plus lent que DirectML.
+Facteurs principaux : moteur neuronal, sortie 4K, RIFE, stabilisation, désentrelacement et cadence recréée. Pour itérer, utilisez **Rendre 1 seconde**, une résolution plus basse et le moteur **Classic**, qui calcule l'amélioration sur le GPU D3D12 quand il est disponible. Le repli CPU des moteurs ONNX est beaucoup plus lent que DirectML.
 
 ### L'aperçu vidéo ne change pas
 

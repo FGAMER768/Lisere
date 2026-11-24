@@ -17,16 +17,28 @@ engines that run locally, and exports ready to keep.
 </div>
 
 > [!WARNING]
-> **Project on hold: no usable GPU for experiments.**
+> **Project on hold: the CPU-render cause is identified and fixed, but resuming needs
+> validation on a discrete GPU.**
 >
-> Latest test: **8K ×2** upscale with **Lisere Classic**, the **Chroma** preset
+> Latest test before the fix: **8K ×2** upscale with **Lisere Classic**, the **Chroma** preset
 > and the **Ultron** grade, on an **RTX 4070**. Result: **the GPU is not being
 > used**, the load goes to **RAM**, and 4K rendering therefore cannot be
 > iterated on under proper conditions.
 >
-> Development is **paused** until a GPU usable for these experiments is
-> available. Existing releases remain downloadable, but no performance
-> improvement is promised in the near term.
+> Two causes were found. **Lisere Classic only had a CPU pipeline**: it now runs the
+> same pipeline as a **D3D12 compute backend (ComputeSharp)** on the dedicated GPU,
+> with an exact CPU fallback. For ONNX engines, DirectML was
+> **pinned to DXGI adapter 0**, which on a hybrid laptop is usually the Intel iGPU:
+> inference ran on the integrated GPU and its shared memory, not on the RTX 4070.
+> Liseré now picks the adapter with the most **dedicated VRAM** and reports the GPU
+> actually used; `LISERE_DML_ADAPTER` can force a DXGI index or a name fragment.
+> Tile copies and the render preview no longer retain full-resolution frames in
+> memory either.
+>
+> Classic's D3D12 backend still needs revalidation on the RTX 4070; development
+> remains **paused** until these fixes are revalidated on a machine with a discrete
+> GPU. Existing releases remain downloadable, but no performance
+> improvement is promised for them.
 
 <img src="assets/screenshots/image-en.png" alt="Liseré Image space: before/after comparison with Ultron CC grading">
 
@@ -379,6 +391,10 @@ choice is stored in `%APPDATA%\Lisere\settings.json`.
 
 - ONNX engines run on **DirectML** when a DirectX 12 adapter is available, with a CPU
   fallback whose reason is shown in the engine note.
+- **Lisere Classic** picks the D3D12 adapter with the most dedicated VRAM and reports
+  the GPU actually used; `LISERE_CLASSIC_GPU` forces an index or name fragment, and
+  `0`/`cpu`/`off` sends it back to the CPU. Enhancement and resizing run on the GPU,
+  then grading and the Chroma tone curve are applied on the CPU.
 - Preset import loads no proprietary weights and does not reproduce the original
   models: only settings, size and frame rate are carried over.
 - `outSizeMethod` 6 → 1080p and 7 → 2160p are deduced from the preset corpus; other
@@ -420,7 +436,7 @@ be built with `scripts/build-setup.ps1`.
 | `src/Lisere` | WPF app, Image and Video pages, view models, dialog, file, localisation, update and uninstall services. |
 | `src/Lisere.Setup` | WPF installer: bundled package extraction, per-user copy, shortcuts and uninstall registration. |
 | `src/Lisere.Core` | Image models, filters, estimation, validation, enhancement pipeline, face detection and clip processing. |
-| `src/Lisere.Ai` | Engines (`IFrameEnhancer`, `IFrameInterpolator`), classic pipeline, tiled ONNX super-resolution, RIFE, YuNet, DirectML/CPU and verified catalogue. |
+| `src/Lisere.Ai` | Engines (`IFrameEnhancer`, `IFrameInterpolator`), Classic CPU/D3D12 pipeline, tiled ONNX super-resolution, RIFE, YuNet, DirectML/CPU and verified catalogue. |
 | `src/Lisere.Video` | FFmpeg, `ffprobe`, frame extraction, rendering, deinterlacing, stabilisation, interpolation, presets and progress. |
 | `tests/` | Four xUnit projects: Core, Ai, Video and App. |
 
@@ -448,7 +464,7 @@ scripts/           ffmpeg, publishing, installer, signing
 <details>
 <summary>🧪 Tests and publishing</summary>
 
-The suite has **486 tests** (125 Core, 27 Ai, 57 Video, 277 App) with 0 build warnings.
+The suite has **499 tests** (125 Core, 37 Ai, 57 Video, 280 App) with 0 build warnings.
 Video integration tests generate a clip with FFmpeg and check rendering, audio,
 deinterlacing, exact size, cancellation and preview extraction; they are skipped when
 FFmpeg is missing. Presets are covered with synthetic JSON and, when
@@ -481,11 +497,15 @@ and extraction safeguards are in [`Update/README.md`](Update/README.md).
 No. All processing is local. Only the update check, when you ask for it, contacts GitHub.
 
 **Do I need a GPU?**
-Not to launch the app: ONNX engines use DirectML when possible, otherwise the CPU. The
-CPU fallback is much slower, and the engine note says which one is active. 4K
-experiments, however, are blocked: on an RTX 4070, a ×2 upscale to 4K with **Lisere
-Classic + Chroma + Ultron** did not use the GPU and mostly consumed RAM. The project is
-paused until a usable GPU is available for these tests.
+Not to launch the app. **Lisere Classic** runs its pipeline as D3D12 compute on the
+dedicated GPU when available, with an exact CPU fallback. `LISERE_CLASSIC_GPU` forces
+an adapter index or name fragment; `0`, `cpu` or `off` disables the GPU. ONNX engines
+use DirectML on the DXGI adapter with the most
+**dedicated VRAM** (the iGPU is skipped when a discrete card is present), with a CPU
+fallback whose reason is shown in the engine note. `LISERE_DML_ADAPTER` forces a DXGI
+index or an adapter name fragment. The CPU fallback is much slower. 4K tests still need
+revalidation on a discrete GPU: Classic's D3D12 backend has not been measured on the
+reference RTX 4070 yet.
 
 **Why does Windows warn me on launch?**
 The binary is not signed with a commercial certificate. Check the SHA-256 published with

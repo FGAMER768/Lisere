@@ -58,7 +58,7 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
 
     public double SecondsPerMegapixel => _model.Manifest.SecondsPerMegapixel;
 
-    public string? ActiveProvider => _host.ProviderName;
+    public string? ActiveProvider => _host.ProviderIdentity;
 
     public EngineCalibrationKey? CalibrationKey => MeasurementKey;
 
@@ -67,7 +67,7 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
     private EngineCalibrationKey MeasurementKey => new(
         _model.Manifest.Id,
         _model.Manifest.Sha256,
-        _host.ProviderName ?? "inconnu",
+        _host.ProviderIdentity ?? "inconnu",
         _coreSize,
         OnnxSessionFactory.RuntimeVersion);
 
@@ -149,9 +149,7 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
             var inputHeight = tile.Height + tile.ContextTop + tile.ContextBottom;
 
             var input = FillTile(image, tile, inputWidth, inputHeight);
-            var prediction = RunTile(input, inputWidth, inputHeight);
-
-            CopyTile(prediction, tile, inputWidth, inputHeight, destination, outputWidth);
+            RunTileInto(input, inputWidth, inputHeight, tile, destination, outputWidth);
 
             // One tile is the smallest honest unit of progress: the model runs
             // as a single opaque call, so anything finer would be invented.
@@ -191,7 +189,13 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
         return input;
     }
 
-    private float[] RunTile(float[] input, int width, int height)
+    private void RunTileInto(
+        float[] input,
+        int width,
+        int height,
+        TilePlanner.Tile tile,
+        byte[] destination,
+        int destinationWidth)
     {
         var session = _host.Get(ValidateSession);
 
@@ -205,7 +209,9 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
             [value],
             [_model.Manifest.OutputName]);
 
-        var prediction = results[0].GetTensorDataAsSpan<float>().ToArray();
+        // Copy straight from the tensor: a per-tile ToArray() allocated up to
+        // 14 MB at x4, which turned an 8K render into gigabytes of garbage.
+        var prediction = results[0].GetTensorDataAsSpan<float>();
         var expected = checked(3 * width * NativeScale * height * NativeScale);
         if (prediction.Length != expected)
         {
@@ -213,7 +219,7 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
                 $"Le modèle a produit {prediction.Length} valeurs au lieu de {expected}.");
         }
 
-        return prediction;
+        CopyTile(prediction, tile, width, height, destination, destinationWidth);
     }
 
     /// <summary>
@@ -221,7 +227,7 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
     /// never lands in the destination twice.
     /// </summary>
     private void CopyTile(
-        float[] prediction,
+        ReadOnlySpan<float> prediction,
         TilePlanner.Tile tile,
         int inputWidth,
         int inputHeight,

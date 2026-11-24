@@ -11,14 +11,19 @@ namespace Lisere.Ai.Enhancement;
 /// </summary>
 public sealed class PassthroughFrameEnhancer : IFrameEnhancer
 {
+    private readonly string _displayName;
+
+    public PassthroughFrameEnhancer(string? displayName = null) =>
+        _displayName = string.IsNullOrWhiteSpace(displayName) ? "Sans amélioration" : displayName;
+
     public string Id => "lisere.passthrough";
 
-    public string DisplayName => "Sans amélioration";
+    public string DisplayName => _displayName;
 
     public EnhancementEngineFamily Family => EnhancementEngineFamily.Classical;
 
     public string Description =>
-        "Conformité sans moteur : la vidéo est redimensionnée puis exportée telle quelle.";
+        "Aucune amélioration : le fichier est seulement redimensionné puis exporté ; la colorimétrie reste appliquée.";
 
     public bool IsAvailable => true;
 

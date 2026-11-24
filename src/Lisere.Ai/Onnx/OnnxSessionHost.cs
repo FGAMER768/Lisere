@@ -24,6 +24,21 @@ internal sealed class OnnxSessionHost : IDisposable
     /// <summary>Nul tant que la session n'a pas été ouverte.</summary>
     public string? ProviderName { get; private set; }
 
+    /// <summary>Adaptateur DirectML réellement utilisé, quand il est connu.</summary>
+    public string? DeviceName { get; private set; }
+
+    /// <summary>
+    /// Provider et adaptateur, par exemple « DirectML · NVIDIA GeForce RTX
+    /// 4070 ». C'est cette identité qui distingue deux GPU d'une même machine
+    /// dans le cache de calibration.
+    /// </summary>
+    public string? ProviderIdentity => ProviderName switch
+    {
+        null => null,
+        _ when string.IsNullOrWhiteSpace(DeviceName) => ProviderName,
+        _ => $"{ProviderName} · {DeviceName}"
+    };
+
     public string? FallbackReason { get; private set; }
 
     public InferenceSession Get(Action<InferenceSession> validate)
@@ -56,6 +71,7 @@ internal sealed class OnnxSessionHost : IDisposable
             }
 
             ProviderName = result.ProviderName;
+            DeviceName = result.DeviceName;
             FallbackReason = result.FallbackReason;
             _session = result.Session;
             return _session;
@@ -69,6 +85,7 @@ internal sealed class OnnxSessionHost : IDisposable
             _session?.Dispose();
             _session = null;
             ProviderName = null;
+            DeviceName = null;
         }
     }
 }

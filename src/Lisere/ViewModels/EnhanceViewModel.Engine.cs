@@ -18,6 +18,9 @@ public sealed partial class EnhanceViewModel
     [NotifyPropertyChangedFor(nameof(EngineNote))]
     [NotifyPropertyChangedFor(nameof(HasModelSelected))]
     [NotifyPropertyChangedFor(nameof(CanRefineFaces))]
+    [NotifyPropertyChangedFor(nameof(HasNoEngine))]
+    [NotifyPropertyChangedFor(nameof(CanUseEnhancement))]
+    [NotifyPropertyChangedFor(nameof(CanAdjustEnhancement))]
     private IFrameEnhancer? _selectedEngine;
 
     public IReadOnlyList<IFrameEnhancer> Engines { get; private set; } = [];
@@ -29,7 +32,13 @@ public sealed partial class EnhanceViewModel
     public bool HasModelSelected =>
         SelectedEngine is { Family: EnhancementEngineFamily.NeuralSuperResolution };
 
-    public bool CanRefineFaces => !HasModelSelected;
+    /// <summary>Le choix « Aucun » n'exécute ni modèle ni pipeline d'amélioration.</summary>
+    public bool HasNoEngine => SelectedEngine is PassthroughFrameEnhancer;
+
+    public bool CanUseEnhancement =>
+        !HasNoEngine && SelectedEngine is not { IsAvailable: false };
+
+    public bool CanRefineFaces => CanUseEnhancement && !HasModelSelected;
 
     /// <summary>What the selected engine does, or why it cannot run.</summary>
     public string EngineNote => SelectedEngine switch
@@ -39,19 +48,47 @@ public sealed partial class EnhanceViewModel
             "engineUnavailable",
             engine.UnavailableReason ?? Strings["engineMissing"]),
         { IsVerified: false } engine => $"{engine.Description} {Strings["engineLocalModel"]}",
-        { } engine => engine.Description
+        { } engine => DescribeEngine(engine)
     };
+
+    /// <summary>
+    /// Après le premier rendu, la session connaît le provider et l'adaptateur :
+    /// la note les affiche pour que « DirectML » ne reste pas une promesse.
+    /// </summary>
+    private static string DescribeEngine(IFrameEnhancer engine) =>
+        engine.ProviderFallbackReason is { } reason
+            ? $"{engine.Description} · {reason}"
+            : engine.ActiveProvider is { } provider
+                ? $"{engine.Description} · {provider}"
+                : engine.Description;
 
     /// <summary>Picks Classic when it is offered, so a fresh session is unchanged.</summary>
     private void SelectDefaultEngine()
     {
         SelectedEngine =
-            Engines.FirstOrDefault(engine => engine.Family is EnhancementEngineFamily.Classical) ??
-            Engines.FirstOrDefault();
+            Engines.FirstOrDefault(engine =>
+                engine is not PassthroughFrameEnhancer &&
+                engine.Family is EnhancementEngineFamily.Classical) ??
+            Engines.FirstOrDefault(engine => engine is not PassthroughFrameEnhancer);
     }
 
     partial void OnSelectedEngineChanged(IFrameEnhancer? value)
     {
+        if (value is PassthroughFrameEnhancer)
+        {
+            // Désactiver les visages avant de forcer « Aucune » : le changement de
+            // paramètre basculerait sinon le preset en Manuel après coup.
+            RefineFaces = false;
+
+            if (SelectedPreset is not { Mode: EnhancementMode.None })
+            {
+                SelectedPreset = Presets.FirstOrDefault(
+                    preset => preset.Mode is EnhancementMode.None) ?? SelectedPreset;
+            }
+
+            return;
+        }
+
         if (value is null ||
             !value.Id.Contains("anime", StringComparison.OrdinalIgnoreCase) ||
             SelectedPreset is not { Mode: EnhancementMode.ChromaEnhanceMain })

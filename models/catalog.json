@@ -94,7 +94,7 @@
       "plane": "rgb",
       "license": "MIT",
       "source": "https://huggingface.co/edgetools/rife",
-      "description": "Export ONNX de RIFE 4.9 (Practical-RIFE, licence MIT), conditionné par un timestep. Deux images RGB en entrée, une image intermédiaire en sortie. Exécuté via ONNX Runtime, DirectML sur iGPU Intel ou CPU en repli."
+      "description": "Export ONNX de RIFE 4.9 (Practical-RIFE, licence MIT), conditionné par un timestep. Deux images RGB en entrée, une image intermédiaire en sortie. Exécuté via ONNX Runtime, DirectML sur le GPU disposant du plus de VRAM dédiée ou CPU en repli."
     },
     {
       "id": "yunet-face-2023mar",
