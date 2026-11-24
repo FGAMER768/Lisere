@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Lisere.Ai.Enhancement;
 using Lisere.Ai.Interpolation;
 using Lisere.Core.Imaging;
+using Lisere.Video.Hardware;
 using Lisere.Video.Ffmpeg;
 using Lisere.Video.Probing;
 
@@ -44,12 +45,16 @@ public sealed class VideoRenderService : IVideoRenderService
 
     private readonly VideoToolchain _toolchain;
     private readonly VideoPasses _passes;
+    private readonly HardwareVideoProbe _hardwareProbe;
 
-    public VideoRenderService(VideoToolchain toolchain)
+    public VideoRenderService(
+        VideoToolchain toolchain,
+        HardwareVideoProbe? hardwareProbe = null)
     {
         ArgumentNullException.ThrowIfNull(toolchain);
         _toolchain = toolchain;
         _passes = new VideoPasses(toolchain);
+        _hardwareProbe = hardwareProbe ?? HardwareVideoProbe.Default;
     }
 
     public bool IsAvailable => _toolchain.IsAvailable;
@@ -87,6 +92,27 @@ public sealed class VideoRenderService : IVideoRenderService
             throw new VideoRenderException(
                 request.Interpolator?.UnavailableReason
                 ?? "L'interpolation RIFE est sélectionnée mais aucun modèle n'est disponible.");
+        }
+
+        // La sonde encode et décode réellement une seconde de vidéo : elle est
+        // mise en cache, donc ce coût n'est payé qu'une fois par binaire.
+        HardwareVideoCapabilities hardware;
+        try
+        {
+            hardware = await _hardwareProbe
+                .ProbeAsync(tools.FfmpegPath, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            // Une sonde cassée ne doit pas rendre l'application inutilisable.
+            // Elle est consignée, et le rendu reste en logiciel.
+            hardware = HardwareVideoCapabilities.None(
+                $"sonde matérielle indisponible : {exception.GetType().Name}");
         }
 
         var started = Stopwatch.StartNew();
@@ -155,7 +181,7 @@ public sealed class VideoRenderService : IVideoRenderService
             // Le démarrage des processus et la préparation du pipeline restent
             // hors du fil UI : une fenêtre qui se figerait au clic contredirait
             // la promesse de fluidité.
-            var (frames, diagnostics) = await Task.Run(
+            var (frames, diagnostics, encoderLabel, decodeLabel) = await Task.Run(
                 () => RenderFramesAsync(
                     tools,
                     working,
@@ -165,6 +191,7 @@ public sealed class VideoRenderService : IVideoRenderService
                     request.Interpolator,
                     outputWidth,
                     outputHeight,
+                    hardware,
                     renderedPath,
                     progress,
                     cancellationToken),
@@ -216,7 +243,9 @@ public sealed class VideoRenderService : IVideoRenderService
                 outputWidth,
                 outputHeight,
                 settings.ResolveFrameRate(source.FrameRate),
-                diagnostics);
+                diagnostics,
+                encoderLabel,
+                decodeLabel);
         }
         finally
         {
@@ -245,7 +274,7 @@ public sealed class VideoRenderService : IVideoRenderService
     /// travaillent en même temps ; chaque frame passe par les trois étages dans
     /// l'ordre, et une erreur n'importe où arrête les trois.
     /// </summary>
-    private async Task<(int Frames, string Diagnostics)> RenderFramesAsync(
+    private async Task<(int Frames, string Diagnostics, string EncoderLabel, string DecodeLabel)> RenderFramesAsync(
         FfmpegTools tools,
         VideoInfo source,
         IFrameEnhancer engine,
@@ -254,6 +283,7 @@ public sealed class VideoRenderService : IVideoRenderService
         IFrameInterpolator? interpolator,
         int outputWidth,
         int outputHeight,
+        HardwareVideoCapabilities hardware,
         string outputPath,
         IProgress<VideoRenderProgress>? progress,
         CancellationToken cancellationToken)
@@ -277,12 +307,20 @@ public sealed class VideoRenderService : IVideoRenderService
             ? source.FrameRate * 2
             : source.FrameRate;
 
+        var encoderPlan = VideoEncoderSelector.Select(
+            settings,
+            hardware,
+            outputWidth,
+            outputHeight);
+        var decodePlan = VideoEncoderSelector.SelectDecoder(hardware, source.VideoCodec);
+
         using var decoder = FfmpegRunner.Start(
             tools.FfmpegPath,
             VideoCommandBuilder.BuildDecodeArguments(
                 source,
                 settings.PreviewStartSeconds,
-                settings.PreviewDurationSeconds),
+                settings.PreviewDurationSeconds,
+                decodePlan),
             redirectStandardInput: false);
 
         Process encoderProcess;
@@ -299,7 +337,8 @@ public sealed class VideoRenderService : IVideoRenderService
                     source.HasAudio && !settings.IsPreview,
                     settings.Codec,
                     settings.EffectiveQuality,
-                    settings.EncodingPreset),
+                    settings.EncodingPreset,
+                    encoderPlan),
                 redirectStandardInput: true);
         }
         catch
@@ -327,12 +366,32 @@ public sealed class VideoRenderService : IVideoRenderService
             FfmpegRunner.Kill(encoder);
         });
 
+        var fallbacks = new List<string>();
+        if (engine.ProviderFallbackReason is { } engineReason)
+        {
+            fallbacks.Add(engineReason);
+        }
+
+        if (encoderPlan.Note is { } encoderNote)
+        {
+            fallbacks.Add($"encodage : {encoderNote}");
+        }
+
+        if (decodePlan is null)
+        {
+            fallbacks.Add(hardware.Decoders.Count == 0
+                ? "décodage : aucun hwaccel validé"
+                : $"décodage : codec {source.VideoCodec} non couvert par le matériel");
+        }
+
+        var decodeLabel = decodePlan?.Label ?? "logiciel (CPU)";
+
         var trace = new RenderTrace(
             $"{source.Width}×{source.Height} @ {source.FrameRate:0.##} i/s",
             $"{outputWidth}×{outputHeight} @ {encoderFrameRate:0.##} i/s",
-            settings.Codec == VideoCodec.H265 ? "libx265 (CPU)" : "libx264 (CPU)",
-            "logiciel (CPU)",
-            engine.ProviderFallbackReason is { } reason ? [reason] : null)
+            encoderPlan.Label,
+            decodeLabel,
+            fallbacks.Count > 0 ? fallbacks : null)
         {
             Adapter = engine.ActiveProvider ?? "CPU (aucun adaptateur D3D12)"
         };
@@ -458,7 +517,7 @@ public sealed class VideoRenderService : IVideoRenderService
             Drain(encoderOutput);
         }
 
-        return (frames, diagnostics);
+        return (frames, diagnostics, encoderPlan.Label, decodeLabel);
     }
 
     private static int ResolveCapacity(long frameBytes)

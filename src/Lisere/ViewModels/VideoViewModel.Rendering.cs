@@ -216,6 +216,9 @@ public sealed partial class VideoViewModel
                 cancellation.Token);
 
             ProgressPercent = 100;
+            _reportedEncoderLabel = result.EncoderLabel;
+            _reportedDecodeLabel = result.DecodeLabel;
+            UpdateEncoderStatus();
 
             if (isPreview)
             {

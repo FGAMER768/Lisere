@@ -1,5 +1,6 @@
 using Lisere.Ai.Enhancement;
 using Lisere.Ai.Interpolation;
+using Lisere.Video.Hardware;
 using Lisere.Video.Probing;
 
 namespace Lisere.Video.Rendering;
@@ -26,7 +27,8 @@ public sealed record VideoRenderSettings(
     string EncodingPreset = "medium",
     FrameInterpolationEngine InterpolationEngine = FrameInterpolationEngine.Ffmpeg,
     double? PreviewStartSeconds = null,
-    double? PreviewDurationSeconds = null)
+    double? PreviewDurationSeconds = null,
+    EncoderPreference Encoder = EncoderPreference.Auto)
 {
     public int EffectiveQuality => Math.Clamp(Quality, 0, 51);
 
@@ -65,7 +67,9 @@ public sealed record VideoRenderResult(
     double OutputFrameRate,
     // Ligne de résumé du dernier rendu (adaptateur, encodeur, goulot, débit),
     // nulle pour un service qui ne l'a pas produite.
-    string? Diagnostics = null);
+    string? Diagnostics = null,
+    string? EncoderLabel = null,
+    string? DecodeLabel = null);
 
 public enum VideoRenderStage
 {

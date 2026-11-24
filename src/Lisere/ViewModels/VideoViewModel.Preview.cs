@@ -14,6 +14,7 @@ using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 using Lisere.Models;
 using Lisere.Services;
+using Lisere.Video.Hardware;
 using Lisere.Video.Preview;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
@@ -606,7 +607,8 @@ public sealed partial class VideoViewModel
         SelectedFrameRate?.FrameRate,
         InterpolationEngine: allowRife && UseRife
             ? FrameInterpolationEngine.Rife
-            : FrameInterpolationEngine.Ffmpeg);
+            : FrameInterpolationEngine.Ffmpeg,
+        Encoder: SelectedEncoder?.Preference ?? EncoderPreference.Auto);
 
     private VideoRenderRequest BuildRenderRequest(VideoInfo source, string outputPath)
     {

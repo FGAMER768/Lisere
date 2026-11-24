@@ -692,6 +692,25 @@
                                               SelectedItem="{Binding SelectedCodec, Mode=TwoWay}" />
                                 </Grid>
 
+                                <Grid Margin="0,12,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="120" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource ParameterLabel}" Text="{Binding Strings[videoLabelEncoder]}" />
+                                    <ComboBox Grid.Column="1"
+                                              AutomationProperties.AutomationId="VideoEncoder"
+                                              AutomationProperties.Name="{Binding Strings[videoLabelEncoder]}"
+                                              DisplayMemberPath="Label"
+                                              ItemsSource="{Binding EncoderOptions}"
+                                              SelectedItem="{Binding SelectedEncoder, Mode=TwoWay}" />
+                                </Grid>
+                                <TextBlock Margin="0,2,0,0"
+                                           FontSize="12"
+                                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding EncoderStatusText}"
+                                           TextWrapping="Wrap" />
+
                                 <Grid Style="{StaticResource ParameterGroup}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />

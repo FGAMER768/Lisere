@@ -1,4 +1,5 @@
 using System.Globalization;
+using Lisere.Video.Hardware;
 using Lisere.Video.Probing;
 
 namespace Lisere.Video.Rendering;
@@ -11,13 +12,19 @@ public static class VideoCommandBuilder
     public static IReadOnlyList<string> BuildDecodeArguments(
         VideoInfo info,
         double? startSeconds = null,
-        double? durationSeconds = null)
+        double? durationSeconds = null,
+        DecodeAccelerationOption? acceleration = null)
     {
         var arguments = new List<string>
         {
             "-v", "error",
             "-nostdin"
         };
+
+        if (acceleration is not null)
+        {
+            arguments.AddRange(BuildDecodeAccelerationArguments(acceleration));
+        }
 
         // Input-side seek: FFmpeg decodes from the previous keyframe and discards
         // the gap (-accurate_seek is its default when transcoding), so the window
@@ -32,6 +39,11 @@ public static class VideoCommandBuilder
         if (durationSeconds is > 0)
         {
             arguments.AddRange(["-t", Format(durationSeconds.Value)]);
+        }
+
+        if (acceleration?.VideoFilter is { } filter)
+        {
+            arguments.AddRange(["-vf", filter]);
         }
 
         arguments.AddRange(
@@ -54,7 +66,8 @@ public static class VideoCommandBuilder
         bool hasAudio,
         VideoCodec codec,
         int quality,
-        string encodingPreset)
+        string encodingPreset,
+        VideoEncoderPlan? encoder = null)
     {
         var arguments = new List<string>
         {
@@ -81,16 +94,31 @@ public static class VideoCommandBuilder
             arguments.AddRange(["-map", "1:a:0", "-c:a", "aac", "-b:a", "192k"]);
         }
 
-        arguments.AddRange(
-        [
-            "-c:v", codec == VideoCodec.H265 ? "libx265" : "libx264",
-            "-preset", encodingPreset,
-            "-crf", quality.ToString(CultureInfo.InvariantCulture),
-            "-pix_fmt", "yuv420p",
-            "-movflags", "+faststart"
-        ]);
+        var effectiveCodec = encoder?.EffectiveCodec ?? codec;
 
-        if (codec == VideoCodec.H265)
+        if (encoder is { IsHardware: true })
+        {
+            arguments.AddRange(BuildHardwareEncoderOptions(
+                encoder.EncoderName,
+                effectiveCodec,
+                quality,
+                encodingPreset));
+        }
+        else
+        {
+            arguments.AddRange(
+            [
+                "-c:v", effectiveCodec == VideoCodec.H265 ? "libx265" : "libx264",
+                "-preset", encodingPreset,
+                "-crf", quality.ToString(CultureInfo.InvariantCulture),
+                "-pix_fmt", "yuv420p"
+            ]);
+        }
+
+        arguments.Add("-movflags");
+        arguments.Add("+faststart");
+
+        if (effectiveCodec == VideoCodec.H265)
         {
             arguments.AddRange(["-tag:v", "hvc1"]);
         }
@@ -205,6 +233,97 @@ public static class VideoCommandBuilder
         "-pix_fmt", "rgb24",
         "pipe:1"
     ];
+
+    /// <summary>
+    /// Options du codec matériel, sans option de conteneur : la sonde les
+    /// réutilise telles quelles avec une sortie <c>-f null</c>, donc elle teste
+    /// exactement les arguments du rendu.
+    /// </summary>
+    public static IReadOnlyList<string> BuildHardwareEncoderOptions(
+        string encoderName,
+        VideoCodec codec,
+        int quality,
+        string preset)
+    {
+        var arguments = new List<string> { "-c:v", encoderName };
+
+        if (encoderName.Contains("nvenc", StringComparison.OrdinalIgnoreCase))
+        {
+            arguments.AddRange(
+            [
+                "-preset", NvencPreset(preset),
+                "-tune", "hq",
+                "-rc", "vbr",
+                "-cq", quality.ToString(CultureInfo.InvariantCulture),
+                "-b:v", "0",
+                "-spatial-aq", "1",
+                "-temporal-aq", "1",
+                "-pix_fmt", "yuv420p"
+            ]);
+        }
+        else
+        {
+            arguments.AddRange(
+            [
+                "-preset", QsvPreset(preset),
+                // Le mode qualité globale (ICQ) remplace le CRF. Le lookahead
+                // QSV exige un débit constant et se bloque sur les petites
+                // sorties : on garde le mode fiable, sans perte visible.
+                "-global_quality", quality.ToString(CultureInfo.InvariantCulture),
+                "-pix_fmt", "nv12"
+            ]);
+        }
+
+        return arguments;
+    }
+
+    /// <summary>
+    /// Arguments d'entrée du décodage matériel. Le filtre QSV rapatrie les
+    /// frames GPU en NV12 avant le swscale du pipeline.
+    /// </summary>
+    public static IReadOnlyList<string> BuildDecodeAccelerationArguments(
+        DecodeAccelerationOption acceleration)
+    {
+        ArgumentNullException.ThrowIfNull(acceleration);
+
+        var arguments = new List<string> { "-hwaccel", acceleration.Hwaccel };
+
+        if (string.Equals(acceleration.Hwaccel, "qsv", StringComparison.OrdinalIgnoreCase))
+        {
+            arguments.AddRange(["-hwaccel_output_format", "qsv"]);
+        }
+
+        return arguments;
+    }
+
+    /// <summary>
+    /// NVENC expose p1 (le plus rapide) à p7 (le plus lent). medium tombe sur
+    /// p5, comme le demande la correspondance documentée.
+    /// </summary>
+    private static string NvencPreset(string preset) =>
+        preset.ToLowerInvariant() switch
+        {
+            "ultrafast" or "superfast" => "p1",
+            "veryfast" => "p2",
+            "faster" => "p3",
+            "fast" => "p4",
+            "medium" => "p5",
+            "slow" => "p6",
+            "slower" or "veryslow" => "p7",
+            _ => "p5"
+        };
+
+    private static string QsvPreset(string preset) =>
+        preset.ToLowerInvariant() switch
+        {
+            "ultrafast" or "superfast" or "veryfast" => "veryfast",
+            "faster" => "faster",
+            "fast" => "fast",
+            "slow" => "slow",
+            "slower" => "slower",
+            "veryslow" => "veryslow",
+            _ => "medium"
+        };
 
     private static IReadOnlyList<string> StartArguments(
         string sourcePath,

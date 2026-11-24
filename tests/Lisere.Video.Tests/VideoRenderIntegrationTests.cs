@@ -7,6 +7,7 @@ using Lisere.Core.Enhancement;
 using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 using Lisere.Video.Ffmpeg;
+using Lisere.Video.Hardware;
 using Lisere.Video.Preview;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
@@ -70,6 +71,64 @@ public class VideoRenderIntegrationTests : IDisposable
         Assert.True(rendered.HasAudio);
         Assert.InRange(rendered.DurationSeconds, 0.5, 2.0);
         Assert.Contains(progress, item => item.Stage == VideoRenderStage.Rendering);
+    }
+
+    /// <summary>
+    /// Un rendu 1080p réel : la sonde a validé l'encodeur sur 256×256, ce test
+    /// vérifie qu'il tient aussi les dimensions d'usage et que la trace nomme
+    /// bien le matériel, sans repli CPU silencieux.
+    /// </summary>
+    [Fact]
+    public async Task HardwareEncodingHandlesAFullHdPreview()
+    {
+        if (!_toolchain.IsAvailable)
+        {
+            return;
+        }
+
+        var tools = _toolchain.RequireTools();
+        var capabilities = await HardwareVideoProbe.Default.ProbeAsync(tools.FfmpegPath);
+        if (!capabilities.HasHardwareEncoder)
+        {
+            return;
+        }
+
+        var source = Path.Combine(_directory, "fullhd.mp4");
+        var generated = await FfmpegRunner.RunAsync(
+            tools.FfmpegPath,
+            [
+                "-v", "error",
+                "-f", "lavfi", "-i", "testsrc2=size=1920x1080:rate=30",
+                "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000",
+                "-t", "1",
+                "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+                "-c:a", "aac", "-shortest", "-y", source
+            ],
+            CancellationToken.None);
+        Assert.True(generated.Succeeded, generated.StandardError);
+
+        var info = await new FfprobeVideoProbe(_toolchain)
+            .ProbeAsync(source, CancellationToken.None);
+        var output = Path.Combine(_directory, "fullhd-hardware.mp4");
+        using var engine = new ClassicFrameEnhancer();
+
+        var result = await new VideoRenderService(_toolchain).RenderAsync(
+            new VideoRenderRequest(
+                info,
+                engine,
+                new FrameEnhancementRequest(EnhancementParameters.Zero),
+                new VideoRenderSettings(
+                    output,
+                    Quality: 25,
+                    EncodingPreset: "ultrafast",
+                    PreviewDurationSeconds: 1)),
+            progress: null,
+            CancellationToken.None);
+
+        Assert.True(File.Exists(output));
+        Assert.True(result.FramesWritten > 0);
+        Assert.NotNull(result.EncoderLabel);
+        Assert.DoesNotContain("CPU", result.EncoderLabel, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

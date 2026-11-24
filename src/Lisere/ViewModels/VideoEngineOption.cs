@@ -1,4 +1,5 @@
 using Lisere.Ai.Enhancement;
+using Lisere.Video.Hardware;
 using Lisere.Video.Rendering;
 
 namespace Lisere.ViewModels;
@@ -33,6 +34,11 @@ public sealed class VideoEngineOption
 }
 
 public sealed record CodecOption(string Label, VideoCodec Codec)
+{
+    public override string ToString() => Label;
+}
+
+public sealed record EncoderOption(string Label, EncoderPreference Preference)
 {
     public override string ToString() => Label;
 }

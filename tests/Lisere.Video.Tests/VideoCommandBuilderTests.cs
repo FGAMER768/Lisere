@@ -1,3 +1,4 @@
+using Lisere.Video.Hardware;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
 
@@ -191,4 +192,111 @@ public class VideoCommandBuilderTests
         Assert.True(seek < Array.IndexOf(arguments.ToArray(), "-i"));
         Assert.Contains("2.5", arguments);
     }
+
+    [Fact]
+    public void NvencUsesConstantQualityAndTheDocumentedPreset()
+    {
+        var plan = new VideoEncoderPlan(
+            "h264_nvenc",
+            "NVENC · RTX 4070",
+            IsHardware: true,
+            VideoCodec.H264);
+
+        var arguments = BuildHardware(plan, "medium");
+        var list = arguments.ToList();
+
+        Assert.Contains("h264_nvenc", list);
+        Assert.Equal("p5", list[list.IndexOf("-preset") + 1]);
+        Assert.Equal("20", list[list.IndexOf("-cq") + 1]);
+        Assert.Equal("0", list[list.IndexOf("-b:v") + 1]);
+        Assert.Equal("1", list[list.IndexOf("-spatial-aq") + 1]);
+        Assert.Equal("1", list[list.IndexOf("-temporal-aq") + 1]);
+        Assert.Contains("yuv420p", list);
+        Assert.DoesNotContain("-crf", list);
+        Assert.DoesNotContain("libx264", list);
+    }
+
+    [Fact]
+    public void QuickSyncMapsUltrafastToItsFastestPreset()
+    {
+        var plan = new VideoEncoderPlan(
+            "h264_qsv",
+            "Quick Sync · Intel",
+            IsHardware: true,
+            VideoCodec.H264);
+
+        var arguments = BuildHardware(plan, "ultrafast");
+        var list = arguments.ToList();
+
+        Assert.Contains("h264_qsv", list);
+        Assert.Equal("veryfast", list[list.IndexOf("-preset") + 1]);
+        Assert.Equal("20", list[list.IndexOf("-global_quality") + 1]);
+        Assert.Contains("nv12", list);
+        Assert.DoesNotContain("-crf", list);
+    }
+
+    [Fact]
+    public void HardwareHevcKeepsTheAppleTag()
+    {
+        var plan = new VideoEncoderPlan(
+            "hevc_nvenc",
+            "NVENC · RTX 4070",
+            IsHardware: true,
+            VideoCodec.H265);
+
+        var arguments = BuildHardware(plan, "medium", VideoCodec.H265);
+
+        Assert.Contains("hevc_nvenc", arguments);
+        Assert.Contains("hvc1", arguments);
+    }
+
+    [Fact]
+    public void HardwareDecodeArgsComeBeforeTheInput()
+    {
+        var arguments = VideoCommandBuilder.BuildDecodeArguments(
+            Info,
+            acceleration: new DecodeAccelerationOption(
+                "qsv",
+                "Quick Sync",
+                "hwdownload,format=nv12"));
+        var list = arguments.ToList();
+        var hwaccel = list.IndexOf("-hwaccel");
+        var input = list.IndexOf("-i");
+
+        Assert.True(hwaccel >= 0 && hwaccel < input);
+        Assert.Contains("-hwaccel_output_format", list);
+
+        var filter = list.IndexOf("-vf");
+        Assert.True(filter > input);
+        Assert.Equal("hwdownload,format=nv12", list[filter + 1]);
+        Assert.Equal("pipe:1", list[^1]);
+    }
+
+    [Fact]
+    public void CudaDecodeNeedsNoDownloadFilter()
+    {
+        var arguments = VideoCommandBuilder.BuildDecodeArguments(
+            Info,
+            acceleration: new DecodeAccelerationOption("cuda", "NVDEC"));
+
+        Assert.Contains("cuda", arguments);
+        Assert.DoesNotContain("-vf", arguments);
+        Assert.DoesNotContain("-hwaccel_output_format", arguments);
+    }
+
+    private static IReadOnlyList<string> BuildHardware(
+        VideoEncoderPlan plan,
+        string preset,
+        VideoCodec codec = VideoCodec.H264) =>
+        VideoCommandBuilder.BuildEncodeArguments(
+            "input.mp4",
+            "output.mp4",
+            1920,
+            1080,
+            25,
+            false,
+            codec,
+            20,
+            preset,
+            plan);
 }

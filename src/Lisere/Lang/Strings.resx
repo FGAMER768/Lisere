@@ -702,6 +702,24 @@
   <data name="videoCodecH265" xml:space="preserve">
     <value>H.265 (HEVC)</value>
   </data>
+  <data name="videoLabelEncoder" xml:space="preserve">
+    <value>Encodeur</value>
+  </data>
+  <data name="videoEncoderAuto" xml:space="preserve">
+    <value>Automatique (GPU)</value>
+  </data>
+  <data name="videoEncoderCpu" xml:space="preserve">
+    <value>CPU</value>
+  </data>
+  <data name="videoEncoderAutoNote" xml:space="preserve">
+    <value>NVENC ou Quick Sync dès que la sonde réussit. Le CPU n'est utilisé qu'en l'absence d'encodeur matériel.</value>
+  </data>
+  <data name="videoEncoderActive" xml:space="preserve">
+    <value>Encodeur : {0} · décodage : {1}</value>
+  </data>
+  <data name="videoDecoderSoftware" xml:space="preserve">
+    <value>logiciel</value>
+  </data>
   <data name="videoQuality" xml:space="preserve">
     <value>Qualité (CRF)</value>
   </data>

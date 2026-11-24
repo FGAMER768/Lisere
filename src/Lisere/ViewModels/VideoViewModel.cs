@@ -15,6 +15,7 @@ using Lisere.Core.Imaging;
 using Lisere.Models;
 using Lisere.Services;
 using Lisere.Video.Ffmpeg;
+using Lisere.Video.Hardware;
 using Lisere.Video.Preview;
 using Lisere.Video.Probing;
 using Lisere.Video.Rendering;
@@ -56,6 +57,8 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private double? _customFrameRate;
     private string _statusKey = "videoStatusStart";
     private object? _statusArgument;
+    private string? _reportedEncoderLabel;
+    private string? _reportedDecodeLabel;
     private IReadOnlyList<ParameterWarning> _warnings = [];
 
     [ObservableProperty]
@@ -165,6 +168,12 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private CodecOption? _selectedCodec;
 
     [ObservableProperty]
+    private EncoderOption? _selectedEncoder;
+
+    [ObservableProperty]
+    private string _encoderStatusText = string.Empty;
+
+    [ObservableProperty]
     private int _quality = 20;
 
     [ObservableProperty]
@@ -256,8 +265,10 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
             .ToArray();
 
         RebuildCodecs();
+        RebuildEncoderOptions();
         RebuildOutputOptions();
         RebuildFrameRates();
+        UpdateEncoderStatus();
 
         SelectedPreset = Presets[0];
         SelectedColorPreset = ColorPresets[0];
@@ -313,6 +324,8 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     public IReadOnlyList<VideoEngineOption> Engines { get; }
 
     public ObservableCollection<CodecOption> Codecs { get; } = [];
+
+    public ObservableCollection<EncoderOption> EncoderOptions { get; } = [];
 
     public ObservableCollection<OutputOption> OutputOptions { get; } = [];
 
@@ -657,8 +670,10 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         }
 
         RebuildCodecs();
+        RebuildEncoderOptions();
         RebuildOutputOptions();
         RebuildFrameRates();
+        UpdateEncoderStatus();
         UpdateEngineNote();
         OnPropertyChanged(nameof(RifeNote));
         OnPropertyChanged(nameof(ToolchainStatusText));
@@ -678,6 +693,28 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
         Codecs.Add(new CodecOption(Strings["videoCodecH265"], VideoCodec.H265));
         SelectedCodec = Codecs.First(option => option.Codec == selected);
     }
+
+    private void RebuildEncoderOptions()
+    {
+        var selected = SelectedEncoder?.Preference ?? EncoderPreference.Auto;
+
+        EncoderOptions.Clear();
+        EncoderOptions.Add(new EncoderOption(Strings["videoEncoderAuto"], EncoderPreference.Auto));
+        EncoderOptions.Add(new EncoderOption(Strings["videoEncoderCpu"], EncoderPreference.Cpu));
+        SelectedEncoder = EncoderOptions.First(option => option.Preference == selected);
+    }
+
+    /// <summary>
+    /// Le nom de l'encodeur n'est connu qu'après la sonde, donc après un rendu.
+    /// Avant, la ligne explique la règle : matériel dès qu'il existe.
+    /// </summary>
+    private void UpdateEncoderStatus() =>
+        EncoderStatusText = _reportedEncoderLabel is { } encoder
+            ? Strings.Format(
+                "videoEncoderActive",
+                encoder,
+                _reportedDecodeLabel ?? Strings["videoDecoderSoftware"])
+            : Strings["videoEncoderAutoNote"];
 
     private void RebuildOutputOptions()
     {
