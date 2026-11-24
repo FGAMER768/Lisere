@@ -1,3 +1,4 @@
+using System.Buffers;
 using Lisere.Core.Enhancement;
 
 namespace Lisere.Core.Imaging;
@@ -403,16 +404,28 @@ public static class ImageFilters
         }
 
         var boxRadius = GaussianBlurRadius(radius, 3);
-        var result = source.Pixels;
 
-        for (var pass = 0; pass < 3; pass++)
+        // Chaque passe emprunte un plan à ArrayPool : un flou 4K enchaînait
+        // sinon huit tableaux de 8 Mo, et l'étalonnage Ultron en appelle une
+        // dizaine par frame. Seul le résultat final garde une taille exacte,
+        // parce que GrayImage l'exige.
+        var result = BoxBlurHorizontal(
+            source.Pixels,
+            source.Width,
+            source.Height,
+            boxRadius,
+            work?.Slice(0, 0.15));
+
+        for (var pass = 1; pass < 3; pass++)
         {
-            result = BoxBlurHorizontal(
+            var next = BoxBlurHorizontal(
                 result,
                 source.Width,
                 source.Height,
                 boxRadius,
                 work?.Slice(pass * 0.15, (pass + 1) * 0.15));
+            ArrayPool<byte>.Shared.Return(result);
+            result = next;
         }
 
         var transposed = Transpose(
@@ -420,24 +433,27 @@ public static class ImageFilters
             source.Width,
             source.Height,
             work?.Slice(0.45, 0.5));
+        ArrayPool<byte>.Shared.Return(result);
+
         for (var pass = 0; pass < 3; pass++)
         {
-            transposed = BoxBlurHorizontal(
+            var next = BoxBlurHorizontal(
                 transposed,
                 source.Height,
                 source.Width,
                 boxRadius,
                 work?.Slice(0.5 + (pass * 0.15), 0.5 + ((pass + 1) * 0.15)));
+            ArrayPool<byte>.Shared.Return(transposed);
+            transposed = next;
         }
 
-        return new GrayImage(
-            source.Width,
+        var exact = TransposeExact(
+            transposed,
             source.Height,
-            Transpose(
-                transposed,
-                source.Height,
-                source.Width,
-                work?.Slice(0.95, 1.0)));
+            source.Width,
+            work?.Slice(0.95, 1.0));
+        ArrayPool<byte>.Shared.Return(transposed);
+        return new GrayImage(source.Width, source.Height, exact);
     }
 
     public static RgbImage GaussianBlur(
@@ -489,24 +505,31 @@ public static class ImageFilters
 
         try
         {
-            for (var i = 0; i < pixels.Length; i++)
-            {
-                if ((i & 0xFFFFF) == 0)
+            var stride = source.Width * 3;
+
+            RowBands.For(
+                source.Height,
+                CancellationToken.None,
+                (start, end) =>
                 {
                     work?.Pulse();
-                }
+                    var index = start * stride;
+                    var limit = end * stride;
 
-                var original = source.Pixels[i];
-                var difference = original - blurred.Pixels[i];
-                if (difference > threshold || difference < -threshold)
-                {
-                    pixels[i] = PixelMath.Clip8(original + (difference * percent / 100));
-                }
-                else
-                {
-                    pixels[i] = original;
-                }
-            }
+                    for (; index < limit; index++)
+                    {
+                        var original = source.Pixels[index];
+                        var difference = original - blurred.Pixels[index];
+                        if (difference > threshold || difference < -threshold)
+                        {
+                            pixels[index] = PixelMath.Clip8(original + (difference * percent / 100));
+                        }
+                        else
+                        {
+                            pixels[index] = original;
+                        }
+                    }
+                });
 
             if (overshoot >= 0)
             {
@@ -968,13 +991,20 @@ public static class ImageFilters
         float floatRadius,
         ImagingWork? work = null)
     {
-        var result = new byte[source.Length];
+        var result = ArrayPool<byte>.Shared.Rent(source.Length);
 
-        for (var y = 0; y < height; y++)
-        {
-            work?.Report(y, height);
-            BoxBlurRow(source, result, y * width, width, floatRadius);
-        }
+        RowBands.For(
+            height,
+            CancellationToken.None,
+            (start, end) =>
+            {
+                work?.Pulse();
+
+                for (var y = start; y < end; y++)
+                {
+                    BoxBlurRow(source, result, y * width, width, floatRadius);
+                }
+            });
 
         work?.Complete();
         return result;
@@ -1079,19 +1109,51 @@ public static class ImageFilters
 
     private static byte[] Transpose(byte[] source, int width, int height, ImagingWork? work = null)
     {
-        var result = new byte[source.Length];
-        for (var y = 0; y < height; y++)
-        {
-            work?.Report(y, height);
+        var result = ArrayPool<byte>.Shared.Rent(source.Length);
+        TransposeCore(source, result, width, height, work);
+        return result;
+    }
 
-            for (var x = 0; x < width; x++)
+    /// <summary>
+    /// Transposée de taille exacte. <see cref="GrayImage"/> refuse un tableau
+    /// plus long que la taille demandée, donc la dernière passe ne peut pas
+    /// emprunter à ArrayPool.
+    /// </summary>
+    private static byte[] TransposeExact(
+        byte[] source,
+        int width,
+        int height,
+        ImagingWork? work = null)
+    {
+        var result = new byte[checked(width * height)];
+        TransposeCore(source, result, width, height, work);
+        return result;
+    }
+
+    private static void TransposeCore(
+        byte[] source,
+        byte[] result,
+        int width,
+        int height,
+        ImagingWork? work)
+    {
+        RowBands.For(
+            height,
+            CancellationToken.None,
+            (start, end) =>
             {
-                result[(x * height) + y] = source[(y * width) + x];
-            }
-        }
+                work?.Pulse();
+
+                for (var y = start; y < end; y++)
+                {
+                    for (var x = 0; x < width; x++)
+                    {
+                        result[(x * height) + y] = source[(y * width) + x];
+                    }
+                }
+            });
 
         work?.Complete();
-        return result;
     }
 
     private static float GaussianBlurRadius(float radius, int passes)
