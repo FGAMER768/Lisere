@@ -19,6 +19,7 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
     private readonly GraphicsDevice? _device;
     private readonly FrameLookEnhancer _cpuFallback;
     private readonly string? _fallbackReason;
+    private readonly string? _providerNote;
     private string? _disabledReason;
     private bool _disabled;
     private bool _disposed;
@@ -28,11 +29,13 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
     private GpuClassicFrameEnhancer(
         GpuClassicRenderer? renderer,
         GraphicsDevice? device,
-        string? fallbackReason)
+        string? fallbackReason,
+        string? providerNote = null)
     {
         _renderer = renderer;
         _device = device;
         _fallbackReason = fallbackReason;
+        _providerNote = providerNote;
         _cpuFallback = new FrameLookEnhancer(new ClassicFrameEnhancer());
     }
 
@@ -57,6 +60,8 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
     public string? ProviderFallbackReason =>
         _disabled ? _disabledReason : _fallbackReason;
 
+    public string? ProviderNote => _disabled ? null : _providerNote;
+
     /// <summary>
     /// Crée le moteur GPU. <paramref name="enableGpu"/> est faux pour les tests
     /// de référence qui doivent garder le CPU.
@@ -73,7 +78,7 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
             return new GpuClassicFrameEnhancer(null, null, "Windows requis pour D3D12");
         }
 
-        var device = GpuDeviceSelector.TryCreate(out var reason);
+        var device = GpuDeviceSelector.TryCreate(out var reason, out var note);
         if (device is null)
         {
             return new GpuClassicFrameEnhancer(null, null, reason);
@@ -82,7 +87,7 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
         try
         {
             var renderer = new GpuClassicRenderer(device);
-            return new GpuClassicFrameEnhancer(renderer, device, null);
+            return new GpuClassicFrameEnhancer(renderer, device, null, note);
         }
         catch (Exception exception)
         {

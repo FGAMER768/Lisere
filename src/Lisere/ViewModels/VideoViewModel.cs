@@ -774,8 +774,11 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
                             reason)
                         : SelectedEngine.Enhancer.ActiveProvider is { } provider
                             ? Strings.Format(
-                                SelectedEngine.IsNeural ? "engineNeuralActive" : "engineClassicGpu",
-                                provider)
+                                  SelectedEngine.IsNeural ? "engineNeuralActive" : "engineClassicGpu",
+                                  provider) +
+                              (SelectedEngine.Enhancer.ProviderNote is { } note
+                                  ? $" {note}"
+                                  : string.Empty)
                             : Strings[SelectedEngine.IsNeural ? "engineNeuralReady" : "engineClassicReady"];
     }
 

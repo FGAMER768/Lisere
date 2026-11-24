@@ -92,6 +92,13 @@ public interface IFrameEnhancer : IDisposable
     /// </summary>
     string? ProviderFallbackReason => null;
 
+    /// <summary>
+    /// Diagnostic non bloquant sur l'adaptateur retenu, affiché avec le
+    /// provider : par exemple une NVIDIA installée mais absente de D3D12. Nul
+    /// quand il n'y a rien à signaler.
+    /// </summary>
+    string? ProviderNote => null;
+
     /// <summary>Clé de la mesure de coût sur cette machine, nulle sans modèle.</summary>
     EngineCalibrationKey? CalibrationKey => null;
 

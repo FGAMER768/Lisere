@@ -5,6 +5,7 @@ using Lisere.Core.Imaging;
 
 namespace Lisere.Ai.Tests;
 
+[Collection(GpuDevices.Name)]
 public class GpuClassicFrameEnhancerTests
 {
     [Fact]

@@ -28,6 +28,12 @@ public static class ChromaTone
 
     private static readonly byte[] Curve = BuildCurve();
 
+    /// <summary>
+    /// Les 256 entrées de la courbe, pour un moteur qui l'applique ailleurs
+    /// (GPU) : la table reste la seule source de vérité.
+    /// </summary>
+    public static ReadOnlySpan<byte> Table => Curve;
+
     public static RgbImage Apply(RgbImage source) => Apply(source, pool: null);
 
     /// <summary>

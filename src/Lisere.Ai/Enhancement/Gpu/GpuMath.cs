@@ -55,6 +55,10 @@ internal static class GpuMath
 
     public static int Min(int first, int second) => first < second ? first : second;
 
+    public static float Max(float first, float second) => first > second ? first : second;
+
+    public static float Min(float first, float second) => first < second ? first : second;
+
     /// <summary>
     /// <c>Math.Round</c> sans argument arrondit au pair le plus proche, pas à
     /// l'infini. Les valeurs manipulées tiennent toutes dans un entier 32 bits.
@@ -86,6 +90,13 @@ internal static class GpuMath
 
         return truncated;
     }
+
+    /// <summary>
+    /// Équivalent de <c>(byte)Math.Round(Math.Clamp(value, 0.0, 255.0))</c>,
+    /// la conversion utilisée par <c>GradingFilters.Clip</c>.
+    /// </summary>
+    public static int RoundClip8(float value) =>
+        Clip8(RoundEven(Clamp(value, 0.0f, 255.0f)));
 
     public static int Abs(int value) => value < 0 ? -value : value;
 

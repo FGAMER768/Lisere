@@ -171,9 +171,15 @@ public class HardwareVideoProbeTests
         var ffmpeg = toolchain.RequireTools().FfmpegPath;
 
         var capabilities = await HardwareVideoProbe.Default.ProbeAsync(ffmpeg);
-        var encoder = Assert.Single(
-            capabilities.Encoders.Where(candidate => candidate.Vendor == HardwareEncoderVendor.Nvidia));
-        Assert.Equal("h264_nvenc", encoder.Name);
+
+        // Une GeForce expose h264_nvenc et hevc_nvenc : la sonde retient les
+        // deux, il faut donc viser explicitement l'encodeur H.264.
+        var encoder = capabilities.Encoders.FirstOrDefault(candidate =>
+            candidate.Vendor == HardwareEncoderVendor.Nvidia &&
+            string.Equals(candidate.Name, "h264_nvenc", StringComparison.Ordinal));
+        Assert.True(
+            encoder is not null,
+            "h264_nvenc est introuvable. Sonde : " + capabilities.Summary);
 
         var directory = Path.Combine(
             Path.GetTempPath(),
@@ -194,7 +200,7 @@ public class HardwareVideoProbeTests
                     "-i", "testsrc2=size=256x256:rate=30",
                     "-frames:v", "30",
                     .. VideoCommandBuilder.BuildHardwareEncoderOptions(
-                        "h264_nvenc",
+                        encoder.Name,
                         VideoCodec.H264,
                         quality: 20,
                         preset: "medium"),

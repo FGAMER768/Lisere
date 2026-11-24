@@ -59,7 +59,8 @@ public sealed partial class EnhanceViewModel
         engine.ProviderFallbackReason is { } reason
             ? $"{engine.Description} · {reason}"
             : engine.ActiveProvider is { } provider
-                ? $"{engine.Description} · {provider}"
+                ? $"{engine.Description} · {provider}" +
+                  (engine.ProviderNote is { } note ? $" · {note}" : string.Empty)
                 : engine.Description;
 
     /// <summary>Picks Classic when it is offered, so a fresh session is unchanged.</summary>
