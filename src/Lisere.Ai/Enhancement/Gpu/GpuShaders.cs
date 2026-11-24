@@ -6,7 +6,7 @@ namespace Lisere.Ai.Enhancement.Gpu;
 // (R dans l'octet bas), comme les plans du pipeline CPU. Les opérations qui ne
 // concernent qu'un canal lisent et réécrivent uniquement cet octet.
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct CopyShader(
     ReadWriteBuffer<uint> source,
@@ -23,7 +23,7 @@ internal readonly partial struct CopyShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ClearFloatShader(
     ReadWriteBuffer<float> target,
@@ -36,6 +36,45 @@ internal readonly partial struct ClearFloatShader(
         {
             target[index] = 0.0f;
         }
+    }
+}
+
+/// <summary>
+/// Grain : masque précalculé sur le CPU puis appliqué par pixel, avec le même
+/// mélange entier que <c>PixelMath.BlendMask</c>.
+/// </summary>
+[ThreadGroupSize(1024, 1, 1)]
+[GeneratedComputeShaderDescriptor]
+internal readonly partial struct GrainShader(
+    ReadWriteBuffer<uint> source,
+    ReadWriteBuffer<uint> mask,
+    ReadWriteBuffer<uint> target,
+    int count,
+    int addAmount) : IComputeShader
+{
+    public void Execute()
+    {
+        var index = ThreadIds.X;
+        if (index >= count)
+        {
+            return;
+        }
+
+        var pixel = source[index];
+        var maskValue = GpuMath.Channel(mask[index], 0);
+        var result = 0xFF000000u;
+
+        for (var channel = 0; channel < 3; channel++)
+        {
+            var original = GpuMath.Channel(pixel, channel);
+            var added = GpuMath.Min(255, original + addAmount);
+            result = GpuMath.WithChannel(
+                result,
+                channel,
+                GpuMath.BlendMask(maskValue, original, added));
+        }
+
+        target[index] = result;
     }
 }
 
@@ -253,7 +292,7 @@ internal readonly partial struct BoxBlurVerticalShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ExtractChannelShader(
     ReadWriteBuffer<uint> source,
@@ -361,7 +400,7 @@ internal readonly partial struct ExtremaVerticalShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ClampChannelShader(
     ReadWriteBuffer<uint> source,
@@ -388,7 +427,7 @@ internal readonly partial struct ClampChannelShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct UnsharpShader(
     ReadWriteBuffer<uint> source,
@@ -419,7 +458,7 @@ internal readonly partial struct UnsharpShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ToGrayShader(
     ReadWriteBuffer<uint> source,
@@ -479,7 +518,7 @@ internal readonly partial struct FindEdgesShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct EdgeMaskShader(
     ReadWriteBuffer<uint> edges,
@@ -498,7 +537,7 @@ internal readonly partial struct EdgeMaskShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct BlendShader(
     ReadWriteBuffer<uint> first,
@@ -529,7 +568,7 @@ internal readonly partial struct BlendShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct CompositeShader(
     ReadWriteBuffer<uint> first,
@@ -561,7 +600,7 @@ internal readonly partial struct CompositeShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct PointMaskShader(
     ReadWriteBuffer<uint> source,
@@ -580,7 +619,7 @@ internal readonly partial struct PointMaskShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ToYCbCrShader(
     ReadWriteBuffer<uint> source,
@@ -611,7 +650,7 @@ internal readonly partial struct ToYCbCrShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct FromYCbCrShader(
     ReadWriteBuffer<uint> luma,
@@ -637,7 +676,7 @@ internal readonly partial struct FromYCbCrShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct DetailAccumulateShader(
     ReadWriteBuffer<uint> luma,
@@ -661,7 +700,7 @@ internal readonly partial struct DetailAccumulateShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ApplyMultiScaleShader(
     ReadWriteBuffer<uint> source,
@@ -698,7 +737,7 @@ internal readonly partial struct ApplyMultiScaleShader(
 /// sur le CPU : elle est minuscule (quelques milliers de valeurs) et évite les
 /// atomics 64 bits absents du niveau de fonctionnalité 11.0.
 /// </summary>
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct DetailScaleShader(
     ReadWriteBuffer<uint> luma,
@@ -839,7 +878,7 @@ internal readonly partial struct ResizeVerticalShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ColorShader(
     ReadWriteBuffer<uint> source,

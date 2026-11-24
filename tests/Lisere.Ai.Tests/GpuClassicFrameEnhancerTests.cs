@@ -30,6 +30,59 @@ public class GpuClassicFrameEnhancerTests
     }
 
     [Fact]
+    public void TheGrainRunsOnTheGpuWithTheCpuMask()
+    {
+        var source = CreatePattern(96, 72);
+        using var reference = new FrameLookEnhancer(new ClassicFrameEnhancer());
+        using var gpu = GpuClassicFrameEnhancer.Create();
+        var request = new FrameEnhancementRequest(
+            new EnhancementParameters(60, 40, 10, 85, 10, 60),
+            AddNoise: 0.02,
+            OutputScale: 2,
+            ApplyChromaTone: true,
+            Grading: ColorPreset.UltronCc);
+
+        if (gpu.ActiveProvider is null)
+        {
+            return;
+        }
+
+        var expected = reference.Enhance(source, request, CancellationToken.None);
+        var actual = gpu.Enhance(source, request, CancellationToken.None);
+
+        // Le grain doit avoir tourné sur le GPU, pas sur le repli CPU.
+        Assert.Equal(1, ((IFrameStageTimingsProvider)gpu).TakeStageTimings().Frames);
+        Assert.Equal(expected.Pixels, actual.Pixels);
+    }
+
+    /// <summary>
+    /// Une frame 4K dépasse 65 535 groupes de 64 threads : ce test garde le
+    /// dispatch au-dessus de cette limite et vérifie que le device survit.
+    /// </summary>
+    [Fact]
+    public void TheGpuHandlesAFourKFrameWithoutDisablingItself()
+    {
+        var source = CreatePattern(3840, 2160);
+        using var gpu = GpuClassicFrameEnhancer.Create();
+
+        if (gpu.ActiveProvider is null)
+        {
+            return;
+        }
+
+        var request = new FrameEnhancementRequest(
+            new EnhancementParameters(60, 40, 10, 85, 10, 60));
+
+        var actual = gpu.Enhance(source, request, CancellationToken.None);
+        var timings = ((IFrameStageTimingsProvider)gpu).TakeStageTimings();
+
+        Assert.Equal(3840, actual.Width);
+        Assert.Equal(2160, actual.Height);
+        Assert.Null(gpu.ProviderFallbackReason);
+        Assert.Equal(1, timings.Frames);
+    }
+
+    [Fact]
     public void DisablingTheGpuKeepsTheCpuPipelineAvailable()
     {
         var source = CreatePattern(32, 24);

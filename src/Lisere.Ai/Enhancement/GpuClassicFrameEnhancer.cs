@@ -104,12 +104,10 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(request);
 
-        // Le grain est encore calculé par le pipeline CPU : il intervient avant
-        // le redimensionnement et la colorimétrie, et le déplacer après aurait
-        // changé le rendu. Le chemin CPU reste donc exact pour ce réglage.
-        if (_renderer is null ||
-            _disabled ||
-            request.AddNoise > EnhancementTuning.Noise.ActiveThreshold)
+        // Le repli CPU n'a lieu que sans adaptateur ou après une panne du
+        // device : le grain est désormais appliqué par le renderer, avec le
+        // masque du CPU, donc un GPU disponible ne repasse jamais au CPU.
+        if (_renderer is null || _disabled)
         {
             return _cpuFallback.Enhance(source, request, cancellationToken);
         }

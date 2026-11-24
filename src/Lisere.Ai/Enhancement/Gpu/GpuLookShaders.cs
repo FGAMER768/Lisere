@@ -7,7 +7,7 @@ namespace Lisere.Ai.Enhancement.Gpu;
 // reproduisent les formules de GradingFilters, mais en float : c'est
 // précisément l'écart avec la référence double que la mesure doit chiffrer.
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ManualSaturationShader(
     ReadWriteBuffer<uint> source,
@@ -39,7 +39,7 @@ internal readonly partial struct ManualSaturationShader(
     }
 }
 
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ManualBrightnessContrastShader(
     ReadWriteBuffer<uint> source,
@@ -76,7 +76,7 @@ internal readonly partial struct ManualBrightnessContrastShader(
 /// des tons chair de 1,0 sur une plage de teinte vide, donc la protection vaut
 /// toujours 1,0 et la teinte n'a pas à être calculée.
 /// </summary>
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ManualVibranceShader(
     ReadWriteBuffer<uint> source,
@@ -124,7 +124,7 @@ internal readonly partial struct ManualVibranceShader(
 /// Courbe de ChromaTone. La table est celle de <c>ChromaTone.Table</c> : la
 /// passe ne peut pas dériver, elle ne fait qu'indexer les 256 octets exacts.
 /// </summary>
-[ThreadGroupSize(DefaultThreadGroupSizes.X)]
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ChromaToneShader(
     ReadWriteBuffer<uint> source,

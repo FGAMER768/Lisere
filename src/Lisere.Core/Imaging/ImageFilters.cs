@@ -837,28 +837,7 @@ public static class ImageFilters
             return source.Clone();
         }
 
-        var smallWidth = Math.Max(1, source.Width / EnhancementTuning.Noise.GrainDivisor);
-        var smallHeight = Math.Max(1, source.Height / EnhancementTuning.Noise.GrainDivisor);
-        var grainPixels = new byte[checked(smallWidth * smallHeight)];
-        var scale = (int)(clamped * EnhancementTuning.Noise.GrainScale);
-        var random = new PythonRandom(EnhancementTuning.Noise.Seed);
-
-        for (var i = 0; i < grainPixels.Length; i++)
-        {
-            grainPixels[i] = (byte)(EnhancementTuning.Noise.GrainCenter + random.RandInt(-scale, scale));
-        }
-
-        var grain = new GrayImage(smallWidth, smallHeight, grainPixels);
-        grain = ImageResampler.Resize(grain, source.Width, source.Height, ResampleMethod.Bilinear);
-        grain = GaussianBlur(grain, (float)EnhancementTuning.Noise.GrainBlurRadius);
-
-        var lift = Point(grain, value =>
-            (int)((value - EnhancementTuning.Noise.GrainCenter) * EnhancementTuning.Noise.GrainLiftScale));
-
-        var mask = Point(lift, value => Math.Min(
-            EnhancementTuning.Noise.GrainMaskMaximum,
-            (int)(Math.Abs(value - EnhancementTuning.Noise.GrainCenter) * EnhancementTuning.Noise.GrainMaskScale)));
-
+        var mask = BuildGrainMask(source.Width, source.Height, clamped);
         var pixels = new byte[source.Pixels.Length];
         for (var i = 0; i < pixels.Length; i++)
         {
@@ -874,6 +853,40 @@ public static class ImageFilters
 
         work?.Complete();
         return new RgbImage(source.Width, source.Height, pixels);
+    }
+
+    /// <summary>
+    /// Construit le masque de grain d'une taille donnée. Le grain est identique
+    /// pour toutes les frames d'un rendu (graine fixe, même taille) : un moteur
+    /// GPU peut donc le calculer une fois puis l'appliquer par trame.
+    /// </summary>
+    public static GrayImage BuildGrainMask(int width, int height, double amount)
+    {
+        var clamped = Math.Clamp(amount, 0.0, EnhancementTuning.Noise.Maximum);
+        var scale = (int)(clamped * EnhancementTuning.Noise.GrainScale);
+        var smallWidth = Math.Max(1, width / EnhancementTuning.Noise.GrainDivisor);
+        var smallHeight = Math.Max(1, height / EnhancementTuning.Noise.GrainDivisor);
+        var grainPixels = new byte[checked(smallWidth * smallHeight)];
+        var random = new PythonRandom(EnhancementTuning.Noise.Seed);
+
+        for (var i = 0; i < grainPixels.Length; i++)
+        {
+            grainPixels[i] = (byte)(EnhancementTuning.Noise.GrainCenter + random.RandInt(-scale, scale));
+        }
+
+        var grain = ImageResampler.Resize(
+            new GrayImage(smallWidth, smallHeight, grainPixels),
+            width,
+            height,
+            ResampleMethod.Bilinear);
+        grain = GaussianBlur(grain, (float)EnhancementTuning.Noise.GrainBlurRadius);
+
+        var lift = Point(grain, value =>
+            (int)((value - EnhancementTuning.Noise.GrainCenter) * EnhancementTuning.Noise.GrainLiftScale));
+
+        return Point(lift, value => Math.Min(
+            EnhancementTuning.Noise.GrainMaskMaximum,
+            (int)(Math.Abs(value - EnhancementTuning.Noise.GrainCenter) * EnhancementTuning.Noise.GrainMaskScale)));
     }
 
     private static GrayImage Filter3x3(

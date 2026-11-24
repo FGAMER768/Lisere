@@ -19,6 +19,11 @@ internal sealed class GpuClassicRenderer : IDisposable
     private GpuWorkspace? _sourceWorkspace;
     private ReadWriteBuffer<uint>? _targetImage;
     private uint[]? _targetPacked;
+    private ReadWriteBuffer<uint>? _grainMask;
+    private uint[]? _grainPacked;
+    private int _grainWidth;
+    private int _grainHeight;
+    private double _grainAmount;
     private ReadWriteBuffer<uint>? _resizeBuffer;
     private GpuResampleTables? _horizontalTables;
     private GpuResampleTables? _verticalTables;
@@ -63,6 +68,15 @@ internal sealed class GpuClassicRenderer : IDisposable
 
             started = Stopwatch.GetTimestamp();
             var output = Enhance(workspace, request, cancellationToken);
+
+            // Le grain précède le redimensionnement et l'étalonnage, comme dans
+            // le pipeline de référence : il est appliqué ici, sur la frame
+            // améliorée à la taille source.
+            if (request.AddNoise > EnhancementTuning.Noise.ActiveThreshold)
+            {
+                output = ApplyGrain(workspace, output, request.AddNoise);
+            }
+
             var (targetWidth, targetHeight) = request.ResolveSize(source.Width, source.Height);
             ReadWriteBuffer<uint> readback;
             uint[] packed;
@@ -387,6 +401,56 @@ internal sealed class GpuClassicRenderer : IDisposable
         }
 
         return output;
+    }
+
+    /// <summary>
+    /// Applique le grain avec le masque exact du CPU. Le masque ne dépend que
+    /// de la taille et du montant : il est construit une fois par rendu puis
+    /// réutilisé pour toutes les frames.
+    /// </summary>
+    private ReadWriteBuffer<uint> ApplyGrain(
+        GpuWorkspace workspace,
+        ReadWriteBuffer<uint> source,
+        double amount)
+    {
+        var mask = EnsureGrainMask(workspace.Width, workspace.Height, amount);
+        var target = Pick(workspace, source, mask);
+        _device.For(workspace.Count, new GrainShader(
+            source,
+            mask,
+            target,
+            workspace.Count,
+            (int)EnhancementTuning.Noise.GrainAddAmount));
+        return target;
+    }
+
+    private ReadWriteBuffer<uint> EnsureGrainMask(int width, int height, double amount)
+    {
+        if (_grainMask is not null &&
+            _grainWidth == width &&
+            _grainHeight == height &&
+            Math.Abs(_grainAmount - amount) < 1e-9)
+        {
+            return _grainMask;
+        }
+
+        var mask = ImageFilters.BuildGrainMask(width, height, amount);
+        var count = checked(width * height);
+
+        _grainMask?.Dispose();
+        _grainMask = _device.AllocateReadWriteBuffer<uint>(count);
+        _grainPacked = new uint[count];
+
+        for (var index = 0; index < count; index++)
+        {
+            _grainPacked[index] = mask.Pixels[index];
+        }
+
+        _grainMask.CopyFrom(_grainPacked);
+        _grainWidth = width;
+        _grainHeight = height;
+        _grainAmount = amount;
+        return _grainMask;
     }
 
     private ReadWriteBuffer<uint> Unsharp(
@@ -817,6 +881,7 @@ internal sealed class GpuClassicRenderer : IDisposable
             _disposed = true;
             _sourceWorkspace?.Dispose();
             DisposeTarget();
+            _grainMask?.Dispose();
             _colorTables.Dispose();
         }
     }
