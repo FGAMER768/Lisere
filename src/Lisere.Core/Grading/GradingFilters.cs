@@ -196,14 +196,16 @@ internal static class GradingFilters
         double radius,
         double amountPercent,
         double threshold,
-        ImagingWork? work = null) =>
+        ImagingWork? work = null,
+        RgbImagePool? pool = null) =>
         ImageFilters.UnsharpMask(
             source,
             (float)(radius * 0.5),
             (int)amountPercent,
             (int)Math.Round(threshold * 255.0),
             -1,
-            work);
+            work,
+            pool);
 
     /// <summary>
     /// Exposition en stops, appliquée en lumière linéaire : c'est le
@@ -366,7 +368,8 @@ internal static class GradingFilters
         }
 
         var span = 1.0 - threshold;
-        var masked = new RgbImage(source.Width, source.Height);
+        var masked = pool?.Rent(source.Width, source.Height)
+            ?? new RgbImage(source.Width, source.Height);
         var maskPixels = masked.Pixels;
         var sourcePixels = source.Pixels;
         var stride = source.Width * 3;
@@ -399,35 +402,51 @@ internal static class GradingFilters
         var output = Copy(pool, source);
         var pixels = output.Pixels;
 
-        for (var channel = 0; channel < 3; channel++)
+        try
         {
-            var channelWork = work?.Slice(channel / 3.0, (channel + 1) / 3.0);
-            var blurred = ImageFilters.GaussianBlur(
-                masked,
-                (float)(width * 0.5 * channelWidths[channel]),
-                channelWork?.Slice(0, 0.9));
-            var channelIndex = channel;
+            for (var channel = 0; channel < 3; channel++)
+            {
+                var channelWork = work?.Slice(channel / 3.0, (channel + 1) / 3.0);
+                var blurred = ImageFilters.GaussianBlur(
+                    masked,
+                    (float)(width * 0.5 * channelWidths[channel]),
+                    channelWork?.Slice(0, 0.9),
+                    pool);
+                var channelIndex = channel;
 
-            RowBands.For(
-                source.Height,
-                cancellationToken,
-                (start, end) =>
-                {
-                    channelWork?.Pulse();
-
-                    for (var i = (start * source.Width * 3) + channelIndex;
-                        i < end * source.Width * 3;
-                        i += 3)
+                RowBands.For(
+                    source.Height,
+                    cancellationToken,
+                    (start, end) =>
                     {
-                        pixels[i] = Clip(pixels[i] + (brightness * blurred.Pixels[i]));
-                    }
-                });
+                        channelWork?.Pulse();
 
-            channelWork?.Complete();
+                        for (var i = (start * source.Width * 3) + channelIndex;
+                            i < end * source.Width * 3;
+                            i += 3)
+                        {
+                            pixels[i] = Clip(pixels[i] + (brightness * blurred.Pixels[i]));
+                        }
+                    });
+
+                if (pool is not null)
+                {
+                    pool.Return(blurred);
+                }
+
+                channelWork?.Complete();
+            }
+
+            work?.Complete();
+            return output;
         }
-
-        work?.Complete();
-        return output;
+        finally
+        {
+            if (pool is not null)
+            {
+                pool.Return(masked);
+            }
+        }
     }
 
     public static RgbImage MultiScaleSharpen(

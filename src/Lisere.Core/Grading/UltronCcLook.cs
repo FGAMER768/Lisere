@@ -63,7 +63,7 @@ public static class UltronCcLook
             cancellationToken);
         output = GradingChain.Advance(pool, source, output, next);
 
-        next = ApplyUnsharpMask(output, work?.Slice(0.82, 0.90));
+        next = ApplyUnsharpMask(output, work?.Slice(0.82, 0.90), pool);
         output = GradingChain.Advance(pool, source, output, next);
 
         next = ApplyBccMagicSharp(
@@ -143,14 +143,18 @@ public static class UltronCcLook
             pool,
             cancellationToken);
 
-    private static RgbImage ApplyUnsharpMask(RgbImage source, ImagingWork? work) =>
+    private static RgbImage ApplyUnsharpMask(
+        RgbImage source,
+        ImagingWork? work,
+        RgbImagePool? pool) =>
         ImageFilters.UnsharpMask(
             source,
             (float)(UltronCcTuning.UnsharpMask.Radius * UltronCcTuning.UnsharpMask.SigmaPerRadius),
             (int)UltronCcTuning.UnsharpMask.Amount,
             (int)Math.Round(UltronCcTuning.UnsharpMask.Threshold * 255.0),
             -1,
-            work);
+            work,
+            pool);
 
     private static RgbImage ApplyBccMagicSharp(
         RgbImage source,

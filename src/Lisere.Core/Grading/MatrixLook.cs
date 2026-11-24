@@ -41,7 +41,8 @@ public static class MatrixLook
             MatrixTuning.UnsharpMask.Radius,
             MatrixTuning.UnsharpMask.AmountPercent,
             MatrixTuning.UnsharpMask.Threshold,
-            work?.Slice(0.05, 0.35));
+            work?.Slice(0.05, 0.35),
+            pool);
         output = GradingChain.Advance(pool, source, output, next);
 
         next = ImageFilters.UnsharpMask(
@@ -50,7 +51,8 @@ public static class MatrixLook
             (int)MatrixTuning.Sharpen.AmountPercent,
             0,
             -1,
-            work?.Slice(0.35, 0.65));
+            work?.Slice(0.35, 0.65),
+            pool);
         output = GradingChain.Advance(pool, source, output, next);
 
         next = GradingFilters.UnsharpMaskFromRadius(
@@ -58,7 +60,8 @@ public static class MatrixLook
             MatrixTuning.BccUnsharpMask.Radius,
             MatrixTuning.BccUnsharpMask.AmountPercent,
             MatrixTuning.BccUnsharpMask.Threshold,
-            work?.Slice(0.65, 1.0));
+            work?.Slice(0.65, 1.0),
+            pool);
         output = GradingChain.Advance(pool, source, output, next);
 
         return output;

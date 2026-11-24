@@ -34,14 +34,16 @@ public static class SplendidaLook
             (int)SplendidaTuning.Sharpen.AmountPercent,
             0,
             -1,
-            work?.Slice(0, 0.35));
+            work?.Slice(0, 0.35),
+            pool);
 
         var next = GradingFilters.UnsharpMaskFromRadius(
             output,
             SplendidaTuning.BccUnsharpMask.Radius,
             SplendidaTuning.BccUnsharpMask.AmountPercent,
             SplendidaTuning.BccUnsharpMask.Threshold,
-            work?.Slice(0.35, 0.55));
+            work?.Slice(0.35, 0.55),
+            pool);
         output = GradingChain.Advance(pool, source, output, next);
 
         next = GradingFilters.Vignette(

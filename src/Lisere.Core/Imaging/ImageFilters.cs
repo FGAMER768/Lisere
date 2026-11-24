@@ -440,21 +440,28 @@ public static class ImageFilters
                 work?.Slice(0.95, 1.0)));
     }
 
-    public static RgbImage GaussianBlur(RgbImage source, float radius, ImagingWork? work = null)
+    public static RgbImage GaussianBlur(
+        RgbImage source,
+        float radius,
+        ImagingWork? work = null,
+        RgbImagePool? pool = null)
     {
         ArgumentNullException.ThrowIfNull(source);
 
         if (radius <= 0.0f)
         {
             work?.Complete();
-            return source.Clone();
+            return pool?.Rent(source.Width, source.Height) is { } copy
+                ? CopyInto(source, copy)
+                : source.Clone();
         }
 
         return MapPlanes(
             source,
             (plane, width, height, planeWork) =>
                 GaussianBlur(new GrayImage(width, height, plane), radius, planeWork).Pixels,
-            work);
+            work,
+            pool);
     }
 
     /// <summary>
@@ -468,49 +475,64 @@ public static class ImageFilters
         int percent,
         int threshold,
         int overshoot = -1,
-        ImagingWork? work = null)
+        ImagingWork? work = null,
+        RgbImagePool? pool = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentOutOfRangeException.ThrowIfNegative(percent);
         ArgumentOutOfRangeException.ThrowIfNegative(threshold);
 
-        var blurred = GaussianBlur(source, radius, work?.Slice(0, 0.68));
-        var pixels = new byte[source.Pixels.Length];
+        var blurred = GaussianBlur(source, radius, work?.Slice(0, 0.68), pool);
+        var output = pool?.Rent(source.Width, source.Height)
+            ?? new RgbImage(source.Width, source.Height);
+        var pixels = output.Pixels;
 
-        for (var i = 0; i < pixels.Length; i++)
+        try
         {
-            if ((i & 0xFFFFF) == 0)
+            for (var i = 0; i < pixels.Length; i++)
             {
-                work?.Pulse();
+                if ((i & 0xFFFFF) == 0)
+                {
+                    work?.Pulse();
+                }
+
+                var original = source.Pixels[i];
+                var difference = original - blurred.Pixels[i];
+                if (difference > threshold || difference < -threshold)
+                {
+                    pixels[i] = PixelMath.Clip8(original + (difference * percent / 100));
+                }
+                else
+                {
+                    pixels[i] = original;
+                }
             }
 
-            var original = source.Pixels[i];
-            var difference = original - blurred.Pixels[i];
-            if (difference > threshold || difference < -threshold)
+            if (overshoot >= 0)
             {
-                pixels[i] = PixelMath.Clip8(original + (difference * percent / 100));
+                ClampToLocalRange(
+                    source,
+                    pixels,
+                    (int)Math.Ceiling(radius),
+                    overshoot,
+                    work?.Slice(0.68, 1.0));
             }
             else
             {
-                pixels[i] = original;
+                work?.Complete();
+            }
+
+            return output;
+        }
+        finally
+        {
+            // Le flou n'a servi qu'à calculer l'accentuation : il retourne à
+            // la réserve avant que la frame suivante n'arrive.
+            if (pool is not null && !ReferenceEquals(blurred, source))
+            {
+                pool.Return(blurred);
             }
         }
-
-        if (overshoot >= 0)
-        {
-            ClampToLocalRange(
-                source,
-                pixels,
-                (int)Math.Ceiling(radius),
-                overshoot,
-                work?.Slice(0.68, 1.0));
-        }
-        else
-        {
-            work?.Complete();
-        }
-
-        return new RgbImage(source.Width, source.Height, pixels);
     }
 
     private static void ClampToLocalRange(
@@ -893,7 +915,8 @@ public static class ImageFilters
     private static RgbImage MapPlanes(
         RgbImage source,
         Func<byte[], int, int, ImagingWork?, byte[]> transform,
-        ImagingWork? work = null)
+        ImagingWork? work = null,
+        RgbImagePool? pool = null)
     {
         var count = source.Width * source.Height;
         var red = new byte[count];
@@ -917,7 +940,10 @@ public static class ImageFilters
         green = transform(green, source.Width, source.Height, work?.Slice(1.0 / 3.0, 2.0 / 3.0));
         blue = transform(blue, source.Width, source.Height, work?.Slice(2.0 / 3.0, 1.0));
 
-        var pixels = new byte[checked(count * 3)];
+        var output = pool?.Rent(source.Width, source.Height)
+            ?? new RgbImage(source.Width, source.Height);
+        var pixels = output.Pixels;
+
         for (var i = 0; i < count; i++)
         {
             var offset = i * 3;
@@ -926,7 +952,13 @@ public static class ImageFilters
             pixels[offset + 2] = blue[i];
         }
 
-        return new RgbImage(source.Width, source.Height, pixels);
+        return output;
+    }
+
+    private static RgbImage CopyInto(RgbImage source, RgbImage destination)
+    {
+        Array.Copy(source.Pixels, destination.Pixels, source.Pixels.Length);
+        return destination;
     }
 
     private static byte[] BoxBlurHorizontal(
