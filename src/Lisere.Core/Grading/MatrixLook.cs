@@ -19,7 +19,11 @@ namespace Lisere.Core.Grading;
 /// </summary>
 public static class MatrixLook
 {
-    public static RgbImage Apply(RgbImage source, ImagingWork? work = null)
+    public static RgbImage Apply(
+        RgbImage source,
+        ImagingWork? work = null,
+        RgbImagePool? pool = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -28,29 +32,34 @@ public static class MatrixLook
             MatrixTuning.BrightnessContrast.Brightness,
             MatrixTuning.BrightnessContrast.Contrast,
             MatrixTuning.BrightnessContrast.Pivot,
-            work?.Slice(0, 0.05));
+            work?.Slice(0, 0.05),
+            pool,
+            cancellationToken);
 
-        output = GradingFilters.UnsharpMaskFromRadius(
+        var next = GradingFilters.UnsharpMaskFromRadius(
             output,
             MatrixTuning.UnsharpMask.Radius,
             MatrixTuning.UnsharpMask.AmountPercent,
             MatrixTuning.UnsharpMask.Threshold,
             work?.Slice(0.05, 0.35));
+        output = GradingChain.Advance(pool, source, output, next);
 
-        output = ImageFilters.UnsharpMask(
+        next = ImageFilters.UnsharpMask(
             output,
             (float)MatrixTuning.Sharpen.Sigma,
             (int)MatrixTuning.Sharpen.AmountPercent,
             0,
             -1,
             work?.Slice(0.35, 0.65));
+        output = GradingChain.Advance(pool, source, output, next);
 
-        output = GradingFilters.UnsharpMaskFromRadius(
+        next = GradingFilters.UnsharpMaskFromRadius(
             output,
             MatrixTuning.BccUnsharpMask.Radius,
             MatrixTuning.BccUnsharpMask.AmountPercent,
             MatrixTuning.BccUnsharpMask.Threshold,
             work?.Slice(0.65, 1.0));
+        output = GradingChain.Advance(pool, source, output, next);
 
         return output;
     }

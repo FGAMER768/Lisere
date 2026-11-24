@@ -14,7 +14,11 @@ namespace Lisere.Core.Grading;
 /// </summary>
 public static class InfinityLook
 {
-    public static RgbImage Apply(RgbImage source, ImagingWork? work = null)
+    public static RgbImage Apply(
+        RgbImage source,
+        ImagingWork? work = null,
+        RgbImagePool? pool = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -26,27 +30,36 @@ public static class InfinityLook
             InfinityTuning.SapphireSharpen.LumaAmount,
             InfinityTuning.SapphireSharpen.ChromaAmount,
             InfinityTuning.SapphireSharpen.EdgeThreshold,
-            work?.Slice(0, 0.5));
+            work?.Slice(0, 0.5),
+            pool,
+            cancellationToken);
 
-        output = GradingFilters.UnsharpMaskFromRadius(
+        var next = GradingFilters.UnsharpMaskFromRadius(
             output,
             InfinityTuning.BccUnsharpMask.Radius,
             InfinityTuning.BccUnsharpMask.AmountPercent,
             InfinityTuning.BccUnsharpMask.Threshold,
             work?.Slice(0.5, 0.65));
+        output = GradingChain.Advance(pool, source, output, next);
 
-        output = GradingFilters.Glow(
+        next = GradingFilters.Glow(
             output,
             InfinityTuning.SapphireGlow.Threshold,
             InfinityTuning.SapphireGlow.Width,
             InfinityTuning.SapphireGlow.Brightness,
             InfinityTuning.SapphireGlow.ChannelWidths,
-            work?.Slice(0.65, 0.95));
+            work?.Slice(0.65, 0.95),
+            pool,
+            cancellationToken);
+        output = GradingChain.Advance(pool, source, output, next);
 
-        output = GradingFilters.Exposure(
+        next = GradingFilters.Exposure(
             output,
             InfinityTuning.Exposure,
-            work?.Slice(0.95, 1.0));
+            work?.Slice(0.95, 1.0),
+            pool,
+            cancellationToken);
+        output = GradingChain.Advance(pool, source, output, next);
 
         return output;
     }

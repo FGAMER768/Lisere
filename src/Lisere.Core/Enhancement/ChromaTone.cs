@@ -28,17 +28,58 @@ public static class ChromaTone
 
     private static readonly byte[] Curve = BuildCurve();
 
-    public static RgbImage Apply(RgbImage source)
+    public static RgbImage Apply(RgbImage source) => Apply(source, pool: null);
+
+    /// <summary>
+    /// Applique la courbe en parallèle. Avec une réserve, le tampon de sortie
+    /// est loué puis rendu par l'appelant au lieu d'être alloué par frame.
+    /// </summary>
+    public static RgbImage Apply(
+        RgbImage source,
+        RgbImagePool? pool,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var output = new RgbImage(source.Width, source.Height);
-        for (var i = 0; i < source.Pixels.Length; i++)
+        var output = pool?.Rent(source.Width, source.Height)
+            ?? new RgbImage(source.Width, source.Height);
+        ApplyInto(source, output, cancellationToken);
+        return output;
+    }
+
+    /// <summary>Écrit la courbe dans <paramref name="destination"/> sans allocation.</summary>
+    public static void ApplyInto(
+        RgbImage source,
+        RgbImage destination,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(destination);
+
+        if (source.Width != destination.Width ||
+            source.Height != destination.Height)
         {
-            output.Pixels[i] = Curve[source.Pixels[i]];
+            throw new ArgumentException(
+                "The destination must have the same size as the source.",
+                nameof(destination));
         }
 
-        return output;
+        var sourcePixels = source.Pixels;
+        var targetPixels = destination.Pixels;
+        var stride = source.Width * 3;
+
+        RowBands.For(
+            source.Height,
+            cancellationToken,
+            (start, end) =>
+            {
+                var offset = start * stride;
+                var limit = end * stride;
+                for (; offset < limit; offset++)
+                {
+                    targetPixels[offset] = Curve[sourcePixels[offset]];
+                }
+            });
     }
 
     private static byte[] BuildCurve()

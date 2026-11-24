@@ -11,7 +11,9 @@ public static class ColorGrading
         RgbImage source,
         ColorPreset preset,
         UltronCcSettings? settings = null,
-        ImagingWork? work = null)
+        ImagingWork? work = null,
+        RgbImagePool? pool = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -20,16 +22,36 @@ public static class ColorGrading
             ColorPreset.Manual => ManualLook.Apply(
                 source,
                 settings ?? UltronCcSettings.Neutral,
-                work),
+                work,
+                pool,
+                cancellationToken),
             ColorPreset.UltronCc => UltronCcLook.Apply(
                 source,
                 settings ?? UltronCcSettings.FromPreset,
-                work),
-            ColorPreset.Matrix => MatrixLook.Apply(source, work),
-            ColorPreset.Infinity => InfinityLook.Apply(source, work),
-            ColorPreset.Nebulus => NebulusLook.Apply(source, work),
-            ColorPreset.Splendida => SplendidaLook.Apply(source, work),
-            _ => source.Clone()
+                work,
+                pool,
+                cancellationToken),
+            ColorPreset.Matrix => MatrixLook.Apply(
+                source,
+                work,
+                pool,
+                cancellationToken),
+            ColorPreset.Infinity => InfinityLook.Apply(
+                source,
+                work,
+                pool,
+                cancellationToken),
+            ColorPreset.Nebulus => NebulusLook.Apply(
+                source,
+                work,
+                pool,
+                cancellationToken),
+            ColorPreset.Splendida => SplendidaLook.Apply(
+                source,
+                work,
+                pool,
+                cancellationToken),
+            _ => GradingChain.Copy(pool, source)
         };
 
         work?.Complete();

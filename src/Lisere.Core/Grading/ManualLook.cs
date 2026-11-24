@@ -17,7 +17,9 @@ public static class ManualLook
     public static RgbImage Apply(
         RgbImage source,
         UltronCcSettings settings,
-        ImagingWork? work = null)
+        ImagingWork? work = null,
+        RgbImagePool? pool = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(settings);
@@ -30,20 +32,26 @@ public static class ManualLook
                 LumaRed,
                 LumaGreen,
                 LumaBlue,
-                work?.Slice(0, 0.45));
+                work?.Slice(0, 0.45),
+                pool,
+                cancellationToken);
 
-        output = settings.Brightness == 0.0 && settings.Contrast == 0.0
-            ? output
-            : GradingFilters.BrightnessContrast(
+        if (settings.Brightness != 0.0 || settings.Contrast != 0.0)
+        {
+            var next = GradingFilters.BrightnessContrast(
                 output,
                 settings.Brightness,
                 settings.Contrast,
                 pivot: 0.5,
-                work?.Slice(0.45, 0.80));
+                work?.Slice(0.45, 0.80),
+                pool,
+                cancellationToken);
+            output = GradingChain.Advance(pool, source, output, next);
+        }
 
-        output = settings.Vibrance == 0.0
-            ? output
-            : GradingFilters.Vibrance(
+        if (settings.Vibrance != 0.0)
+        {
+            var next = GradingFilters.Vibrance(
                 output,
                 settings.Vibrance,
                 LumaRed,
@@ -52,8 +60,12 @@ public static class ManualLook
                 skinProtection: 1.0,
                 skinHueStart: 0.0,
                 skinHueEnd: 0.0,
-                work?.Slice(0.80, 1.0));
+                work?.Slice(0.80, 1.0),
+                pool,
+                cancellationToken);
+            output = GradingChain.Advance(pool, source, output, next);
+        }
 
-        return ReferenceEquals(output, source) ? source.Clone() : output;
+        return ReferenceEquals(output, source) ? GradingChain.Copy(pool, source) : output;
     }
 }

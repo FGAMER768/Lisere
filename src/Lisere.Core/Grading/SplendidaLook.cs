@@ -20,7 +20,11 @@ namespace Lisere.Core.Grading;
 /// </summary>
 public static class SplendidaLook
 {
-    public static RgbImage Apply(RgbImage source, ImagingWork? work = null)
+    public static RgbImage Apply(
+        RgbImage source,
+        ImagingWork? work = null,
+        RgbImagePool? pool = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -32,32 +36,42 @@ public static class SplendidaLook
             -1,
             work?.Slice(0, 0.35));
 
-        output = GradingFilters.UnsharpMaskFromRadius(
+        var next = GradingFilters.UnsharpMaskFromRadius(
             output,
             SplendidaTuning.BccUnsharpMask.Radius,
             SplendidaTuning.BccUnsharpMask.AmountPercent,
             SplendidaTuning.BccUnsharpMask.Threshold,
             work?.Slice(0.35, 0.55));
+        output = GradingChain.Advance(pool, source, output, next);
 
-        output = GradingFilters.Vignette(
+        next = GradingFilters.Vignette(
             output,
             SplendidaTuning.Vignette.AmountPercent,
             SplendidaTuning.Vignette.AngleOfView,
             SplendidaTuning.Vignette.CenterX,
             SplendidaTuning.Vignette.CenterY,
-            work?.Slice(0.55, 0.7));
+            work?.Slice(0.55, 0.7),
+            pool,
+            cancellationToken);
+        output = GradingChain.Advance(pool, source, output, next);
 
-        output = GradingFilters.BrightnessContrast(
+        next = GradingFilters.BrightnessContrast(
             output,
             SplendidaTuning.BrightnessContrast.Brightness,
             SplendidaTuning.BrightnessContrast.Contrast,
             SplendidaTuning.BrightnessContrast.Pivot,
-            work?.Slice(0.7, 0.85));
+            work?.Slice(0.7, 0.85),
+            pool,
+            cancellationToken);
+        output = GradingChain.Advance(pool, source, output, next);
 
-        output = GradingFilters.CurveTable(
+        next = GradingFilters.CurveTable(
             output,
             SplendidaTuning.MasterCurve,
-            work?.Slice(0.85, 1.0));
+            work?.Slice(0.85, 1.0),
+            pool,
+            cancellationToken);
+        output = GradingChain.Advance(pool, source, output, next);
 
         return output;
     }

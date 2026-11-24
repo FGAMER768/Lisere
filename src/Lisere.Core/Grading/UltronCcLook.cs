@@ -26,33 +26,77 @@ public static class UltronCcLook
     public static RgbImage Apply(
         RgbImage source,
         UltronCcSettings settings,
-        ImagingWork? work = null)
+        ImagingWork? work = null,
+        RgbImagePool? pool = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(settings);
 
-        var output = ApplyLooksSaturation(source, settings, work?.Slice(0, 0.04));
-        output = ApplySapphireSharpen(output, work?.Slice(0.04, 0.70));
-        output = ApplyBrightnessContrast(output, settings, work?.Slice(0.70, 0.75));
-        output = ApplyVibrance(output, settings, work?.Slice(0.75, 0.82));
-        output = ApplyUnsharpMask(output, work?.Slice(0.82, 0.90));
-        output = ApplyBccMagicSharp(output, work?.Slice(0.90, 1.0));
+        var output = ApplyLooksSaturation(
+            source,
+            settings,
+            work?.Slice(0, 0.04),
+            pool,
+            cancellationToken);
+
+        var next = ApplySapphireSharpen(
+            output,
+            work?.Slice(0.04, 0.70),
+            pool,
+            cancellationToken);
+        output = GradingChain.Advance(pool, source, output, next);
+
+        next = ApplyBrightnessContrast(
+            output,
+            settings,
+            work?.Slice(0.70, 0.75),
+            pool,
+            cancellationToken);
+        output = GradingChain.Advance(pool, source, output, next);
+
+        next = ApplyVibrance(
+            output,
+            settings,
+            work?.Slice(0.75, 0.82),
+            pool,
+            cancellationToken);
+        output = GradingChain.Advance(pool, source, output, next);
+
+        next = ApplyUnsharpMask(output, work?.Slice(0.82, 0.90));
+        output = GradingChain.Advance(pool, source, output, next);
+
+        next = ApplyBccMagicSharp(
+            output,
+            work?.Slice(0.90, 1.0),
+            pool,
+            cancellationToken);
+        output = GradingChain.Advance(pool, source, output, next);
+
         return output;
     }
 
     private static RgbImage ApplyLooksSaturation(
         RgbImage source,
         UltronCcSettings settings,
-        ImagingWork? work) =>
+        ImagingWork? work,
+        RgbImagePool? pool,
+        CancellationToken cancellationToken) =>
         GradingFilters.WeightedSaturation(
             source,
             settings.SaturationPercent / 100.0,
             UltronCcTuning.Looks.LumaRed,
             UltronCcTuning.Looks.LumaGreen,
             UltronCcTuning.Looks.LumaBlue,
-            work);
+            work,
+            pool,
+            cancellationToken);
 
-    private static RgbImage ApplySapphireSharpen(RgbImage source, ImagingWork? work) =>
+    private static RgbImage ApplySapphireSharpen(
+        RgbImage source,
+        ImagingWork? work,
+        RgbImagePool? pool,
+        CancellationToken cancellationToken) =>
         GradingFilters.MultiScaleSharpen(
             source,
             UltronCcTuning.SapphireSharpen.SmallDetailSize,
@@ -61,23 +105,31 @@ public static class UltronCcLook
             UltronCcTuning.SapphireSharpen.LumaAmount,
             UltronCcTuning.SapphireSharpen.ChromaAmount,
             UltronCcTuning.SapphireSharpen.EdgeThreshold,
-            work);
+            work,
+            pool,
+            cancellationToken);
 
     private static RgbImage ApplyBrightnessContrast(
         RgbImage source,
         UltronCcSettings settings,
-        ImagingWork? work) =>
+        ImagingWork? work,
+        RgbImagePool? pool,
+        CancellationToken cancellationToken) =>
         GradingFilters.BrightnessContrast(
             source,
             settings.Brightness,
             settings.Contrast,
             UltronCcTuning.BrightnessContrast.Pivot,
-            work);
+            work,
+            pool,
+            cancellationToken);
 
     private static RgbImage ApplyVibrance(
         RgbImage source,
         UltronCcSettings settings,
-        ImagingWork? work) =>
+        ImagingWork? work,
+        RgbImagePool? pool,
+        CancellationToken cancellationToken) =>
         GradingFilters.Vibrance(
             source,
             settings.Vibrance,
@@ -87,7 +139,9 @@ public static class UltronCcLook
             UltronCcTuning.Vibrance.SkinProtection,
             UltronCcTuning.Vibrance.SkinHueStart,
             UltronCcTuning.Vibrance.SkinHueEnd,
-            work);
+            work,
+            pool,
+            cancellationToken);
 
     private static RgbImage ApplyUnsharpMask(RgbImage source, ImagingWork? work) =>
         ImageFilters.UnsharpMask(
@@ -98,7 +152,11 @@ public static class UltronCcLook
             -1,
             work);
 
-    private static RgbImage ApplyBccMagicSharp(RgbImage source, ImagingWork? work) =>
+    private static RgbImage ApplyBccMagicSharp(
+        RgbImage source,
+        ImagingWork? work,
+        RgbImagePool? pool,
+        CancellationToken cancellationToken) =>
         GradingFilters.BandLumaSharpen(
             source,
             UltronCcTuning.BccMagicSharp.Radius,
@@ -106,5 +164,7 @@ public static class UltronCcLook
             UltronCcTuning.BccMagicSharp.SmallRadius,
             UltronCcTuning.BccMagicSharp.SmallGain,
             UltronCcTuning.BccMagicSharp.ThresholdLevels,
-            work);
+            work,
+            pool,
+            cancellationToken);
 }
