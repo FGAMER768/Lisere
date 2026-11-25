@@ -310,7 +310,190 @@ internal readonly partial struct ExtractChannelShader(
     }
 }
 
+/// <summary>
+/// Même flou que <see cref="BoxBlurHorizontalShader"/>, quatre pixels par
+/// thread : la fenêtre glisse au lieu d'être resommée à chaque pixel.
+/// </summary>
 [ThreadGroupSize(DefaultThreadGroupSizes.XY)]
+[GeneratedComputeShaderDescriptor]
+internal readonly partial struct BoxBlurHorizontal4Shader(
+    ReadWriteBuffer<uint> source,
+    ReadWriteBuffer<uint> target,
+    int width,
+    int height,
+    int channels,
+    int radius,
+    uint weight,
+    uint fraction) : IComputeShader
+{
+    public void Execute()
+    {
+        var start = ThreadIds.X * 4;
+        var y = ThreadIds.Y;
+        if (start >= width || y >= height)
+        {
+            return;
+        }
+
+        var row = y * width;
+        var count = width - start < 4 ? width - start : 4;
+        var acc0 = 0u;
+        var acc1 = 0u;
+        var acc2 = 0u;
+
+        for (var offset = -radius; offset <= radius; offset++)
+        {
+            var pixel = source[row + GpuMath.Clamp(start + offset, 0, width - 1)];
+            acc0 += (uint)GpuMath.Channel(pixel, 0);
+            if (channels > 1)
+            {
+                acc1 += (uint)GpuMath.Channel(pixel, 1);
+            }
+
+            if (channels > 2)
+            {
+                acc2 += (uint)GpuMath.Channel(pixel, 2);
+            }
+        }
+
+        var entering = source[row + GpuMath.Clamp(start + radius + 1, 0, width - 1)];
+
+        for (var i = 0; i < count; i++)
+        {
+            var x = start + i;
+            var left = source[row + GpuMath.Clamp(x - radius - 1, 0, width - 1)];
+            var right = source[row + GpuMath.Clamp(x + radius + 1, 0, width - 1)];
+
+            if (i > 0)
+            {
+                acc0 += (uint)(GpuMath.Channel(entering, 0) - GpuMath.Channel(left, 0));
+                if (channels > 1)
+                {
+                    acc1 += (uint)(GpuMath.Channel(entering, 1) - GpuMath.Channel(left, 1));
+                }
+
+                if (channels > 2)
+                {
+                    acc2 += (uint)(GpuMath.Channel(entering, 2) - GpuMath.Channel(left, 2));
+                }
+            }
+
+            var value = (acc0 * weight) +
+                ((uint)(GpuMath.Channel(left, 0) + GpuMath.Channel(right, 0)) * fraction);
+            var result = GpuMath.WithChannel(0xFF000000u, 0, (int)((value + (1u << 23)) >> 24));
+
+            if (channels > 1)
+            {
+                value = (acc1 * weight) +
+                    ((uint)(GpuMath.Channel(left, 1) + GpuMath.Channel(right, 1)) * fraction);
+                result = GpuMath.WithChannel(result, 1, (int)((value + (1u << 23)) >> 24));
+            }
+
+            if (channels > 2)
+            {
+                value = (acc2 * weight) +
+                    ((uint)(GpuMath.Channel(left, 2) + GpuMath.Channel(right, 2)) * fraction);
+                result = GpuMath.WithChannel(result, 2, (int)((value + (1u << 23)) >> 24));
+            }
+
+            target[row + x] = result;
+            entering = right;
+        }
+    }
+}
+
+/// <summary>
+/// Variante verticale de <see cref="BoxBlurHorizontal4Shader"/>, même flou que
+/// <see cref="BoxBlurVerticalShader"/>.
+/// </summary>
+[ThreadGroupSize(DefaultThreadGroupSizes.XY)]
+[GeneratedComputeShaderDescriptor]
+internal readonly partial struct BoxBlurVertical4Shader(
+    ReadWriteBuffer<uint> source,
+    ReadWriteBuffer<uint> target,
+    int width,
+    int height,
+    int channels,
+    int radius,
+    uint weight,
+    uint fraction) : IComputeShader
+{
+    public void Execute()
+    {
+        var x = ThreadIds.X;
+        var start = ThreadIds.Y * 4;
+        if (x >= width || start >= height)
+        {
+            return;
+        }
+
+        var count = height - start < 4 ? height - start : 4;
+        var acc0 = 0u;
+        var acc1 = 0u;
+        var acc2 = 0u;
+
+        for (var offset = -radius; offset <= radius; offset++)
+        {
+            var pixel = source[(GpuMath.Clamp(start + offset, 0, height - 1) * width) + x];
+            acc0 += (uint)GpuMath.Channel(pixel, 0);
+            if (channels > 1)
+            {
+                acc1 += (uint)GpuMath.Channel(pixel, 1);
+            }
+
+            if (channels > 2)
+            {
+                acc2 += (uint)GpuMath.Channel(pixel, 2);
+            }
+        }
+
+        var entering = source[(GpuMath.Clamp(start + radius + 1, 0, height - 1) * width) + x];
+
+        for (var i = 0; i < count; i++)
+        {
+            var y = start + i;
+            var top = source[(GpuMath.Clamp(y - radius - 1, 0, height - 1) * width) + x];
+            var bottom = source[(GpuMath.Clamp(y + radius + 1, 0, height - 1) * width) + x];
+
+            if (i > 0)
+            {
+                acc0 += (uint)(GpuMath.Channel(entering, 0) - GpuMath.Channel(top, 0));
+                if (channels > 1)
+                {
+                    acc1 += (uint)(GpuMath.Channel(entering, 1) - GpuMath.Channel(top, 1));
+                }
+
+                if (channels > 2)
+                {
+                    acc2 += (uint)(GpuMath.Channel(entering, 2) - GpuMath.Channel(top, 2));
+                }
+            }
+
+            var value = (acc0 * weight) +
+                ((uint)(GpuMath.Channel(top, 0) + GpuMath.Channel(bottom, 0)) * fraction);
+            var result = GpuMath.WithChannel(0xFF000000u, 0, (int)((value + (1u << 23)) >> 24));
+
+            if (channels > 1)
+            {
+                value = (acc1 * weight) +
+                    ((uint)(GpuMath.Channel(top, 1) + GpuMath.Channel(bottom, 1)) * fraction);
+                result = GpuMath.WithChannel(result, 1, (int)((value + (1u << 23)) >> 24));
+            }
+
+            if (channels > 2)
+            {
+                value = (acc2 * weight) +
+                    ((uint)(GpuMath.Channel(top, 2) + GpuMath.Channel(bottom, 2)) * fraction);
+                result = GpuMath.WithChannel(result, 2, (int)((value + (1u << 23)) >> 24));
+            }
+
+            target[(y * width) + x] = result;
+            entering = bottom;
+        }
+    }
+}
+
+[ThreadGroupSize(1024, 1, 1)]
 [GeneratedComputeShaderDescriptor]
 internal readonly partial struct ExtremaHorizontalShader(
     ReadWriteBuffer<uint> source,

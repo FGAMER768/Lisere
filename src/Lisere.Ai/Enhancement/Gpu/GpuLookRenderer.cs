@@ -31,10 +31,9 @@ internal sealed class GpuLookRenderer : IDisposable
     private ReadWriteBuffer<uint>? _a;
     private ReadWriteBuffer<uint>? _b;
     private ReadWriteBuffer<uint>? _current;
-    private ReadWriteBuffer<uint>? _blur0;
-    private ReadWriteBuffer<uint>? _blur1;
     private ReadWriteBuffer<uint>? _plane0;
     private ReadWriteBuffer<uint>? _plane1;
+    private ReadWriteBuffer<uint>? _mask;
     private ReadWriteBuffer<float>? _luma;
     private ReadWriteBuffer<float>? _blueChroma;
     private ReadWriteBuffer<float>? _redChroma;
@@ -566,12 +565,14 @@ internal sealed class GpuLookRenderer : IDisposable
         double brightness,
         IReadOnlyList<double> channelWidths)
     {
-        EnsurePlanes();
+        EnsureMask();
         var span = (float)(1.0 - threshold);
 
+        // Le masque est calculé une fois : Swap() fait aliaser _a et _b, donc
+        // _current est écrasé par les additions et ne survit pas à la boucle.
         _device.For(_width, _height, new LookGlowMaskShader(
             _current!,
-            _blur0!,
+            _mask!,
             _width,
             _height,
             (float)threshold,
@@ -586,7 +587,7 @@ internal sealed class GpuLookRenderer : IDisposable
         for (var channel = 0; channel < 3; channel++)
         {
             _device.For(_width, _height, new LookExtractChannelShader(
-                _blur0!,
+                _mask!,
                 _plane0!,
                 _width,
                 _height,
@@ -595,13 +596,13 @@ internal sealed class GpuLookRenderer : IDisposable
             _device.For(_width, _height, new LookAddPlaneShader(
                 _b!,
                 _plane0!,
-                _blur1!,
+                _plane1!,
                 _width,
                 _height,
                 channel,
                 (float)brightness));
             _device.For(_width, _height, new LookCopyShader(
-                _blur1!,
+                _plane1!,
                 _b!,
                 _width,
                 _height));
@@ -666,28 +667,31 @@ internal sealed class GpuLookRenderer : IDisposable
             _height));
     }
 
-    /// <summary>
+        /// <summary>
     /// Flou en six passes de boîte, la même conversion rayon → écart-type que
     /// <c>ImageFilters.GaussianBlur</c>. Le résultat est laissé dans
-    /// <see cref="_blur1"/>.
+    /// <see cref="_plane1"/>.
     /// </summary>
     private ReadWriteBuffer<uint> BlurRgb(float radius)
     {
+        EnsureScratch();
         var box = GaussianBlurRadius(radius, 3);
         var (boxRadius, weight, fraction) = BoxWeights(box);
 
-        Horizontal(_current!, _blur0!, 3, boxRadius, weight, fraction);
-        Horizontal(_blur0!, _blur1!, 3, boxRadius, weight, fraction);
-        Horizontal(_blur1!, _blur0!, 3, boxRadius, weight, fraction);
-        Vertical(_blur0!, _blur1!, 3, boxRadius, weight, fraction);
-        Vertical(_blur1!, _blur0!, 3, boxRadius, weight, fraction);
-        Vertical(_blur0!, _blur1!, 3, boxRadius, weight, fraction);
-        return _blur1!;
+        Horizontal(_current!, _plane0!, 3, boxRadius, weight, fraction);
+        Horizontal(_plane0!, _plane1!, 3, boxRadius, weight, fraction);
+        Horizontal(_plane1!, _plane0!, 3, boxRadius, weight, fraction);
+        Vertical(_plane0!, _plane1!, 3, boxRadius, weight, fraction);
+        Vertical(_plane1!, _plane0!, 3, boxRadius, weight, fraction);
+        Vertical(_plane0!, _plane1!, 3, boxRadius, weight, fraction);
+
+        return _plane1!;
     }
 
     /// <summary>Flou d'un plan 8 bits, laissé dans <see cref="_plane0"/>.</summary>
     private void BlurPlane(float radius)
     {
+        EnsureScratch();
         var box = GaussianBlurRadius(radius, 3);
         var (boxRadius, weight, fraction) = BoxWeights(box);
 
@@ -705,8 +709,9 @@ internal sealed class GpuLookRenderer : IDisposable
         int channels,
         int radius,
         uint weight,
-        uint fraction) =>
-        _device.For(_width, _height, new BoxBlurHorizontalShader(
+        uint fraction)
+    {
+        _device.For((_width + 3) / 4, _height, new BoxBlurHorizontal4Shader(
             source,
             target,
             _width,
@@ -715,6 +720,7 @@ internal sealed class GpuLookRenderer : IDisposable
             radius,
             weight,
             fraction));
+    }
 
     private void Vertical(
         ReadWriteBuffer<uint> source,
@@ -722,8 +728,9 @@ internal sealed class GpuLookRenderer : IDisposable
         int channels,
         int radius,
         uint weight,
-        uint fraction) =>
-        _device.For(_width, _height, new BoxBlurVerticalShader(
+        uint fraction)
+    {
+        _device.For(_width, (_height + 3) / 4, new BoxBlurVertical4Shader(
             source,
             target,
             _width,
@@ -732,6 +739,7 @@ internal sealed class GpuLookRenderer : IDisposable
             radius,
             weight,
             fraction));
+    }
 
     private void Swap() => (_current, _b) = (_b!, _current!);
 
@@ -794,15 +802,10 @@ internal sealed class GpuLookRenderer : IDisposable
         _packed = new uint[checked(width * height)];
         _a = _device.AllocateReadWriteBuffer<uint>(_packed.Length);
         _b = _device.AllocateReadWriteBuffer<uint>(_packed.Length);
-        _blur0 = _device.AllocateReadWriteBuffer<uint>(_packed.Length);
-        _blur1 = _device.AllocateReadWriteBuffer<uint>(_packed.Length);
     }
 
-    /// <summary>
-    /// Plans de travail alloués à la première passe qui en a besoin : un look
-    /// sans accentuation spatiale ne paie pas 200 Mo à 4K pour rien.
-    /// </summary>
-    private void EnsurePlanes()
+    /// <summary>Deux tampons RGBA de travail, partagés par le flou et le glow.</summary>
+    private void EnsureScratch()
     {
         if (_plane0 is not null)
         {
@@ -812,6 +815,28 @@ internal sealed class GpuLookRenderer : IDisposable
         var count = checked(_width * _height);
         _plane0 = _device.AllocateReadWriteBuffer<uint>(count);
         _plane1 = _device.AllocateReadWriteBuffer<uint>(count);
+    }
+
+    /// <summary>Masque du glow, alloué seulement pour Infinity et Nebulus.</summary>
+    private void EnsureMask()
+    {
+        EnsureScratch();
+        _mask ??= _device.AllocateReadWriteBuffer<uint>(checked(_width * _height));
+    }
+
+    /// <summary>
+    /// Plans de travail alloués à la première passe qui en a besoin : un look
+    /// sans accentuation spatiale ne paie pas 200 Mo à 4K pour rien.
+    /// </summary>
+    private void EnsurePlanes()
+    {
+        EnsureScratch();
+        if (_luma is not null)
+        {
+            return;
+        }
+
+        var count = checked(_width * _height);
         _luma = _device.AllocateReadWriteBuffer<float>(count);
         _blueChroma = _device.AllocateReadWriteBuffer<float>(count);
         _redChroma = _device.AllocateReadWriteBuffer<float>(count);
@@ -824,10 +849,9 @@ internal sealed class GpuLookRenderer : IDisposable
     {
         _a?.Dispose();
         _b?.Dispose();
-        _blur0?.Dispose();
-        _blur1?.Dispose();
         _plane0?.Dispose();
         _plane1?.Dispose();
+        _mask?.Dispose();
         _luma?.Dispose();
         _blueChroma?.Dispose();
         _redChroma?.Dispose();
@@ -837,10 +861,9 @@ internal sealed class GpuLookRenderer : IDisposable
         _a = null;
         _b = null;
         _current = null;
-        _blur0 = null;
-        _blur1 = null;
         _plane0 = null;
         _plane1 = null;
+        _mask = null;
         _luma = null;
         _blueChroma = null;
         _redChroma = null;
