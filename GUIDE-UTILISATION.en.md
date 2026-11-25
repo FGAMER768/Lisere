@@ -48,7 +48,7 @@ To develop from a checkout without the binaries, run `scripts/fetch-ffmpeg.ps1`.
 
 If a manifest is present but a file is missing or modified, video features are disabled instead of running an unverified binary.
 
-Three ONNX models are provided in `models/` and copied next to the executable: **Super-Resolution CNN x3**, **RIFE 4.9** and **YuNet** (face detection for Image page enhancement). The classic engine depends on no model. Licences and sources are detailed in section **12** and in [models/README.md](models/README.md).
+The ONNX models are provided in `models/` and copied next to the executable: **Super-Resolution CNN x3**, **Real-ESRGAN x4** (general, anime 6B, anime video), **1x photo cleaning** (RealPLKSR), **RIFE 4.9** and **YuNet** (face detection for Image page enhancement). The classic engine depends on no model. Licences and sources are detailed in section **12** and in [models/README.md](models/README.md).
 
 ### 2.2 Installing or running from source
 
@@ -328,7 +328,7 @@ The **Engine** menu offers the installed engines:
 
 The note below the menu indicates whether the engine is ready, which GPU it actually uses, or why it is unavailable. If a neural engine is unavailable, choose **Classic**: the rest of the application keeps working.
 
-The same choice is offered on the **Image** page, with **Lisere Classic** as the default. A neural engine replaces the whole pipeline for the frame, at its original size, and disables **Refine faces**: that texture belongs to the classical pipeline.
+The same choice is offered on the **Image** page, with **Lisere Classic** as the default. A neural engine replaces the whole pipeline for the frame, at its original size, and disables **Enhance faces**: that texture belongs to the classical pipeline.
 
 The estimate announced before a long render and the progress bar both follow the chosen engine: a neural model costs tens of seconds per megapixel, and the bar moves tile by tile instead of jumping at the end.
 
@@ -393,7 +393,10 @@ In **Auto** mode, video samples several positions in the clip to estimate the pa
 | **Output frame rate** | Source, 30, 60 or 120 fps. A different rate recreates frames with motion compensation (`minterpolate`). | Very CPU-intensive. |
 | **RIFE x2 interpolation** | Doubles the frame rate with the RIFE 4.9 model (ONNX, DirectML or CPU). | The frame-rate list is disabled: RIFE produces exactly two frames per source frame. Slow in HD. |
 | **Codec** | H.264 or H.265 (HEVC). | H.265 compresses better but is less universally readable. |
+| **Encoder** | **Automatic (GPU)** takes the first hardware encoder that passes a real probe, NVENC then Quick Sync; **CPU** forces `libx264` or `libx265`. | Hardware takes the load off the CPU; Liseré never silently falls back to the CPU. |
 | **Quality (CRF)** | From 14 to 32; a lower value gives better quality and a larger file. | The default is 20. |
+
+After a render, the note under the **Encoder** menu names the encoder and decoding actually used.
 
 Stabilisation, deinterlacing and interpolation are additional passes: they add to the frame-by-frame enhancement time.
 
@@ -510,7 +513,7 @@ A network error, a different digest or a non-writable installation folder stops 
 - Output: **MP4**, H.264 or H.265, AAC 192 kbit/s audio if present.
 - Audio is not kept in one-second previews.
 - Rotation carried in metadata is not applied during decoding.
-- The queue is sequential, with no parallelism.
+- The queue is sequential: one export at a time.
 - **RIFE is limited to x2** and imposes the doubled frame rate.
 - Temporary preview files go to `%TEMP%\Lisere\previews` and are purged after 24 h.
 - The temporary render folder is removed at the end; cancellation also removes partial files.

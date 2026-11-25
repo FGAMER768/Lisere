@@ -48,7 +48,7 @@ Pour développer depuis un checkout sans binaires, lancez `scripts/fetch-ffmpeg.
 
 Si un manifeste est présent mais qu'un fichier manque ou a été modifié, les fonctions vidéo sont désactivées plutôt que d'exécuter un binaire non vérifié.
 
-Trois modèles ONNX sont fournis dans `models/` et copiés à côté de l'exécutable : **Super-Resolution CNN ×3**, **RIFE 4.9** et **YuNet** (détection des visages pour le renforcement de la page Image). Le moteur classique, lui, ne dépend d'aucun modèle. Les licences et les sources sont détaillées dans la section **12** et dans [models/README.md](models/README.md).
+Les modèles ONNX sont fournis dans `models/` et copiés à côté de l'exécutable : **Super-Resolution CNN ×3**, **Real-ESRGAN ×4** (général, anime 6B, anime vidéo), **Nettoyage photo 1×** (RealPLKSR), **RIFE 4.9** et **YuNet** (détection des visages pour le renforcement de la page Image). Le moteur classique, lui, ne dépend d'aucun modèle. Les licences et les sources sont détaillées dans la section **12** et dans [models/README.md](models/README.md).
 
 ### 2.2 Installer ou lancer depuis les sources
 
@@ -328,7 +328,7 @@ Le menu **Moteur** propose les moteurs installés :
 
 La note sous le menu indique si le moteur est prêt, quel GPU il utilise réellement, ou pourquoi il est indisponible. Si un moteur neuronal est indisponible, choisissez **Classic** : le reste de l'application continue de fonctionner.
 
-Le même choix est proposé sur la page **Image**, avec **Lisere Classic** par défaut. Un moteur neuronal y remplace le pipeline complet pour toute l'image, à sa taille d'origine, et désactive l'option **Affiner les visages** : cette texture fait partie du pipeline classique.
+Le même choix est proposé sur la page **Image**, avec **Lisere Classic** par défaut. Un moteur neuronal y remplace le pipeline complet pour toute l'image, à sa taille d'origine, et désactive l'option **Renforcer les visages** : cette texture fait partie du pipeline classique.
 
 L'estimation annoncée avant un long rendu et la barre de progression suivent le moteur choisi : un modèle neuronal se compte en dizaines de secondes par mégapixel, et la barre avance par tuiles au lieu de sauter à la fin.
 
@@ -393,7 +393,10 @@ En mode **Auto**, la vidéo échantillonne plusieurs positions du clip pour esti
 | **Cadence de sortie** | Source, 30, 60 ou 120 i/s. Une cadence différente recrée des frames par compensation de mouvement (`minterpolate`). | Très coûteux en CPU. |
 | **Interpolation RIFE ×2** | Double la cadence avec le modèle RIFE 4.9 (ONNX, DirectML ou CPU). | La liste de cadence est désactivée : RIFE produit exactement deux images par image source. Lent en HD. |
 | **Codec** | H.264 ou H.265 (HEVC). | H.265 compresse mieux mais est moins universellement lisible. |
+| **Encodeur** | **Automatique (GPU)** retient le premier encodeur matériel qui réussit une vraie sonde, NVENC puis Quick Sync ; **CPU** force `libx264` ou `libx265`. | Le matériel allège le CPU ; Liseré ne bascule pas silencieusement vers le CPU. |
 | **Qualité (CRF)** | De 14 à 32 ; une valeur plus basse donne une meilleure qualité et un fichier plus gros. | La valeur par défaut est 20. |
+
+Après un rendu, la note sous le menu **Encodeur** nomme l'encodeur et le décodage réellement utilisés.
 
 La stabilisation, le désentrelacement et l'interpolation sont des passes supplémentaires : elles s'ajoutent au temps d'amélioration image par image.
 
@@ -510,7 +513,7 @@ Une erreur réseau, une empreinte différente ou un dossier d'installation non i
 - Sortie : **MP4**, H.264 ou H.265, audio AAC 192 kbit/s si présent.
 - L'audio n'est pas conservé dans les aperçus d'une seconde.
 - La rotation portée par les métadonnées n'est pas appliquée au décodage.
-- La file est séquentielle, sans parallélisme.
+- La file est séquentielle : un export à la fois.
 - **RIFE est limité au ×2** et impose la cadence doublée.
 - Les fichiers temporaires d'aperçu vont dans `%TEMP%\Lisere\previews` et sont purgés après 24 h.
 - Le dossier temporaire de rendu est supprimé à la fin ; une annulation supprime aussi les fichiers partiels.
