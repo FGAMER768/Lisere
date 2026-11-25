@@ -27,6 +27,8 @@ internal sealed class RenderTrace
     private readonly string _outputDescription;
     private readonly string _encoder;
     private readonly string _decoder;
+    private readonly string _version;
+    private readonly string _settings;
     private readonly List<string> _fallbacks;
     private readonly Dictionary<string, ChannelStats> _channels = new(StringComparer.Ordinal);
 
@@ -52,12 +54,16 @@ internal sealed class RenderTrace
         string outputDescription,
         string encoder,
         string decoder,
-        IEnumerable<string>? fallbacks = null)
+        IEnumerable<string>? fallbacks = null,
+        string? version = null,
+        string? settings = null)
     {
         _sourceDescription = sourceDescription;
         _outputDescription = outputDescription;
         _encoder = encoder;
         _decoder = decoder;
+        _version = string.IsNullOrWhiteSpace(version) ? ResolveVersion() : version;
+        _settings = settings ?? string.Empty;
         _fallbacks = fallbacks?.Where(reason => !string.IsNullOrWhiteSpace(reason)).ToList() ?? [];
         UpdatePeakWorkingSet();
     }
@@ -211,6 +217,7 @@ internal sealed class RenderTrace
 
         var report = new StringBuilder();
         report.AppendLine("Lisere — trace de rendu");
+        report.AppendLine($"Version : {_version}");
         report.AppendLine($"Date : {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         report.AppendLine($"Résultat : {(succeeded ? "terminé" : "interrompu")}");
         report.AppendLine($"Source : {_sourceDescription}");
@@ -220,6 +227,11 @@ internal sealed class RenderTrace
         report.AppendLine($"Encodeur : {_encoder}");
         report.AppendLine($"Décodage : {_decoder}");
         report.AppendLine($"Replis : {(_fallbacks.Count == 0 ? "aucun" : string.Join(" · ", _fallbacks))}");
+
+        if (_settings.Length > 0)
+        {
+            report.AppendLine($"Réglages : {_settings}");
+        }
 
         if (!string.IsNullOrWhiteSpace(failure))
         {
@@ -308,6 +320,30 @@ internal sealed class RenderTrace
             exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// La version du processus, pas celle de l'assembly : la publication fixe
+    /// la version de fichier (1.5.4.0) mais laisse l'assembly en 1.0.0.0.
+    /// </summary>
+    private static string ResolveVersion()
+    {
+        try
+        {
+            var path = Environment.ProcessPath;
+            var fileVersion = string.IsNullOrWhiteSpace(path)
+                ? null
+                : FileVersionInfo.GetVersionInfo(path).FileVersion;
+
+            return Version.TryParse(fileVersion, out var parsed)
+                ? parsed.ToString(3)
+                : fileVersion ?? "inconnue";
+        }
+        catch (Exception exception) when (
+            exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return "inconnue";
         }
     }
 

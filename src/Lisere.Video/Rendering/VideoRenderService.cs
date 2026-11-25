@@ -1,6 +1,8 @@
 using System.Diagnostics;
+using System.Globalization;
 using Lisere.Ai.Enhancement;
 using Lisere.Ai.Interpolation;
+using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 using Lisere.Video.Hardware;
 using Lisere.Video.Ffmpeg;
@@ -403,7 +405,8 @@ public sealed class VideoRenderService : IVideoRenderService
             $"{outputWidth}×{outputHeight} @ {encoderFrameRate:0.##} i/s",
             encoderPlan.Label,
             decodeLabel,
-            fallbacks.Count > 0 ? fallbacks : null)
+            fallbacks.Count > 0 ? fallbacks : null,
+            settings: DescribeFrameSettings(frameRequest, engine.DisplayName))
         {
             Adapter = engine.ActiveProvider ?? "CPU (aucun adaptateur D3D12)"
         };
@@ -531,6 +534,48 @@ public sealed class VideoRenderService : IVideoRenderService
 
         return (frames, diagnostics, encoderPlan.Label, decodeLabel);
     }
+
+    /// <summary>
+    /// Les valeurs qui changent le rendu, dans l'ordre du préréglage : sans
+    /// elles, une trace ne dit pas quel réglage a coûté le temps mesuré.
+    /// </summary>
+    internal static string DescribeFrameSettings(FrameEnhancementRequest request, string engine)
+    {
+        var parameters = request.ClampedParameters;
+        var parts = new List<string>
+        {
+            engine,
+            $"amélioration {Number(parameters.FixCompression)}/{Number(parameters.ReduceNoise)}/" +
+            $"{Number(parameters.Sharpen)}/{Number(parameters.RecoverDetails)}/" +
+            $"{Number(parameters.Dehalo)}/{Number(parameters.AntialiasDeblur)}",
+            $"récupération {Number(request.RecoverOriginalDetail)}",
+            $"bruit {Number(request.AddNoise)}",
+            $"échelle {request.EffectiveOutputScale}"
+        };
+
+        if (request.Grading is not ColorPreset.None)
+        {
+            var grading = request.Grading.ToString();
+
+            if (request.GradingSettings is { } look)
+            {
+                grading += $" S{Number(look.SaturationPercent)}/L{Number(look.Brightness)}/" +
+                    $"C{Number(look.Contrast)}/V{Number(look.Vibrance)}";
+            }
+
+            parts.Add($"étalonnage {grading}");
+        }
+
+        if (request.ApplyChromaTone)
+        {
+            parts.Add("courbe Chroma");
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    private static string Number(double value) =>
+        value.ToString("0.##", CultureInfo.InvariantCulture);
 
     private static int ResolveCapacity(long frameBytes)
     {

@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using ComputeSharp;
 using Lisere.Ai.Enhancement.Gpu;
 using Xunit;
@@ -9,6 +10,7 @@ public class GpuBoxBlurParityTests(ITestOutputHelper output)
 {
     /// <summary>Le flou à quatre pixels par thread doit rendre exactement le shader d'origine.</summary>
     [Fact]
+    [SupportedOSPlatform("windows6.2")]
     public void MatchesOriginalShader()
     {
         if (!OperatingSystem.IsWindows())
