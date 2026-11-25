@@ -16,29 +16,16 @@ engines that run locally, and exports ready to keep.
 
 </div>
 
-> [!WARNING]
-> **Project on hold: the CPU-render cause is identified and fixed, but resuming needs
-> validation on a discrete GPU.**
+> [!NOTE]
+> **GPU rendering ships in the 1.5.x releases.** Lisere Classic runs its pipeline as
+> **D3D12 compute (ComputeSharp)** on the dedicated GPU, with an exact CPU fallback:
+> enhancement, resizing, grain, grading and the Chroma curve all run there. For ONNX
+> engines, DirectML picks the DirectX 12 adapter with the most **dedicated VRAM**, and
+> the engine note names the GPU actually used; `LISERE_DML_ADAPTER` and
+> `LISERE_CLASSIC_GPU` can force it. Video encodes and decodes on hardware — NVENC
+> first, Quick Sync next — after a probe that runs a real encode and a real decode.
 >
-> Latest test before the fix: **8K ×2** upscale with **Lisere Classic**, the **Chroma** preset
-> and the **Ultron** grade, on an **RTX 4070**. Result: **the GPU is not being
-> used**, the load goes to **RAM**, and 4K rendering therefore cannot be
-> iterated on under proper conditions.
->
-> Two causes were found. **Lisere Classic only had a CPU pipeline**: it now runs the
-> same pipeline as a **D3D12 compute backend (ComputeSharp)** on the dedicated GPU,
-> with an exact CPU fallback. For ONNX engines, DirectML was
-> **pinned to DXGI adapter 0**, which on a hybrid laptop is usually the Intel iGPU:
-> inference ran on the integrated GPU and its shared memory, not on the RTX 4070.
-> Liseré now picks the adapter with the most **dedicated VRAM** and reports the GPU
-> actually used; `LISERE_DML_ADAPTER` can force a DXGI index or a name fragment.
-> Tile copies and the render preview no longer retain full-resolution frames in
-> memory either.
->
-> Classic's D3D12 backend still needs revalidation on the RTX 4070; development
-> remains **paused** until these fixes are revalidated on a machine with a discrete
-> GPU. Existing releases remain downloadable, but no performance
-> improvement is promised for them.
+> Full revalidation on the reference RTX 4070 is still open.
 
 <img src="assets/screenshots/image-en.png" alt="Liseré Image space: before/after comparison with Ultron CC grading">
 
@@ -152,6 +139,8 @@ of slowing the clip down, and before and after always show the same frame.
 - Interchangeable engines: **Lisere Classic** (deterministic local pipeline) or
   SHA-256-verified ONNX models, including **AnimeVideo ×4** for animation, run
   on DirectML with CPU fallback.
+- **Hardware encoding and decoding** when the probe finds an encoder: NVENC first,
+  Quick Sync next, with no silent fallback to the CPU.
 - Source resolution, 2×, 4×, 1080p or 2160p; source frame rate, 30, 60 or 120 fps.
 - **RIFE ×2 neural interpolation**, `bwdif` deinterlacing and two-pass `vidstab`
   stabilisation.
@@ -484,7 +473,7 @@ scripts/           ffmpeg, publishing, installer, signing
 <details>
 <summary>🧪 Tests and publishing</summary>
 
-The suite has **499 tests** (125 Core, 37 Ai, 57 Video, 280 App) with 0 build warnings.
+The suite has **561 tests** (140 Core, 47 Ai, 94 Video, 280 App) with 0 build warnings.
 Video integration tests generate a clip with FFmpeg and check rendering, audio,
 deinterlacing, exact size, cancellation and preview extraction; they are skipped when
 FFmpeg is missing. Presets are covered with synthetic JSON and, when
@@ -523,9 +512,8 @@ an adapter index or name fragment; `0`, `cpu` or `off` disables the GPU. ONNX en
 use DirectML on the DXGI adapter with the most
 **dedicated VRAM** (the iGPU is skipped when a discrete card is present), with a CPU
 fallback whose reason is shown in the engine note. `LISERE_DML_ADAPTER` forces a DXGI
-index or an adapter name fragment. The CPU fallback is much slower. 4K tests still need
-revalidation on a discrete GPU: Classic's D3D12 backend has not been measured on the
-reference RTX 4070 yet.
+index or an adapter name fragment. The CPU fallback is much slower. Full revalidation on
+the reference RTX 4070 is still open.
 
 **Why does Windows warn me on launch?**
 The binary is not signed with a commercial certificate. Check the SHA-256 published with

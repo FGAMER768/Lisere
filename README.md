@@ -16,29 +16,17 @@ des moteurs qui tournent en local et des exports prêts à garder.
 
 </div>
 
-> [!WARNING]
-> **Projet en pause : la cause du rendu CPU est identifiée et corrigée, mais la reprise
-> reste à valider sur un GPU dédié.**
+> [!NOTE]
+> **Le rendu GPU est livré dans les versions 1.5.x.** Lisere Classic exécute son
+> pipeline en **compute D3D12 (ComputeSharp)** sur le GPU dédié, avec un repli CPU
+> exact : amélioration, redimensionnement, grain, étalonnage et courbe Chroma y
+> passent. Pour les moteurs ONNX, DirectML retient l'adaptateur DirectX 12 qui
+> possède le plus de **VRAM dédiée**, et la note du moteur nomme le GPU réellement
+> utilisé ; `LISERE_DML_ADAPTER` et `LISERE_CLASSIC_GPU` permettent de le forcer.
+> La vidéo encode et décode en matériel — NVENC d'abord, Quick Sync ensuite — après
+> une sonde qui réalise un vrai encodage et un vrai décodage.
 >
-> Dernier test effectué avant correction : upscale **×2 vers 8K** avec **Lisere Classic**, le
-> préréglage **Chroma** et l'étalonnage **Ultron**, sur une **RTX 4070**. Constat :
-> **le GPU n'est pas sollicité** et la consommation part dans la **RAM**.
->
-> Deux causes ont été trouvées. **Lisere Classic ne disposait que d'un pipeline CPU** :
-> il exécute désormais le même pipeline en **compute D3D12 (ComputeSharp)** sur le GPU
-> dédié, avec un repli CPU exact. Pour les moteurs ONNX,
-> DirectML était **verrouillé sur l'adaptateur DXGI 0**, qui est souvent l'iGPU Intel
-> d'un portable hybride : l'inférence tournait sur le GPU intégré et sa mémoire
-> partagée, pas sur la RTX 4070. Liseré choisit désormais l'adaptateur qui possède le
-> plus de **VRAM dédiée** et affiche le GPU réellement utilisé ; `LISERE_DML_ADAPTER`
-> permet de forcer un index DXGI ou un fragment de nom. Les copies de tuiles et
-> l'aperçu de rendu ne gardent plus non plus des images pleine résolution en mémoire.
->
-> Le backend D3D12 de Classic reste à revalider sur la RTX 4070 ; le développement
-> reste **suspendu** tant que ces corrections n'ont pas été revalidées sur une machine
-> à GPU dédié. Les releases existantes restent
-> téléchargeables, mais aucune amélioration de performance n'est promise pour
-> elles.
+> La revalidation complète sur la RTX 4070 de référence reste ouverte.
 
 <img src="assets/screenshots/image-fr.png" alt="Espace Image de Liseré : comparaison avant/après avec l'étalonnage Ultron CC">
 
@@ -153,6 +141,8 @@ sautées au lieu de ralentir le clip, et l'avant comme l'après restent sur la m
 - Moteurs interchangeables : **Lisere Classic** (pipeline local déterministe, calcul
   D3D12 sur le GPU dédié ou CPU) ou modèles ONNX vérifiés par SHA-256, dont
   **Anime vidéo ×4** pour l'animation, exécutés sur DirectML avec repli CPU.
+- **Encodage et décodage matériel** quand la sonde en trouve un : NVENC d'abord,
+  Quick Sync ensuite, sans bascule silencieuse vers le CPU.
 - Résolution source, 2×, 4×, 1080p ou 2160p ; cadence source, 30, 60 ou 120 i/s.
 - **Interpolation neuronale RIFE ×2**, désentrelacement `bwdif` et stabilisation
   `vidstab` en deux passes.
@@ -494,7 +484,7 @@ scripts/           ffmpeg, publication, installateur, signature
 <details>
 <summary>🧪 Tests et publication</summary>
 
-La suite compte **499 tests** (125 Core, 37 Ai, 57 Video, 280 App) avec 0 avertissement
+La suite compte **561 tests** (140 Core, 47 Ai, 94 Video, 280 App) avec 0 avertissement
 de build. Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le
 rendu, l'audio, le désentrelacement, la taille, l'annulation et l'extraction d'aperçu ;
 ils sont ignorés si FFmpeg est introuvable. Les presets sont couverts sur des JSON
@@ -537,9 +527,8 @@ Les moteurs ONNX utilisent DirectML sur
 l'adaptateur DXGI qui possède le plus de **VRAM dédiée** (l'iGPU est écarté quand une
 carte dédiée est présente), avec un repli CPU dont la raison est affichée dans la note
 du moteur. La variable `LISERE_DML_ADAPTER` force un index DXGI ou un fragment de nom
-d'adaptateur. Le repli CPU est nettement plus lent. Les essais 4K restent à revalider
-sur une machine à GPU dédié : le backend D3D12 de **Classic** n'a pas encore été
-mesuré sur la RTX 4070 de référence.
+d'adaptateur. Le repli CPU est nettement plus lent. La revalidation complète sur la
+RTX 4070 de référence reste ouverte.
 
 **Pourquoi Windows affiche-t-il un avertissement au lancement ?**
 Le binaire n'est pas signé avec un certificat commercial. Vérifiez l'empreinte SHA-256
