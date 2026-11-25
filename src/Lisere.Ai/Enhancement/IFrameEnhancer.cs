@@ -72,6 +72,13 @@ public interface IFrameEnhancer : IDisposable
     int NativeScale { get; }
 
     /// <summary>
+    /// Vrai pour le moteur « sans amélioration » : l'interface peut le
+    /// reconnaître sans dépendre du type exact, y compris quand il est enveloppé
+    /// par l'étage colorimétrique.
+    /// </summary>
+    bool IsPassthrough => false;
+
+    /// <summary>
     /// Coût mesuré du moteur en secondes par mégapixel source. Zéro quand le
     /// moteur n'a rien mesuré : l'appelant retombe alors sur son estimation
     /// générique plutôt que d'inventer un chiffre.

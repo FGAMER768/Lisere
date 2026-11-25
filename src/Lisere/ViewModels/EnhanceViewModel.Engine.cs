@@ -33,7 +33,7 @@ public sealed partial class EnhanceViewModel
         SelectedEngine is { Family: EnhancementEngineFamily.NeuralSuperResolution };
 
     /// <summary>Le choix « Aucun » n'exécute ni modèle ni pipeline d'amélioration.</summary>
-    public bool HasNoEngine => SelectedEngine is PassthroughFrameEnhancer;
+    public bool HasNoEngine => SelectedEngine?.IsPassthrough ?? false;
 
     public bool CanUseEnhancement =>
         !HasNoEngine && SelectedEngine is not { IsAvailable: false };
@@ -68,14 +68,14 @@ public sealed partial class EnhanceViewModel
     {
         SelectedEngine =
             Engines.FirstOrDefault(engine =>
-                engine is not PassthroughFrameEnhancer &&
+                !engine.IsPassthrough &&
                 engine.Family is EnhancementEngineFamily.Classical) ??
-            Engines.FirstOrDefault(engine => engine is not PassthroughFrameEnhancer);
+            Engines.FirstOrDefault(engine => !engine.IsPassthrough);
     }
 
     partial void OnSelectedEngineChanged(IFrameEnhancer? value)
     {
-        if (value is PassthroughFrameEnhancer)
+        if (value is { IsPassthrough: true })
         {
             // Désactiver les visages avant de forcer « Aucune » : le changement de
             // paramètre basculerait sinon le preset en Manuel après coup.

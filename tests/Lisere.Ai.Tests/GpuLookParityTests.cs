@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Runtime.Versioning;
 using System.Text;
 using ComputeSharp;
+using Lisere.Ai.Enhancement;
 using Lisere.Ai.Enhancement.Gpu;
 using Lisere.Core.Enhancement;
 using Lisere.Core.Grading;
@@ -11,10 +12,10 @@ using Xunit.Abstractions;
 namespace Lisere.Ai.Tests;
 
 /// <summary>
-/// Banc de mesure du prototype GPU de <see cref="ManualLook"/> +
-/// <see cref="ChromaTone"/>. Il n'affirme pas la parité : il chiffre l'écart
-/// octet par octet entre les shaders float et la référence double du CPU, et
-/// écrit le rapport à côté des binaires de test (look-parity.txt).
+/// Compare chaque preset étalonné sur GPU à la référence CPU, octet par octet.
+/// Les passes sans flou doivent tenir dans l'arrondi 8 bits ; les passes
+/// spatiales (flous, halo) réutilisent les boîtes 24 bits du pipeline, donc
+/// l'écart reste borné à quelques niveaux.
 /// </summary>
 [Collection(GpuDevices.Name)]
 public class GpuLookParityTests
@@ -25,7 +26,7 @@ public class GpuLookParityTests
 
     [Fact]
     [SupportedOSPlatform("windows6.2")]
-    public void MeasuringTheGpuLookAgainstTheCpuReference()
+    public void EveryPresetMatchesTheCpuReferenceWithinTheAllowedDelta()
     {
         var notes = new List<string>();
         using var device = TryCreateDevice(notes);
@@ -51,52 +52,51 @@ public class GpuLookParityTests
 
         report.AppendLine();
 
-        var settings = new (string Name, UltronCcSettings Value)[]
+        var presets = new (string Name, ColorPreset Preset, UltronCcSettings? Settings)[]
         {
-            ("neutre", UltronCcSettings.Neutral),
-            ("preset", UltronCcSettings.FromPreset),
-            ("sat+vibrance", new UltronCcSettings(180.0, 0.0, 0.0, 100.0)),
-            ("extrême", new UltronCcSettings(60.0, -40.0, 40.0, 100.0)),
+            ("manuel neutre", ColorPreset.Manual, UltronCcSettings.Neutral),
+            ("manuel réglé", ColorPreset.Manual, new UltronCcSettings(180.0, 20.0, -10.0, 60.0)),
+            ("ultron", ColorPreset.UltronCc, UltronCcSettings.FromPreset),
+            ("ultron réglé", ColorPreset.UltronCc, new UltronCcSettings(70.0, -20.0, 30.0, 10.0)),
+            ("matrix", ColorPreset.Matrix, null),
+            ("infinity", ColorPreset.Infinity, null),
+            ("nebulus", ColorPreset.Nebulus, null),
+            ("splendida", ColorPreset.Splendida, null),
         };
 
         var images = new (string Name, RgbImage Image)[]
         {
-            ("rampe 256x256", CreateRamp(256, 256)),
-            ("photo 384x216", CreatePhotoLike(384, 216)),
-            ("photo 1080p", CreatePhotoLike(1920, 1080)),
+            ("photo 480x270", CreatePhotoLike(480, 270)),
+            ("photo 960x540", CreatePhotoLike(960, 540)),
         };
 
         using var renderer = new GpuLookRenderer(device);
 
         foreach (var (imageName, image) in images)
         {
-            foreach (var (settingName, value) in settings)
+            foreach (var (presetName, preset, settings) in presets)
             {
                 var cpu = ChromaTone.Apply(
-                    ColorGrading.Apply(image, ColorPreset.Manual, value));
-                var gpu = renderer.Apply(image, value, applyChromaTone: true);
+                    ColorGrading.Apply(image, preset, settings));
+                var gpu = renderer.Apply(image, preset, settings, chromaTone: true);
 
                 Assert.Equal(cpu.Width, gpu.Width);
                 Assert.Equal(cpu.Height, gpu.Height);
-                report.AppendLine(
-                    $"{imageName} · {settingName} · +courbe : " +
-                    Describe(cpu.Pixels, gpu.Pixels, cpu.Width));
 
-                // Le chemin neutre ne lance aucune passe : il doit être exact.
-                if (ReferenceEquals(value, UltronCcSettings.Neutral))
+                var (description, maximum) = Describe(cpu.Pixels, gpu.Pixels);
+                report.AppendLine($"{imageName} · {presetName} · +courbe : {description}");
+
+                // Le mode neutre ne lance aucune passe : il doit être exact.
+                if (ReferenceEquals(settings, UltronCcSettings.Neutral))
                 {
                     Assert.Equal(cpu.Pixels, gpu.Pixels);
                 }
+
+                Assert.True(
+                    maximum <= 2,
+                    $"{presetName} sur {imageName} : écart maximal {maximum} niveaux, au-delà de la tolérance de 3.");
             }
 
-            // Sépare l'étalonnage de la courbe : seule la courbe est exacte par
-            // construction, l'écart vient forcément des trois autres passes.
-            var preset = UltronCcSettings.FromPreset;
-            var gradingCpu = ColorGrading.Apply(image, ColorPreset.Manual, preset);
-            var gradingGpu = renderer.Apply(image, preset, applyChromaTone: false);
-            report.AppendLine(
-                $"{imageName} · preset · sans courbe : " +
-                Describe(gradingCpu.Pixels, gradingGpu.Pixels, gradingCpu.Width));
             report.AppendLine();
         }
 
@@ -107,14 +107,38 @@ public class GpuLookParityTests
             text);
     }
 
-    private static string Describe(byte[] expected, byte[] actual, int width)
+    /// <summary>
+    /// Le parcours « sans amélioration » doit tout de même appliquer la
+    /// colorimétrie : c'est le cas qui exportait une copie de la source.
+    /// </summary>
+    [Fact]
+    [SupportedOSPlatform("windows6.2")]
+    public void ThePassthroughEngineAppliesTheLook()
+    {
+        var source = CreatePhotoLike(96, 54);
+        using var engine = new FrameLookEnhancer(new PassthroughFrameEnhancer());
+
+        var request = new FrameEnhancementRequest(
+            EnhancementPresets.ChromaEnhanceMain.Parameters,
+            Grading: ColorPreset.UltronCc,
+            GradingSettings: UltronCcSettings.FromPreset,
+            ApplyChromaTone: true);
+
+        var output = engine.Enhance(source, request, CancellationToken.None);
+
+        Assert.NotEqual(source.Pixels, output.Pixels);
+        Assert.True(
+            output.Pixels.Zip(source.Pixels).Count(pair => pair.First != pair.Second) > source.Pixels.Length / 10,
+            "La colorimétrie n'a modifié qu'une fraction négligeable des octets.");
+    }
+
+    private static (string Description, int Maximum) Describe(byte[] expected, byte[] actual)
     {
         var differences = 0;
         var maximum = 0;
         var one = 0;
         var two = 0;
         var beyond = 0;
-        var pixels = 0;
 
         for (var index = 0; index < expected.Length; index++)
         {
@@ -141,33 +165,21 @@ public class GpuLookParityTests
             }
         }
 
-        for (var pixel = 0; pixel < expected.Length / 3; pixel++)
-        {
-            var offset = pixel * 3;
-            if (expected[offset] != actual[offset] ||
-                expected[offset + 1] != actual[offset + 1] ||
-                expected[offset + 2] != actual[offset + 2])
-            {
-                pixels++;
-            }
-        }
-
         var total = expected.Length;
         var percent = total == 0 ? 0.0 : (100.0 * differences) / total;
 
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            "{0} octets sur {1} ({2:0.0000} %), max {3}, ±1 {4}, ±2 {5}, ≥3 {6}, pixels touchés {7} / {8} (largeur {9})",
-            differences,
-            total,
-            percent,
-            maximum,
-            one,
-            two,
-            beyond,
-            pixels,
-            total / 3,
-            width);
+        return (
+            string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} octets sur {1} ({2:0.0000} %), max {3}, ±1 {4}, ±2 {5}, ≥3 {6}",
+                differences,
+                total,
+                percent,
+                maximum,
+                one,
+                two,
+                beyond),
+            maximum);
     }
 
     [SupportedOSPlatform("windows6.2")]
@@ -216,33 +228,9 @@ public class GpuLookParityTests
                 ?? devices[0];
         }
 
-        foreach (var device in devices)
-        {
-            if (!ReferenceEquals(device, selected))
-            {
-                device.Dispose();
-            }
-        }
-
+        // ComputeSharp partage une instance par adaptateur : libérer les
+        // autres invaliderait le device qu'un test voisin tient encore.
         return selected;
-    }
-
-    private static RgbImage CreateRamp(int width, int height)
-    {
-        var pixels = new byte[width * height * 3];
-
-        for (var y = 0; y < height; y++)
-        {
-            for (var x = 0; x < width; x++)
-            {
-                var offset = ((y * width) + x) * 3;
-                pixels[offset] = (byte)x;
-                pixels[offset + 1] = (byte)y;
-                pixels[offset + 2] = (byte)(255 - x);
-            }
-        }
-
-        return new RgbImage(width, height, pixels);
     }
 
     private static RgbImage CreatePhotoLike(int width, int height)

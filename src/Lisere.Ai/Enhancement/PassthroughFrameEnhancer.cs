@@ -31,6 +31,8 @@ public sealed class PassthroughFrameEnhancer : IFrameEnhancer
 
     public int NativeScale => 1;
 
+    public bool IsPassthrough => true;
+
     public RgbImage Enhance(
         RgbImage source,
         FrameEnhancementRequest request,

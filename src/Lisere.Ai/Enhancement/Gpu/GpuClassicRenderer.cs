@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using ComputeSharp;
 using Lisere.Core.Enhancement;
+using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 
 namespace Lisere.Ai.Enhancement.Gpu;
@@ -14,6 +15,7 @@ internal sealed class GpuClassicRenderer : IDisposable
 {
     private readonly GraphicsDevice _device;
     private readonly ReadOnlyBuffer<int> _colorTables;
+    private readonly GpuLookRenderer _look;
     private readonly object _gate = new();
 
     private GpuWorkspace? _sourceWorkspace;
@@ -43,6 +45,7 @@ internal sealed class GpuClassicRenderer : IDisposable
     {
         _device = device;
         _colorTables = device.AllocateReadOnlyBuffer(GpuColorTables.Build());
+        _look = new GpuLookRenderer(device);
     }
 
     public string DeviceName => _device.Name;
@@ -94,9 +97,27 @@ internal sealed class GpuClassicRenderer : IDisposable
                 packed = _targetPacked!;
             }
 
+            // L'étalonnage s'applique sur le GPU, après le redimensionnement et
+            // avant le readback : la frame n'est notée qu'une fois, quand tout
+            // est déjà calculé.
+            var graded = request.Grading is not ColorPreset.None || request.ApplyChromaTone;
+            if (graded)
+            {
+                readback = _look.ApplyToBuffer(
+                    readback,
+                    targetWidth,
+                    targetHeight,
+                    request.Grading,
+                    request.GradingSettings,
+                    request.ApplyChromaTone,
+                    cancellationToken);
+            }
+
             Interlocked.Add(ref _computeTicks, Stopwatch.GetElapsedTime(started).Ticks);
             started = Stopwatch.GetTimestamp();
-            var image = Unpack(readback, packed, targetWidth, targetHeight, pool, cancellationToken);
+            var image = graded
+                ? _look.Read(readback, targetWidth, targetHeight, pool, cancellationToken)
+                : Unpack(readback, packed, targetWidth, targetHeight, pool, cancellationToken);
             Interlocked.Add(ref _readbackTicks, Stopwatch.GetElapsedTime(started).Ticks);
             _timedFrames++;
             return image;
@@ -882,6 +903,7 @@ internal sealed class GpuClassicRenderer : IDisposable
             _sourceWorkspace?.Dispose();
             DisposeTarget();
             _grainMask?.Dispose();
+            _look.Dispose();
             _colorTables.Dispose();
         }
     }

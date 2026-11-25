@@ -157,10 +157,11 @@ public sealed partial class EnhanceViewModel : ObservableObject, IDisposable
         _localization = localization;
         _calibration = calibration ?? new EngineCalibrationStore();
         var availableEngines = engines ?? [];
-        Engines = availableEngines.Any(engine => engine is PassthroughFrameEnhancer)
+        Engines = availableEngines.Any(engine => engine.IsPassthrough)
             ? availableEngines
             : availableEngines
-                .Append(new PassthroughFrameEnhancer(_localization["enginePassthrough"]))
+                .Append(new FrameLookEnhancer(
+                    new PassthroughFrameEnhancer(_localization["enginePassthrough"])))
                 .ToArray();
         SelectDefaultEngine();
 

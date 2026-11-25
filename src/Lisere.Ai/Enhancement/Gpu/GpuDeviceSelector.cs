@@ -65,7 +65,6 @@ internal static class GpuDeviceSelector
         if (hardware.Count == 0)
         {
             reason = "aucun GPU matériel D3D12 détecté" + Describe(devices);
-            DisposeAll(devices);
             return null;
         }
 
@@ -89,7 +88,6 @@ internal static class GpuDeviceSelector
             if (selected is null)
             {
                 reason = $"adaptateur « {preference} » introuvable" + Describe(devices);
-                DisposeAll(devices);
                 return null;
             }
         }
@@ -108,14 +106,10 @@ internal static class GpuDeviceSelector
                 "Gérer les paramètres 3D → Paramètres de programme).";
         }
 
-        foreach (var device in devices)
-        {
-            if (!ReferenceEquals(device, selected))
-            {
-                device.Dispose();
-            }
-        }
-
+        // Les adaptateurs non retenus ne sont pas libérés : ComputeSharp rend
+        // la même instance pour un adaptateur donné, et un autre moteur (le
+        // modèle ONNX et son étage colorimétrique, par exemple) peut déjà la
+        // tenir. La libérer ici invaliderait son device en pleine session.
         return selected;
     }
 
@@ -210,11 +204,4 @@ internal static class GpuDeviceSelector
         }
     }
 
-    private static void DisposeAll(IEnumerable<GraphicsDevice> devices)
-    {
-        foreach (var device in devices)
-        {
-            device.Dispose();
-        }
-    }
 }

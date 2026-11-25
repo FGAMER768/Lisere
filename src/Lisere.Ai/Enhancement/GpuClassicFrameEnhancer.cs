@@ -1,39 +1,34 @@
-using System.Diagnostics;
 using ComputeSharp;
 using Lisere.Ai.Enhancement.Gpu;
 using Lisere.Core.Enhancement;
-using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 
 namespace Lisere.Ai.Enhancement;
 
 /// <summary>
 /// Lisere Classic exécuté sur le GPU dédié. Le pipeline reste le même ; seul
-/// le moteur de calcul change. Si D3D12 n'est pas disponible, si un adaptateur
-/// disparaît ou si le rendu échoue, la frame est recalculée par le pipeline
-/// CPU, sans jamais rendre un fichier différent en silence.
+/// le moteur de calcul change. L'étalonnage et la courbe du préréglage Chroma
+/// passent par le même device, avant le readback. Si D3D12 n'est pas
+/// disponible, si un adaptateur disparaît ou si le rendu échoue, la frame est
+/// recalculée par le pipeline CPU, sans jamais rendre un fichier différent en
+/// silence.
 /// </summary>
 public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimingsProvider
 {
     private readonly GpuClassicRenderer? _renderer;
-    private readonly GraphicsDevice? _device;
     private readonly FrameLookEnhancer _cpuFallback;
     private readonly string? _fallbackReason;
     private readonly string? _providerNote;
     private string? _disabledReason;
     private bool _disabled;
     private bool _disposed;
-    private long _gradingTicks;
-    private long _chromaTicks;
 
     private GpuClassicFrameEnhancer(
         GpuClassicRenderer? renderer,
-        GraphicsDevice? device,
         string? fallbackReason,
         string? providerNote = null)
     {
         _renderer = renderer;
-        _device = device;
         _fallbackReason = fallbackReason;
         _providerNote = providerNote;
         _cpuFallback = new FrameLookEnhancer(new ClassicFrameEnhancer());
@@ -46,7 +41,7 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
     public EnhancementEngineFamily Family => EnhancementEngineFamily.Classical;
 
     public string Description =>
-        "Pipeline déterministe six paramètres, amélioration et redimensionnement sur GPU D3D12 quand il est disponible.";
+        "Pipeline déterministe six paramètres, amélioration, redimensionnement et étalonnage sur GPU D3D12 quand il est disponible.";
 
     public bool IsAvailable => true;
 
@@ -70,29 +65,29 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
     {
         if (!enableGpu)
         {
-            return new GpuClassicFrameEnhancer(null, null, "GPU désactivé");
+            return new GpuClassicFrameEnhancer(null, "GPU désactivé");
         }
 
         if (!OperatingSystem.IsWindows())
         {
-            return new GpuClassicFrameEnhancer(null, null, "Windows requis pour D3D12");
+            return new GpuClassicFrameEnhancer(null, "Windows requis pour D3D12");
         }
 
         var device = GpuDeviceSelector.TryCreate(out var reason, out var note);
         if (device is null)
         {
-            return new GpuClassicFrameEnhancer(null, null, reason);
+            return new GpuClassicFrameEnhancer(null, reason);
         }
 
         try
         {
             var renderer = new GpuClassicRenderer(device);
-            return new GpuClassicFrameEnhancer(renderer, device, null, note);
+            return new GpuClassicFrameEnhancer(renderer, null, note);
         }
         catch (Exception exception)
         {
-            device.Dispose();
-            return new GpuClassicFrameEnhancer(null, null, exception.Message);
+            // Device partagé : on ne le libère pas, un autre moteur peut le tenir.
+            return new GpuClassicFrameEnhancer(null, exception.Message);
         }
     }
 
@@ -105,8 +100,9 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
         ArgumentNullException.ThrowIfNull(request);
 
         // Le repli CPU n'a lieu que sans adaptateur ou après une panne du
-        // device : le grain est désormais appliqué par le renderer, avec le
-        // masque du CPU, donc un GPU disponible ne repasse jamais au CPU.
+        // device : le grain et l'étalonnage sont désormais appliqués par le
+        // renderer, sur le GPU, donc un GPU disponible ne repasse jamais au
+        // CPU.
         if (_renderer is null || _disabled)
         {
             return _cpuFallback.Enhance(source, request, cancellationToken);
@@ -114,44 +110,7 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
 
         try
         {
-            var pool = request.BufferPool;
-            var output = _renderer.Render(source, request, pool, cancellationToken);
-
-            if (request.Grading is not ColorPreset.None)
-            {
-                var started = Stopwatch.GetTimestamp();
-                var graded = ColorGrading.Apply(
-                    output,
-                    request.Grading,
-                    request.GradingSettings,
-                    work: null,
-                    pool,
-                    cancellationToken);
-                Interlocked.Add(ref _gradingTicks, Stopwatch.GetElapsedTime(started).Ticks);
-
-                if (!ReferenceEquals(graded, output))
-                {
-                    pool?.Return(output);
-                }
-
-                output = graded;
-            }
-
-            if (request.ApplyChromaTone)
-            {
-                var started = Stopwatch.GetTimestamp();
-                var toned = ChromaTone.Apply(output, pool, cancellationToken);
-                Interlocked.Add(ref _chromaTicks, Stopwatch.GetElapsedTime(started).Ticks);
-
-                if (!ReferenceEquals(toned, output))
-                {
-                    pool?.Return(output);
-                }
-
-                output = toned;
-            }
-
-            return output;
+            return _renderer.Render(source, request, request.BufferPool, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -169,15 +128,8 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
         }
     }
 
-    public FrameStageTimings TakeStageTimings()
-    {
-        var renderer = _renderer?.TakeStageTimings() ?? FrameStageTimings.Empty;
-        return renderer with
-        {
-            Grading = TimeSpan.FromTicks(Interlocked.Exchange(ref _gradingTicks, 0)),
-            ChromaTone = TimeSpan.FromTicks(Interlocked.Exchange(ref _chromaTicks, 0))
-        };
-    }
+    public FrameStageTimings TakeStageTimings() =>
+        _renderer?.TakeStageTimings() ?? FrameStageTimings.Empty;
 
     public void Dispose()
     {
@@ -188,7 +140,6 @@ public sealed class GpuClassicFrameEnhancer : IFrameEnhancer, IFrameStageTimings
 
         _disposed = true;
         _renderer?.Dispose();
-        _device?.Dispose();
         _cpuFallback.Dispose();
     }
 }

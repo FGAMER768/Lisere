@@ -39,7 +39,11 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private readonly ILocalizationService _localization;
     private readonly VideoToolchain? _toolchain;
     private readonly IFrameInterpolator? _rife;
-    private readonly IFrameEnhancer _tikTokFallback = new PassthroughFrameEnhancer();
+    // Le parcours « TikTok uniquement » traverse aussi l'étage colorimétrique :
+    // sans cela, un export avec seulement une colorimétrie ressortait identique
+    // à la source.
+    private readonly IFrameEnhancer _tikTokFallback =
+        new FrameLookEnhancer(new PassthroughFrameEnhancer());
     private readonly Stopwatch _renderWatch = new();
     private int _frameVersion;
 
@@ -368,7 +372,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
 
     private bool HasAvailableEngine => SelectedEngine is { IsAvailable: true };
 
-    public bool HasNoEngine => SelectedEngine?.Enhancer is PassthroughFrameEnhancer;
+    public bool HasNoEngine => SelectedEngine?.Enhancer.IsPassthrough ?? false;
 
     public bool CanUseEnhancement => HasAvailableEngine && !HasNoEngine;
 
@@ -764,7 +768,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     {
         EngineNote = SelectedEngine is null
             ? Strings["engineMissing"]
-            : SelectedEngine.Enhancer is PassthroughFrameEnhancer
+            : SelectedEngine.Enhancer.IsPassthrough
                 ? Strings["enginePassthroughNote"]
                 : !SelectedEngine.IsAvailable
                     ? Strings.Format("engineUnavailable", SelectedEngine.Enhancer.UnavailableReason ?? Strings["engineMissing"])
