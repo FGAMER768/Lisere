@@ -271,6 +271,27 @@ l'étalonnage Ultron CC. La comparaison porte sur la netteté, la micro-texture 
 peau et des cheveux, le rendu du cuir et les tons moyens. Les trois images du tableau
 sont des JPEG réduits à 900 px ; les fichiers de travail ne sont pas distribués.
 
+### 🎬 Liseré, After Effects et Topaz sur des plans 4K
+
+Dix photogrammes 4K du même extrait ont été passés dans trois chaînes : **Liseré**
+(moteur Liseré Classic, préréglage Chroma, étalonnage Ultron CC), **After Effects CC**
+seul (étalonnage Ultron CC, sans amélioration) et **Topaz puis After Effects CC**
+(amélioration Chroma et Ultron CC). Deux plans sont montrés ici ; chaque plan occupe
+deux lignes, l'image entière réduite à 960 × 960 puis un détail à 100 % (210 × 210
+pixels natifs).
+
+| Source 4K | Liseré Classic + Ultron CC | After Effects CC | Topaz + AE CC |
+|---|---|---|---|
+| <img src="assets/comparisons/video/frame-01-stock.jpg" width="210" alt="Photogramme source, plan 1"> | <img src="assets/comparisons/video/frame-01-lisere.jpg" width="210" alt="Rendu Liseré, plan 1"> | <img src="assets/comparisons/video/frame-01-aecc.jpg" width="210" alt="Rendu After Effects CC, plan 1"> | <img src="assets/comparisons/video/frame-01-topaz.jpg" width="210" alt="Rendu Topaz puis After Effects CC, plan 1"> |
+| <img src="assets/comparisons/video/frame-01-detail-stock.jpg" width="210" alt="Détail à 100 %, source, plan 1"> | <img src="assets/comparisons/video/frame-01-detail-lisere.jpg" width="210" alt="Détail à 100 %, Liseré, plan 1"> | <img src="assets/comparisons/video/frame-01-detail-aecc.jpg" width="210" alt="Détail à 100 %, After Effects CC, plan 1"> | <img src="assets/comparisons/video/frame-01-detail-topaz.jpg" width="210" alt="Détail à 100 %, Topaz puis After Effects CC, plan 1"> |
+| <img src="assets/comparisons/video/frame-10-stock.jpg" width="210" alt="Photogramme source, plan 10"> | <img src="assets/comparisons/video/frame-10-lisere.jpg" width="210" alt="Rendu Liseré, plan 10"> | <img src="assets/comparisons/video/frame-10-aecc.jpg" width="210" alt="Rendu After Effects CC, plan 10"> | <img src="assets/comparisons/video/frame-10-topaz.jpg" width="210" alt="Rendu Topaz puis After Effects CC, plan 10"> |
+| <img src="assets/comparisons/video/frame-10-detail-stock.jpg" width="210" alt="Détail à 100 %, source, plan 10"> | <img src="assets/comparisons/video/frame-10-detail-lisere.jpg" width="210" alt="Détail à 100 %, Liseré, plan 10"> | <img src="assets/comparisons/video/frame-10-detail-aecc.jpg" width="210" alt="Détail à 100 %, After Effects CC, plan 10"> | <img src="assets/comparisons/video/frame-10-detail-topaz.jpg" width="210" alt="Détail à 100 %, Topaz puis After Effects CC, plan 10"> |
+
+L'étalonnage Ultron CC est le même dans les trois colonnes ; seule l'amélioration
+diffère. Liseré tient la micro-texture de la barbe, des mèches et des rides avec des
+contours plus souples ; Topaz + AE CC va plus loin en netteté, au prix d'une peau plus
+sèche et de contours plus durs. After Effects CC seul ne change que la colorimétrie.
+
 ### 🧪 Deux démonstrations + un bonus upscale
 
 Deux cas générés par le pipeline de la page Image, avec les réglages exacts, et un
@@ -299,7 +320,7 @@ Source 640 × 427. Comparatif **bicubique ×4** / **Real-ESRGAN ×4**, détails 
 20, sortie 2560 × 1708. Ce rendu utilise le **moteur ×4 de l'export vidéo** ; la page
 Image conserve la taille source.
 
-*Crédits images.* Démo 1 et comparatif ci-dessus : photogramme de la saga *Iron Man*
+*Crédits images.* Démo 1 et comparatifs ci-dessus : photogramme de la saga *Iron Man*
 (Marvel Studios), utilisé à titre illustratif ; tous droits réservés. Démo 2 :
 portrait officiel de Barack Obama par **Pete Souza**, licence
 [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), via

@@ -267,6 +267,26 @@ CC preset. **Liseré** is the local render with Chroma and Ultron CC. The compar
 covers sharpness, skin and hair micro-texture, leather rendering and midtones. The three
 table images are JPEGs reduced to 900 px; the working files are not distributed.
 
+### 🎬 Liseré, After Effects and Topaz on 4K shots
+
+Ten 4K frames from the same clip went through three chains: **Liseré** (Liseré Classic
+engine, Chroma preset, Ultron CC grading), **After Effects CC** alone (Ultron CC
+grading, no enhancement) and **Topaz then After Effects CC** (Chroma enhancement and
+Ultron CC). Two shots are shown here; each shot takes two rows, the full frame reduced
+to 960 × 960 then a 100% detail (native 210 × 210 crop).
+
+| 4K source | Liseré Classic + Ultron CC | After Effects CC | Topaz + AE CC |
+|---|---|---|---|
+| <img src="assets/comparisons/video/frame-01-stock.jpg" width="210" alt="Source frame, shot 1"> | <img src="assets/comparisons/video/frame-01-lisere.jpg" width="210" alt="Liseré render, shot 1"> | <img src="assets/comparisons/video/frame-01-aecc.jpg" width="210" alt="After Effects CC render, shot 1"> | <img src="assets/comparisons/video/frame-01-topaz.jpg" width="210" alt="Topaz then After Effects CC render, shot 1"> |
+| <img src="assets/comparisons/video/frame-01-detail-stock.jpg" width="210" alt="100% detail, source, shot 1"> | <img src="assets/comparisons/video/frame-01-detail-lisere.jpg" width="210" alt="100% detail, Liseré, shot 1"> | <img src="assets/comparisons/video/frame-01-detail-aecc.jpg" width="210" alt="100% detail, After Effects CC, shot 1"> | <img src="assets/comparisons/video/frame-01-detail-topaz.jpg" width="210" alt="100% detail, Topaz then After Effects CC, shot 1"> |
+| <img src="assets/comparisons/video/frame-10-stock.jpg" width="210" alt="Source frame, shot 10"> | <img src="assets/comparisons/video/frame-10-lisere.jpg" width="210" alt="Liseré render, shot 10"> | <img src="assets/comparisons/video/frame-10-aecc.jpg" width="210" alt="After Effects CC render, shot 10"> | <img src="assets/comparisons/video/frame-10-topaz.jpg" width="210" alt="Topaz then After Effects CC render, shot 10"> |
+| <img src="assets/comparisons/video/frame-10-detail-stock.jpg" width="210" alt="100% detail, source, shot 10"> | <img src="assets/comparisons/video/frame-10-detail-lisere.jpg" width="210" alt="100% detail, Liseré, shot 10"> | <img src="assets/comparisons/video/frame-10-detail-aecc.jpg" width="210" alt="100% detail, After Effects CC, shot 10"> | <img src="assets/comparisons/video/frame-10-detail-topaz.jpg" width="210" alt="100% detail, Topaz then After Effects CC, shot 10"> |
+
+Ultron CC grading is the same in all three columns; only the enhancement differs.
+Liseré holds the micro-texture of the beard, hair strands and wrinkles with softer
+edges; Topaz + AE CC pushes sharpness further, at the cost of drier skin and harder
+edges. After Effects CC alone only changes the colour grade.
+
 ### 🧪 Two demonstrations + an upscale bonus
 
 Two cases produced by the Image page pipeline, with the exact settings, plus an ×4
@@ -295,7 +315,7 @@ Source 640 × 427. **Bicubic ×4** / **Real-ESRGAN ×4** comparison, original de
 output 2560 × 1708. This render uses the **×4 engine from video export**; the Image
 page keeps the source size.
 
-*Image credits.* Demo 1 and the comparison above: still from the *Iron Man* film
+*Image credits.* Demo 1 and the comparisons above: still from the *Iron Man* film
 series (Marvel Studios), used for illustration only; all rights reserved. Demo 2:
 official portrait of Barack Obama by **Pete Souza**,
 [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), via
