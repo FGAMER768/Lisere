@@ -76,16 +76,16 @@ public class UltronCcLookTests
     }
 
     [Fact]
-    public void ApplyMovesUniformMiddleGrayAlongTheLegacyContrastCurve()
+    public void ApplyMovesUniformMiddleGrayAlongTheContrastCurve()
     {
         // Un aplat ne contient aucun détail : seuls la saturation (sans effet
-        // sur un gris), le contraste +5 / +7 et la vibrance (sans effet sur un
-        // gris) peuvent le déplacer. 128 -> 133.
+        // sur un gris), le contraste +5 / +7 ancré à 0,62 et la vibrance (sans
+        // effet sur un gris) peuvent le déplacer. 128 -> 131.
         var source = Uniform(128, 16);
 
         var result = UltronCcLook.Apply(source);
 
-        Assert.Equal(133, result.Pixels[Offset(8, 8, 16)]);
+        Assert.Equal(131, result.Pixels[Offset(8, 8, 16)]);
     }
 
     [Fact]

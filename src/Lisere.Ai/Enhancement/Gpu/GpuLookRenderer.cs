@@ -195,7 +195,10 @@ internal sealed class GpuLookRenderer : IDisposable
             UltronCcTuning.SapphireSharpen.EdgeThreshold,
             cancellationToken);
 
-        BrightnessContrast(settings.Brightness, settings.Contrast, pivot: 0.5);
+        BrightnessContrast(
+            settings.Brightness,
+            settings.Contrast,
+            UltronCcTuning.BrightnessContrast.Pivot);
 
         Vibrance(
             settings.Vibrance / 100.0,

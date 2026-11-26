@@ -64,8 +64,16 @@ public static class UltronCcTuning
         /// <summary>Contrast = 7.</summary>
         public const double Contrast = 7.0;
 
-        /// <summary>Point d'ancrage du contraste : gris moyen.</summary>
-        public const double Pivot = 0.5;
+        /// <summary>
+        /// Point d'ancrage du contraste, relevé sur un rendu After Effects du
+        /// même plan (10 photogrammes 4K). Le mode « legacy » est une droite :
+        /// ancrer le contraste au gris moyen éclaircit les hautes lumières de
+        /// 5 à 8 niveaux là où le rendu de référence les tient. 0,62 -- environ
+        /// 158 niveaux -- place la luminance moyenne de nos sorties à moins de
+        /// deux niveaux de la référence sur les plans clairs, moyens et sombres
+        /// (62, 33 et 15 de luminance moyenne).
+        /// </summary>
+        public const double Pivot = 0.62;
     }
 
     /// <summary>Effet 3 : After Effects <c>Vibrance</c>.</summary>

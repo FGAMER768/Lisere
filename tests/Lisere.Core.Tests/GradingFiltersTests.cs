@@ -42,8 +42,8 @@ public class GradingFiltersTests
             UltronCcTuning.BrightnessContrast.Contrast,
             UltronCcTuning.BrightnessContrast.Pivot);
 
-        // (128 / 255 - 0,5) x 1,07 + 0,5 + 5 / 255 = 0,5217 -> 133.
-        Assert.Equal([0, 0, 0, 133, 133, 133, 255, 255, 255], result.Pixels);
+        // (128 / 255 - 0,62) x 1,07 + 0,62 + 5 / 255 = 0,5133 -> 131.
+        Assert.Equal([0, 0, 0, 131, 131, 131, 255, 255, 255], result.Pixels);
     }
 
     [Fact]
