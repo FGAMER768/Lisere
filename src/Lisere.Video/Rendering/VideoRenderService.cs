@@ -566,11 +566,6 @@ public sealed class VideoRenderService : IVideoRenderService
             parts.Add($"étalonnage {grading}");
         }
 
-        if (request.ApplyChromaTone)
-        {
-            parts.Add("courbe Chroma");
-        }
-
         return string.Join(" · ", parts);
     }
 

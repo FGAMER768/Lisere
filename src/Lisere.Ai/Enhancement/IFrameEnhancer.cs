@@ -14,7 +14,6 @@ public sealed record FrameEnhancementRequest(
     int OutputScale = 1,
     int? TargetWidth = null,
     int? TargetHeight = null,
-    bool ApplyChromaTone = false,
     ColorPreset Grading = ColorPreset.None,
     UltronCcSettings? GradingSettings = null,
     // Avancement du moteur, de 0 à 100, pour les moteurs qui travaillent par

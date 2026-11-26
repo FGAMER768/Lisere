@@ -8,23 +8,6 @@ namespace Lisere.Ai.Tests;
 public class FrameLookEnhancerTests
 {
     [Fact]
-    public void TheFlagAppliesTheCurveOnlyWhenRequested()
-    {
-        var source = CreateGradient(8, 8);
-        using var enhancer = new FrameLookEnhancer(new ClassicFrameEnhancer());
-        var request = new FrameEnhancementRequest(EnhancementParameters.Zero);
-
-        var plain = enhancer.Enhance(source, request, CancellationToken.None);
-        var toned = enhancer.Enhance(
-            source,
-            request with { ApplyChromaTone = true },
-            CancellationToken.None);
-
-        Assert.Equal(ChromaTone.Apply(plain).Pixels, toned.Pixels);
-        Assert.NotEqual(plain.Pixels, toned.Pixels);
-    }
-
-    [Fact]
     public void TheWrapperKeepsTheEngineIdentity()
     {
         using var engine = new ClassicFrameEnhancer();
@@ -37,7 +20,7 @@ public class FrameLookEnhancerTests
     }
 
     [Fact]
-    public void TheSelectedGradingIsAppliedBeforeTheToneCurve()
+    public void TheSelectedGradingIsAppliedAfterTheEngine()
     {
         var source = CreateGradient(16, 16);
         using var engine = new ClassicFrameEnhancer();
@@ -46,23 +29,17 @@ public class FrameLookEnhancerTests
             EnhancementParameters.Zero,
             Grading: ColorPreset.Matrix);
 
-        var plain = enhancer.Enhance(source, request, CancellationToken.None);
-
         // The video pipeline must match the image pipeline's order:
-        // engine → grading → Chroma tone.
+        // engine → grading.
         var expected = ColorGrading.Apply(
             engine.Enhance(
                 source,
                 new FrameEnhancementRequest(EnhancementParameters.Zero),
                 CancellationToken.None),
             ColorPreset.Matrix);
-        Assert.Equal(expected.Pixels, plain.Pixels);
-
-        var toned = enhancer.Enhance(
-            source,
-            request with { ApplyChromaTone = true },
-            CancellationToken.None);
-        Assert.Equal(ChromaTone.Apply(expected).Pixels, toned.Pixels);
+        Assert.Equal(
+            expected.Pixels,
+            enhancer.Enhance(source, request, CancellationToken.None).Pixels);
     }
 
     [Fact]

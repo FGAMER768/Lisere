@@ -11,7 +11,6 @@ public readonly record struct FrameStageTimings(
     TimeSpan Compute,
     TimeSpan Readback,
     TimeSpan Grading,
-    TimeSpan ChromaTone,
     int Frames)
 {
     public static FrameStageTimings Empty => default;

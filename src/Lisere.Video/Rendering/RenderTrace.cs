@@ -46,7 +46,6 @@ internal sealed class RenderTrace
     private TimeSpan _compute;
     private TimeSpan _readback;
     private TimeSpan _grading;
-    private TimeSpan _chroma;
     private int _stageFrames;
 
     public RenderTrace(
@@ -127,7 +126,6 @@ internal sealed class RenderTrace
             _compute += timings.Compute;
             _readback += timings.Readback;
             _grading += timings.Grading;
-            _chroma += timings.ChromaTone;
             _stageFrames += timings.Frames;
         }
     }
@@ -171,7 +169,7 @@ internal sealed class RenderTrace
             (Name: EncodeChannel, Elapsed: TimeSpan.FromTicks(Interlocked.Read(ref _encodeChannelWaitTicks)))
         };
 
-        TimeSpan pack, upload, compute, readback, grading, chroma;
+        TimeSpan pack, upload, compute, readback, grading;
         int stageFrames;
 
         lock (_gate)
@@ -181,7 +179,6 @@ internal sealed class RenderTrace
             compute = _compute;
             readback = _readback;
             grading = _grading;
-            chroma = _chroma;
             stageFrames = _stageFrames;
         }
 
@@ -199,7 +196,6 @@ internal sealed class RenderTrace
             stages.Add(("calcul GPU", compute));
             stages.Add(("retour GPU", readback));
             stages.Add(("étalonnage", grading));
-            stages.Add(("courbe Chroma", chroma));
         }
         else
         {
@@ -249,13 +245,12 @@ internal sealed class RenderTrace
                 ("calcul GPU", compute),
                 ("retour GPU", readback),
                 ("étalonnage", grading),
-                ("courbe Chroma", chroma),
                 ("interpolation", interpolation),
                 ("instantanés", snapshot),
                 ("attente écriture", write)
             }.Select(stage =>
                 stage.Item1 is "Pack" or "envoi GPU" or "calcul GPU" or "retour GPU" or
-                    "étalonnage" or "courbe Chroma"
+                    "étalonnage"
                     ? stageFrames > 0
                         ? $"{stage.Item1} {Seconds(stage.Item2)} s"
                         : $"{stage.Item1} non instrumenté"

@@ -261,24 +261,6 @@ public class VideoViewModelTests
     }
 
     [Fact]
-    public async Task TheVideoPageNeverRequestsTheToneCurve()
-    {
-        var renderer = new FakeVideoRenderer();
-        var viewModel = CreateViewModel(renderer: renderer);
-        await viewModel.OpenCommand.ExecuteAsync(null);
-
-        // Le modèle Topaz vidéo est neutre en tons : la courbe de Chroma est
-        // réservée à la page Image, même quand le préréglage est sélectionné.
-        Assert.Equal(EnhancementMode.ChromaEnhanceMain, viewModel.SelectedPreset?.Mode);
-        await viewModel.RenderPreviewCommand.ExecuteAsync(null);
-        Assert.False(renderer.Request!.Frame.ApplyChromaTone);
-
-        viewModel.FixCompression = 20;
-        await viewModel.RenderPreviewCommand.ExecuteAsync(null);
-        Assert.False(renderer.Request!.Frame.ApplyChromaTone);
-    }
-
-    [Fact]
     public void VideoParameterTabsMirrorTheImagePage()
     {
         var viewModel = CreateViewModel();

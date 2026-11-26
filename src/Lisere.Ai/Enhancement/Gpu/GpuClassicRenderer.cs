@@ -100,7 +100,7 @@ internal sealed class GpuClassicRenderer : IDisposable
             // L'étalonnage s'applique sur le GPU, après le redimensionnement et
             // avant le readback : la frame n'est notée qu'une fois, quand tout
             // est déjà calculé.
-            var graded = request.Grading is not ColorPreset.None || request.ApplyChromaTone;
+            var graded = request.Grading is not ColorPreset.None;
             if (graded)
             {
                 readback = _look.ApplyToBuffer(
@@ -109,7 +109,6 @@ internal sealed class GpuClassicRenderer : IDisposable
                     targetHeight,
                     request.Grading,
                     request.GradingSettings,
-                    request.ApplyChromaTone,
                     cancellationToken);
             }
 
@@ -134,7 +133,6 @@ internal sealed class GpuClassicRenderer : IDisposable
                 TimeSpan.FromTicks(_uploadTicks),
                 TimeSpan.FromTicks(_computeTicks),
                 TimeSpan.FromTicks(_readbackTicks),
-                TimeSpan.Zero,
                 TimeSpan.Zero,
                 _timedFrames);
             _packTicks = 0;

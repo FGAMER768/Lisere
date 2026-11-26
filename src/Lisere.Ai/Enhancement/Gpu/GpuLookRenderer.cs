@@ -1,12 +1,11 @@
 using ComputeSharp;
-using Lisere.Core.Enhancement;
 using Lisere.Core.Grading;
 using Lisere.Core.Imaging;
 
 namespace Lisere.Ai.Enhancement.Gpu;
 
 /// <summary>
-/// Portage GPU de <see cref="ColorGrading"/> et de <see cref="ChromaTone"/>.
+/// Portage GPU de <see cref="ColorGrading"/>.
 /// La chaîne suit l'ordre exact du CPU — saturation, accentuation multi-échelles,
 /// luminosité/contraste, vibrance, unsharp, Magic Sharp, courbe — et écrit dans
 /// le même tampon RGBA que le rendu, sans repasser par le CPU.
@@ -20,7 +19,6 @@ namespace Lisere.Ai.Enhancement.Gpu;
 internal sealed class GpuLookRenderer : IDisposable
 {
     private readonly GraphicsDevice _device;
-    private readonly ReadWriteBuffer<int> _toneCurve;
     private readonly ReadWriteBuffer<int> _masterCurve;
     private readonly ReadWriteBuffer<int> _brightnessContrast;
     private readonly int[] _brightnessContrastValues = new int[256];
@@ -47,7 +45,6 @@ internal sealed class GpuLookRenderer : IDisposable
     {
         ArgumentNullException.ThrowIfNull(device);
         _device = device;
-        _toneCurve = device.AllocateReadWriteBuffer(TableFromSpan(ChromaTone.Table));
         _masterCurve = device.AllocateReadWriteBuffer(TableFromList(SplendidaTuning.MasterCurve));
         _brightnessContrast = device.AllocateReadWriteBuffer(new int[256]);
     }
@@ -59,7 +56,6 @@ internal sealed class GpuLookRenderer : IDisposable
         RgbImage source,
         ColorPreset preset,
         UltronCcSettings? settings,
-        bool chromaTone,
         RgbImagePool? pool = null,
         CancellationToken cancellationToken = default)
     {
@@ -72,7 +68,7 @@ internal sealed class GpuLookRenderer : IDisposable
             RgbaPacking.Pack(source, _packed!, cancellationToken);
             _a!.CopyFrom(_packed!);
             _current = _a;
-            Run(preset, settings, chromaTone, cancellationToken);
+            Run(preset, settings, cancellationToken);
             return Read(_current!, source.Width, source.Height, pool, cancellationToken);
         }
     }
@@ -87,7 +83,6 @@ internal sealed class GpuLookRenderer : IDisposable
         int height,
         ColorPreset preset,
         UltronCcSettings? settings,
-        bool chromaTone,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -98,7 +93,7 @@ internal sealed class GpuLookRenderer : IDisposable
             EnsureSize(width, height);
             source.CopyTo(_a!);
             _current = _a;
-            Run(preset, settings, chromaTone, cancellationToken);
+            Run(preset, settings, cancellationToken);
             return _current!;
         }
     }
@@ -127,7 +122,6 @@ internal sealed class GpuLookRenderer : IDisposable
     private void Run(
         ColorPreset preset,
         UltronCcSettings? settings,
-        bool chromaTone,
         CancellationToken cancellationToken)
     {
         switch (preset)
@@ -150,11 +144,6 @@ internal sealed class GpuLookRenderer : IDisposable
             case ColorPreset.Splendida:
                 ApplySplendida(cancellationToken);
                 break;
-        }
-
-        if (chromaTone)
-        {
-            Table(_toneCurve);
         }
     }
 
@@ -770,17 +759,6 @@ internal sealed class GpuLookRenderer : IDisposable
         return integerPart + fraction;
     }
 
-    private static int[] TableFromSpan(ReadOnlySpan<byte> source)
-    {
-        var table = new int[source.Length];
-        for (var index = 0; index < table.Length; index++)
-        {
-            table[index] = source[index];
-        }
-
-        return table;
-    }
-
     private static int[] TableFromList(IReadOnlyList<byte> source)
     {
         var table = new int[source.Count];
@@ -886,7 +864,6 @@ internal sealed class GpuLookRenderer : IDisposable
 
             _disposed = true;
             DisposeBuffers();
-            _toneCurve.Dispose();
             _masterCurve.Dispose();
             _brightnessContrast.Dispose();
         }

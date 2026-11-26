@@ -18,7 +18,6 @@ public class GpuClassicFrameEnhancerTests
             new EnhancementParameters(60, 40, 10, 85, 10, 60),
             RecoverOriginalDetail: 20,
             OutputScale: 2,
-            ApplyChromaTone: true,
             Grading: ColorPreset.UltronCc);
 
         var expected = reference.Enhance(source, request, CancellationToken.None);
@@ -39,7 +38,6 @@ public class GpuClassicFrameEnhancerTests
             new EnhancementParameters(60, 40, 10, 85, 10, 60),
             AddNoise: 0.02,
             OutputScale: 2,
-            ApplyChromaTone: true,
             Grading: ColorPreset.UltronCc);
 
         if (gpu.ActiveProvider is null)

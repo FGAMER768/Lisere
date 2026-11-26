@@ -8,11 +8,10 @@ using Lisere.Core.Imaging;
 namespace Lisere.Ai.Enhancement;
 
 /// <summary>
-/// Applies the look stages shared by the image page and the video page: the
-/// selected color grade, then the Chroma preset's tone curve. Grading runs on
-/// the enhanced frame and before the curve, exactly as
-/// <c>EnhancementOrchestrator</c> does for a photo, so a neural model and the
-/// classical pipeline both produce the same colors.
+/// Applies the color grade shared by the image page and the video page. Grading
+/// runs on the enhanced frame, exactly as <c>EnhancementOrchestrator</c> does for
+/// a photo, so a neural model and the classical pipeline both produce the same
+/// colors.
 /// <para>
 /// L'étalonnage tourne sur le GPU D3D12 quand il existe, sur le même adaptateur
 /// que le rendu : la frame n'est plus notée par le CPU pendant que le GPU
@@ -29,7 +28,6 @@ public sealed class FrameLookEnhancer : IFrameEnhancer, IFrameStageTimingsProvid
     private bool _gpuChecked;
     private long _gradingTicks;
     private long _gpuLookTicks;
-    private long _chromaTicks;
     private bool _disposed;
 
     public FrameLookEnhancer(IFrameEnhancer inner)
@@ -101,7 +99,7 @@ public sealed class FrameLookEnhancer : IFrameEnhancer, IFrameStageTimingsProvid
         var pool = request.BufferPool;
         var output = _inner.Enhance(source, request, cancellationToken);
 
-        if (request.Grading is ColorPreset.None && !request.ApplyChromaTone)
+        if (request.Grading is ColorPreset.None)
         {
             return output;
         }
@@ -117,7 +115,6 @@ public sealed class FrameLookEnhancer : IFrameEnhancer, IFrameStageTimingsProvid
                     output,
                     request.Grading,
                     request.GradingSettings,
-                    request.ApplyChromaTone,
                     pool,
                     cancellationToken);
                 // Le temps de l'étalonnage GPU est du calcul GPU : il rejoint
@@ -171,20 +168,6 @@ public sealed class FrameLookEnhancer : IFrameEnhancer, IFrameStageTimingsProvid
             }
 
             output = graded;
-        }
-
-        if (request.ApplyChromaTone)
-        {
-            var started = Stopwatch.GetTimestamp();
-            var toned = ChromaTone.Apply(output, pool, cancellationToken);
-            Interlocked.Add(ref _chromaTicks, Stopwatch.GetElapsedTime(started).Ticks);
-
-            if (!ReferenceEquals(toned, output) && !ReferenceEquals(output, source))
-            {
-                pool?.Return(output);
-            }
-
-            output = toned;
         }
 
         return output;
@@ -253,8 +236,7 @@ public sealed class FrameLookEnhancer : IFrameEnhancer, IFrameStageTimingsProvid
         return timings with
         {
             Compute = timings.Compute + TimeSpan.FromTicks(Interlocked.Exchange(ref _gpuLookTicks, 0)),
-            Grading = TimeSpan.FromTicks(Interlocked.Exchange(ref _gradingTicks, 0)),
-            ChromaTone = TimeSpan.FromTicks(Interlocked.Exchange(ref _chromaTicks, 0))
+            Grading = TimeSpan.FromTicks(Interlocked.Exchange(ref _gradingTicks, 0))
         };
     }
 

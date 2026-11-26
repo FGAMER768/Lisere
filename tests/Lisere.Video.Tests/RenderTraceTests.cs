@@ -20,7 +20,6 @@ public class RenderTraceTests
             preset.Parameters,
             preset.RecoverOriginalDetail,
             preset.AddNoise,
-            ApplyChromaTone: true,
             Grading: ColorPreset.UltronCc,
             GradingSettings: UltronCcSettings.FromPreset);
         var settings = VideoRenderService.DescribeFrameSettings(request, "Lisere Classic");
@@ -39,6 +38,5 @@ public class RenderTraceTests
         Assert.Contains("amélioration 60/40/10/85/10/95", report);
         Assert.Contains("récupération 20", report);
         Assert.Contains("étalonnage UltronCc", report);
-        Assert.Contains("courbe Chroma", report);
     }
 }

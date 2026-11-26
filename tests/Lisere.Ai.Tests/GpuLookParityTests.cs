@@ -76,15 +76,14 @@ public class GpuLookParityTests
         {
             foreach (var (presetName, preset, settings) in presets)
             {
-                var cpu = ChromaTone.Apply(
-                    ColorGrading.Apply(image, preset, settings));
-                var gpu = renderer.Apply(image, preset, settings, chromaTone: true);
+                var cpu = ColorGrading.Apply(image, preset, settings);
+                var gpu = renderer.Apply(image, preset, settings);
 
                 Assert.Equal(cpu.Width, gpu.Width);
                 Assert.Equal(cpu.Height, gpu.Height);
 
                 var (description, maximum) = Describe(cpu.Pixels, gpu.Pixels);
-                report.AppendLine($"{imageName} · {presetName} · +courbe : {description}");
+                report.AppendLine($"{imageName} · {presetName} : {description}");
 
                 // Le mode neutre ne lance aucune passe : il doit être exact.
                 if (ReferenceEquals(settings, UltronCcSettings.Neutral))
@@ -130,8 +129,7 @@ public class GpuLookParityTests
         var request = new FrameEnhancementRequest(
             EnhancementPresets.ChromaEnhanceMain.Parameters,
             Grading: ColorPreset.UltronCc,
-            GradingSettings: UltronCcSettings.FromPreset,
-            ApplyChromaTone: true);
+            GradingSettings: UltronCcSettings.FromPreset);
 
         var output = engine.Enhance(source, request, CancellationToken.None);
 
