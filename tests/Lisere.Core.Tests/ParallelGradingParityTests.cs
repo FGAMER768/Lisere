@@ -64,9 +64,15 @@ public class ParallelGradingParityTests
             double blue = source.Pixels[i + 2];
             var luma = (lumaRed * red) + (lumaGreen * green) + (lumaBlue * blue);
 
-            red = Clip(luma + (saturation * (red - luma)));
-            green = Clip(luma + (saturation * (green - luma)));
-            blue = Clip(luma + (saturation * (blue - luma)));
+            var maximumSource = (int)Math.Max(red, Math.Max(green, blue));
+            var minimumSource = (int)Math.Min(red, Math.Min(green, blue));
+            var grey = maximumSource > 0 ? ((maximumSource - minimumSource) * 255) / maximumSource : 0;
+            var amount = (int)Math.Round((saturation - 1.0) * 1024.0);
+            var gain = (1024 + ((amount * (255 - grey)) / 255)) / 1024.0;
+
+            red = Clip(luma + (gain * (red - luma)));
+            green = Clip(luma + (gain * (green - luma)));
+            blue = Clip(luma + (gain * (blue - luma)));
 
             red = Clip(((((red / 255.0) - 0.5) * scale) + 0.5 + offset) * 255.0);
             green = Clip(((((green / 255.0) - 0.5) * scale) + 0.5 + offset) * 255.0);

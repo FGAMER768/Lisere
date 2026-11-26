@@ -86,11 +86,16 @@ internal readonly partial struct LookSaturationShader(
         float green = LookMath.Channel(pixel, 1);
         float blue = LookMath.Channel(pixel, 2);
         var luma = (lumaRed * red) + (lumaGreen * green) + (lumaBlue * blue);
+        var maximum = (int)Hlsl.Max(red, Hlsl.Max(green, blue));
+        var minimum = (int)Hlsl.Min(red, Hlsl.Min(green, blue));
+        var grey = maximum > 0 ? ((maximum - minimum) * 255) / maximum : 0;
+        var amount = (int)Hlsl.Round((saturation - 1.0f) * 1024.0f);
+        var gain = (1024 + ((amount * (255 - grey)) / 255)) / 1024.0f;
 
         target[index] = LookMath.Pixel(
-            LookMath.RoundClip8(luma + (saturation * (red - luma))),
-            LookMath.RoundClip8(luma + (saturation * (green - luma))),
-            LookMath.RoundClip8(luma + (saturation * (blue - luma))));
+            LookMath.RoundClip8(luma + (gain * (red - luma))),
+            LookMath.RoundClip8(luma + (gain * (green - luma))),
+            LookMath.RoundClip8(luma + (gain * (blue - luma))));
     }
 }
 
