@@ -35,7 +35,8 @@ internal static class GradingFilters
         double lumaBlue,
         ImagingWork? work = null,
         RgbImagePool? pool = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool softCeiling = false)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -59,16 +60,25 @@ internal static class GradingFilters
                     double blue = sourcePixels[row + 2];
                     var luma = (lumaRed * red) + (lumaGreen * green) + (lumaBlue * blue);
 
-                    // Plafond souple : la saturation d'After Effects relève surtout
-                    // les tons sourds et laisse les pixels déjà saturés en place
-                    // (mesuré sur 3 plans, voir docs/ANALYSE-TOPAZ-VIDEO.md).
-                    // Gain quantifié en 1/1024 à partir d'entiers : le GPU calcule
-                    // les mêmes, donc le même octet des deux côtés.
-                    var maximum = (int)Math.Max(red, Math.Max(green, blue));
-                    var minimum = (int)Math.Min(red, Math.Min(green, blue));
-                    var grey = maximum > 0 ? ((maximum - minimum) * 255) / maximum : 0;
-                    var amount = (int)Math.Round((saturation - 1.0) * 1024.0);
-                    var gain = (1024 + ((amount * (255 - grey)) / 255)) / 1024.0;
+                    double gain;
+
+                    if (softCeiling)
+                    {
+                        // Plafond souple du look Ultron : la saturation d'After
+                        // Effects relève surtout les tons sourds et laisse les
+                        // pixels déjà saturés en place (3 plans mesurés). Gain
+                        // quantifié en 1/1024 à partir d'entiers : le GPU calcule
+                        // les mêmes, donc le même octet des deux côtés.
+                        var maximum = (int)Math.Max(red, Math.Max(green, blue));
+                        var minimum = (int)Math.Min(red, Math.Min(green, blue));
+                        var grey = maximum > 0 ? ((maximum - minimum) * 255) / maximum : 0;
+                        var amount = (int)Math.Round((saturation - 1.0) * 1024.0);
+                        gain = (1024 + ((amount * (255 - grey)) / 255)) / 1024.0;
+                    }
+                    else
+                    {
+                        gain = saturation;
+                    }
 
                     pixels[row] = Clip(luma + (gain * (red - luma)));
                     pixels[row + 1] = Clip(luma + (gain * (green - luma)));

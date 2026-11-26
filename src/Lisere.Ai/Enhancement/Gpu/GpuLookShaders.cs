@@ -69,7 +69,8 @@ internal readonly partial struct LookSaturationShader(
     float saturation,
     float lumaRed,
     float lumaGreen,
-    float lumaBlue) : IComputeShader
+    float lumaBlue,
+    int softCeiling) : IComputeShader
 {
     public void Execute()
     {
@@ -90,7 +91,9 @@ internal readonly partial struct LookSaturationShader(
         var minimum = (int)Hlsl.Min(red, Hlsl.Min(green, blue));
         var grey = maximum > 0 ? ((maximum - minimum) * 255) / maximum : 0;
         var amount = (int)Hlsl.Round((saturation - 1.0f) * 1024.0f);
-        var gain = (1024 + ((amount * (255 - grey)) / 255)) / 1024.0f;
+        var gain = softCeiling != 0
+            ? (1024 + ((amount * (255 - grey)) / 255)) / 1024.0f
+            : saturation;
 
         target[index] = LookMath.Pixel(
             LookMath.RoundClip8(luma + (gain * (red - luma))),

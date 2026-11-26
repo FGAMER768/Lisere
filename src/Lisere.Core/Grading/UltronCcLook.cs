@@ -90,7 +90,8 @@ public static class UltronCcLook
             UltronCcTuning.Looks.LumaBlue,
             work,
             pool,
-            cancellationToken);
+            cancellationToken,
+            softCeiling: true);
 
     private static RgbImage ApplySapphireSharpen(
         RgbImage source,

@@ -149,7 +149,7 @@ internal sealed class GpuLookRenderer : IDisposable
 
     private void ApplyManual(UltronCcSettings settings, CancellationToken cancellationToken)
     {
-        Saturation(settings.SaturationPercent / 100.0, 0.2126, 0.7152, 0.0722);
+        Saturation(settings.SaturationPercent / 100.0, 0.2126, 0.7152, 0.0722, softCeiling: false);
 
         if (settings.Brightness != 0.0 || settings.Contrast != 0.0)
         {
@@ -173,7 +173,7 @@ internal sealed class GpuLookRenderer : IDisposable
 
     private void ApplyUltron(UltronCcSettings settings, CancellationToken cancellationToken)
     {
-        Saturation(settings.SaturationPercent / 100.0, 0.2126, 0.7152, 0.0722);
+        Saturation(settings.SaturationPercent / 100.0, 0.2126, 0.7152, 0.0722, softCeiling: true);
 
         MultiScaleSharpen(
             UltronCcTuning.SapphireSharpen.SmallDetailSize,
@@ -299,7 +299,12 @@ internal sealed class GpuLookRenderer : IDisposable
         cancellationToken.ThrowIfCancellationRequested();
     }
 
-    private void Saturation(double saturation, double lumaRed, double lumaGreen, double lumaBlue)
+    private void Saturation(
+        double saturation,
+        double lumaRed,
+        double lumaGreen,
+        double lumaBlue,
+        bool softCeiling)
     {
         if (Math.Abs(saturation - 1.0) < 0.0001)
         {
@@ -314,7 +319,8 @@ internal sealed class GpuLookRenderer : IDisposable
             (float)saturation,
             (float)lumaRed,
             (float)lumaGreen,
-            (float)lumaBlue));
+            (float)lumaBlue,
+            softCeiling ? 1 : 0));
         Swap();
     }
 
