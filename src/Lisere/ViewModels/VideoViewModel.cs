@@ -47,10 +47,7 @@ public sealed partial class VideoViewModel : ObservableObject, IDisposable
     private readonly Stopwatch _renderWatch = new();
     private int _frameVersion;
     private bool _renderDrivesTimeline;
-    private double _renderStartPercent;
-    private double _renderSpanPercent = 100;
     private double _playheadBeforeRender;
-    private int _renderFrameFactor = 1;
 
     private VideoInfo? _video;
     private RgbImage? _previewFrame;

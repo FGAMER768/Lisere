@@ -193,12 +193,43 @@ public class FrameRenderPipelineTests
         Assert.Equal(reference, sink.FirstPixels);
     }
 
+    [Fact]
+    public async Task RifeKeepsThePositionInTheClipWhenItWritesTwiceTheFrames()
+    {
+        var reports = new List<VideoRenderProgress>();
+        var pool = new RgbImagePool(16 * FrameBytes);
+
+        // 4 frames source, 8 écrites : totalFrames compte l'interpolation. Le
+        // rendu ne couvre que la moitié du clip, à partir de son quart.
+        var pipeline = CreatePipeline(
+            new RecordingEngine(),
+            pool,
+            capacity: 2,
+            usesRife: true,
+            interpolator: new AverageInterpolator(),
+            totalFrames: 8,
+            positionStartPercent: 25,
+            positionSpanPercent: 50,
+            progress: new RecordingProgress(reports));
+
+        await pipeline.RunAsync(new FakeSource(4, valueStep: 10), new RecordingSink(), CancellationToken.None)
+            .WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.NotEmpty(reports);
+        Assert.Equal(75, reports[^1].PositionPercent, 1);
+        Assert.All(reports, report => Assert.InRange(report.PositionPercent, 25, 75));
+    }
+
     private static FrameRenderPipeline CreatePipeline(
         IFrameEnhancer engine,
         RgbImagePool pool,
         int capacity,
         bool usesRife = false,
         IFrameInterpolator? interpolator = null,
+        int totalFrames = 60,
+        double positionStartPercent = 0,
+        double positionSpanPercent = 100,
+        IProgress<VideoRenderProgress>? progress = null,
         Action? abort = null) =>
         new(
             engine,
@@ -210,11 +241,13 @@ public class FrameRenderPipelineTests
             Width,
             Height,
             capacity,
-            totalFrames: 60,
+            totalFrames,
             pool,
             new RenderTrace("16×8", "16×8", "test", "test"),
-            progress: null,
-            abort);
+            progress,
+            abort,
+            positionStartPercent,
+            positionSpanPercent);
 
     /// <summary>Remplit chaque frame avec son numéro, comme le ferait un décodeur.</summary>
     private sealed class FakeSource(
@@ -240,6 +273,12 @@ public class FrameRenderPipelineTests
             _index++;
             return true;
         }
+    }
+
+    private sealed class RecordingProgress(List<VideoRenderProgress> reports)
+        : IProgress<VideoRenderProgress>
+    {
+        public void Report(VideoRenderProgress value) => reports.Add(value);
     }
 
     private sealed class RecordingSink(int throwOnFrame = -1) : IRenderFrameSink

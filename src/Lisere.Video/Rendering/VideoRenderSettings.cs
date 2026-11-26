@@ -91,7 +91,10 @@ public sealed record VideoRenderProgress(
     int FramesWritten,
     int? TotalFrames,
     string? Detail,
-    VideoFrameSnapshot? Snapshot = null)
+    VideoFrameSnapshot? Snapshot = null,
+    // Position dans le clip de l'image écrite : 0 au début de la source, 100 à
+    // sa fin, même quand l'interpolation double le nombre de frames.
+    double PositionPercent = 0)
 {
     public static VideoRenderProgress Start(VideoRenderStage stage) =>
         new(stage, 0, StageRange.Start(stage), 0, null, null);

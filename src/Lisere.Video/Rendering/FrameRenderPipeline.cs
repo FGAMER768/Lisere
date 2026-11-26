@@ -57,6 +57,8 @@ internal sealed class FrameRenderPipeline
     private readonly RenderTrace _trace;
     private readonly IProgress<VideoRenderProgress>? _progress;
     private readonly Action? _abort;
+    private readonly double _positionStartPercent;
+    private readonly double _positionSpanPercent;
 
     public FrameRenderPipeline(
         IFrameEnhancer engine,
@@ -72,7 +74,9 @@ internal sealed class FrameRenderPipeline
         RgbImagePool pool,
         RenderTrace trace,
         IProgress<VideoRenderProgress>? progress,
-        Action? abort)
+        Action? abort,
+        double positionStartPercent = 0,
+        double positionSpanPercent = 100)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(frameRequest);
@@ -99,6 +103,8 @@ internal sealed class FrameRenderPipeline
         _trace = trace;
         _progress = progress;
         _abort = abort;
+        _positionStartPercent = positionStartPercent;
+        _positionSpanPercent = positionSpanPercent;
     }
 
     public async Task<int> RunAsync(
@@ -186,7 +192,8 @@ internal sealed class FrameRenderPipeline
             frames,
             frames,
             DescribeThroughput(frames, clock.Elapsed),
-            lastSnapshot));
+            lastSnapshot,
+            PositionPercent(100)));
 
         return frames;
     }
@@ -421,7 +428,8 @@ internal sealed class FrameRenderPipeline
                             frames,
                             _totalFrames > 0 ? _totalFrames : null,
                             DescribeThroughput(frames, clock.Elapsed),
-                            snapshot));
+                            snapshot,
+                            PositionPercent(percent)));
                     }
                 }
                 finally
@@ -438,6 +446,17 @@ internal sealed class FrameRenderPipeline
             throw;
         }
     }
+
+    /// <summary>
+    /// Position dans le clip d'un pourcentage de la fenêtre rendue. Les frames
+    /// comptées sont celles du flux écrit, interpolées comprises, et le total
+    /// l'est aussi : le rapport reste la fraction du clip.
+    /// </summary>
+    private double PositionPercent(double segmentPercent) =>
+        Math.Clamp(
+            _positionStartPercent + (_positionSpanPercent * segmentPercent / 100.0),
+            0,
+            100);
 
     private RgbImage Copy(RgbImage source)
     {

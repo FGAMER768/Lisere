@@ -1059,7 +1059,8 @@ public class VideoViewModelTests
             4,
             10,
             null,
-            new VideoFrameSnapshot(4, 4, new byte[4 * 4 * 3])));
+            new VideoFrameSnapshot(4, 4, new byte[4 * 4 * 3]),
+            40));
         renderer.Handler = async (request, _) =>
         {
             // Le rapport arrive en tâche de fond : on l'attend pendant le rendu.
@@ -1085,47 +1086,6 @@ public class VideoViewModelTests
         Assert.Equal(95, viewModel.MaximumPreviewPosition, 3);
 
         // Le rendu est fini : le point de lecture revient à sa place.
-        Assert.Equal(25, viewModel.PreviewPositionPercent, 1);
-    }
-
-    [Fact]
-    public async Task RifeHalvesTheTimelinePositionBecauseItWritesTwiceTheFrames()
-    {
-        var renderer = new FakeVideoRenderer();
-        var extractor = new RecordingFrameExtractor();
-        var viewModel = CreateViewModel(
-            renderer: renderer,
-            extractor: extractor,
-            rife: new FakeInterpolator());
-        viewModel.UseRife = true;
-        var timeline = 0.0;
-        var sourcePosition = 0.0;
-
-        // 20 frames écrites sur 40 : la moitié du flux interpolé, donc un quart
-        // du clip.
-        renderer.OnProgress = progress => progress.Report(new VideoRenderProgress(
-            VideoRenderStage.Rendering,
-            40,
-            55,
-            20,
-            40,
-            null,
-            new VideoFrameSnapshot(4, 4, new byte[4 * 4 * 3])));
-        renderer.Handler = async (request, _) =>
-        {
-            await WaitForAsync(
-                () => Math.Abs(extractor.Positions[^1] - 0.2) < 0.02,
-                "the source half should come from a quarter of the clip");
-            timeline = viewModel.PreviewPositionPercent;
-            sourcePosition = extractor.Positions[^1];
-            return FakeVideoRenderer.ResultFor(request);
-        };
-
-        await viewModel.OpenCommand.ExecuteAsync(null);
-        await viewModel.RenderCommand.ExecuteAsync(null);
-
-        Assert.Equal(20, timeline, 1);
-        Assert.Equal(0.2, sourcePosition, 2);
         Assert.Equal(25, viewModel.PreviewPositionPercent, 1);
     }
 

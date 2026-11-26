@@ -322,6 +322,18 @@ public sealed class VideoRenderService : IVideoRenderService
         var totalFrames = (int)Math.Min(
             int.MaxValue,
             Math.Ceiling(Math.Max(1, segmentSeconds * source.FrameRate)) * interpolationFactor);
+
+        // La fenêtre rendue se traduit ici en position dans le clip : la page
+        // vidéo suit le rendu en pourcentage de la source.
+        var segmentStartPercent = source.DurationSeconds > 0
+            ? Math.Clamp(
+                (settings.PreviewStartSeconds ?? 0) / source.DurationSeconds * 100,
+                0,
+                100)
+            : 0;
+        var segmentSpanPercent = source.DurationSeconds > 0
+            ? Math.Clamp(segmentSeconds / source.DurationSeconds * 100, 0, 100)
+            : 100;
         var encoderFrameRate = settings.UsesRife
             ? source.FrameRate * 2
             : source.FrameRate;
@@ -425,6 +437,8 @@ public sealed class VideoRenderService : IVideoRenderService
             pool,
             trace,
             progress,
+            positionStartPercent: segmentStartPercent,
+            positionSpanPercent: segmentSpanPercent,
             abort: () =>
             {
                 FfmpegRunner.Kill(decoder);

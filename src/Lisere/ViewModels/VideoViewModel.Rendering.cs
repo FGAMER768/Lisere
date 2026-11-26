@@ -205,22 +205,8 @@ public sealed partial class VideoViewModel
 
         // Un rendu complet fait avancer la timeline jusqu'au bout du clip ; un
         // aperçu de quelques secondes ne le mérite pas.
-        var duration = _video?.DurationSeconds ?? 0;
         _renderDrivesTimeline = !isPreview;
         _playheadBeforeRender = PreviewPositionPercent;
-
-        // RIFE écrit deux frames par frame source : un pourcentage d'images
-        // écrites ne vaut que la moitié du clip.
-        _renderFrameFactor = request.Interpolator is null ? 1 : 2;
-        _renderStartPercent = duration > 0
-            ? Math.Clamp((request.Settings.PreviewStartSeconds ?? 0) / duration * 100, 0, 100)
-            : 0;
-        _renderSpanPercent = duration > 0
-            ? Math.Clamp(
-                (isPreview ? request.Settings.PreviewDurationSeconds ?? 0 : duration) / duration * 100,
-                0,
-                100)
-            : 100;
         MaximumPreviewPosition = _renderDrivesTimeline ? 100 : MaximumPreviewPositionPercent;
         _renderWatch.Restart();
         ShowReassuringProgress(0);
@@ -454,7 +440,7 @@ public sealed partial class VideoViewModel
         {
             // Le point de la timeline est l'image que le rendu vient d'écrire :
             // il montre l'avancement, il ne désigne pas une position à lire.
-            PreviewPositionPercent = RenderingPositionPercent(progress);
+            PreviewPositionPercent = progress.PositionPercent;
         }
     }
 
@@ -511,7 +497,7 @@ public sealed partial class VideoViewModel
             var source = _video is { } video
                 ? await _previewRenderer.LoadSourceFrameAsync(
                     video,
-                    RenderingPositionPercent(progress),
+                    progress.PositionPercent,
                     CancellationToken.None)
                 : null;
 
@@ -536,13 +522,5 @@ public sealed partial class VideoViewModel
             // render.
         }
     }
-
-    /// <summary>Position dans le clip de l'image que le rendu vient d'écrire.</summary>
-    private double RenderingPositionPercent(VideoRenderProgress progress) =>
-        Math.Clamp(
-            _renderStartPercent +
-                (_renderSpanPercent * progress.StagePercent / _renderFrameFactor / 100.0),
-            0,
-            100);
 
 }
