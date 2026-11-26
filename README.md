@@ -19,8 +19,7 @@ des moteurs qui tournent en local et des exports prêts à garder.
 > [!NOTE]
 > **Le rendu GPU est livré dans les versions 1.5.x.** Lisere Classic exécute son
 > pipeline en **compute D3D12 (ComputeSharp)** sur le GPU dédié, avec un repli CPU
-> exact : amélioration, redimensionnement, grain, étalonnage et courbe Chroma y
-> passent. Pour les moteurs ONNX, DirectML retient l'adaptateur DirectX 12 qui
+> exact : amélioration, redimensionnement, grain et étalonnage y passent. Pour les moteurs ONNX, DirectML retient l'adaptateur DirectX 12 qui
 > possède le plus de **VRAM dédiée**, et la note du moteur nomme le GPU réellement
 > utilisé ; `LISERE_DML_ADAPTER` et `LISERE_CLASSIC_GPU` permettent de le forcer.
 > La vidéo encode et décode en matériel — NVENC d'abord, Quick Sync ensuite — après
@@ -167,7 +166,7 @@ sautées au lieu de ralentir le clip, et l'avant comme l'après restent sur la m
 
 | Préréglage | Comportement |
 |---|---|
-| **Chroma** | Préréglage de référence : détail multi-échelles borné, unsharp maîtrisé et courbe de tons relevée sur la référence Topaz. |
+| **Chroma** | Préréglage de référence : détail multi-échelles borné, unsharp maîtrisé et courbe de tons relevée sur la référence Topaz. La courbe ne s'applique qu'à la page Image : le modèle Topaz vidéo est neutre en tons. |
 | **Auto** | Estime les paramètres à partir de l'image ou de plusieurs frames du clip. |
 | **Manuel** | Applique directement les valeurs saisies. |
 | **Auto + relatif moyen** | Estimation automatique, puis ajustement relatif moyen. |
@@ -412,7 +411,7 @@ le choix est enregistré dans `%APPDATA%\Lisere\settings.json`.
 - **Lisere Classic** choisit l'adaptateur D3D12 avec le plus de VRAM dédiée et affiche
   le GPU utilisé ; `LISERE_CLASSIC_GPU` force un index ou un fragment de nom, et
   `0`/`cpu`/`off` le replace sur le CPU. L'amélioration et le redimensionnement sont
-  calculés sur GPU, puis l'étalonnage et la courbe Chroma sont appliqués sur CPU.
+  calculés sur GPU, puis l'étalonnage est appliqué sur CPU.
 - L'import de presets ne charge aucun poids propriétaire et ne reproduit pas les
   modèles d'origine : seuls les réglages, la taille et la cadence sont transposés.
 - `outSizeMethod` 6 → 1080p et 7 → 2160p sont déduits du corpus de presets ; les

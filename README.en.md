@@ -19,7 +19,7 @@ engines that run locally, and exports ready to keep.
 > [!NOTE]
 > **GPU rendering ships in the 1.5.x releases.** Lisere Classic runs its pipeline as
 > **D3D12 compute (ComputeSharp)** on the dedicated GPU, with an exact CPU fallback:
-> enhancement, resizing, grain, grading and the Chroma curve all run there. For ONNX
+> enhancement, resizing, grain and grading all run there. For ONNX
 > engines, DirectML picks the DirectX 12 adapter with the most **dedicated VRAM**, and
 > the engine note names the GPU actually used; `LISERE_DML_ADAPTER` and
 > `LISERE_CLASSIC_GPU` can force it. Video encodes and decodes on hardware — NVENC
@@ -165,7 +165,7 @@ of slowing the clip down, and before and after always show the same frame.
 
 | Preset | Behaviour |
 |---|---|
-| **Chroma** | Reference preset: bounded multi-scale detail, controlled unsharp and a tone curve measured on the Topaz reference. |
+| **Chroma** | Reference preset: bounded multi-scale detail, controlled unsharp and a tone curve measured on the Topaz reference. The curve applies to the Image page only: the Topaz video model is tone-neutral. |
 | **Auto** | Estimates the controls from the image or several clip frames. |
 | **Manual** | Applies the entered values directly. |
 | **Auto + relative medium** | Automatic estimate, then a medium relative adjustment. |
@@ -403,7 +403,7 @@ choice is stored in `%APPDATA%\Lisere\settings.json`.
 - **Lisere Classic** picks the D3D12 adapter with the most dedicated VRAM and reports
   the GPU actually used; `LISERE_CLASSIC_GPU` forces an index or name fragment, and
   `0`/`cpu`/`off` sends it back to the CPU. Enhancement and resizing run on the GPU,
-  then grading and the Chroma tone curve are applied on the CPU.
+  then grading is applied on the CPU.
 - Preset import loads no proprietary weights and does not reproduce the original
   models: only settings, size and frame rate are carried over.
 - `outSizeMethod` 6 → 1080p and 7 → 2160p are deduced from the preset corpus; other

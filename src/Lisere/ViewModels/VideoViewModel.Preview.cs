@@ -563,9 +563,9 @@ public sealed partial class VideoViewModel
     private FrameEnhancementRequest BuildFrameRequest()
     {
         var (width, height) = ResolveTargetSize();
-        // Le préréglage Chroma emporte sa courbe de tons en vidéo comme en
-        // image ; un préréglage manuel ou Auto garde le rendu du moteur.
-        var chromaTone = SelectedPreset?.Mode is EnhancementMode.ChromaEnhanceMain;
+        // Pas de courbe de tons en vidéo : le modèle Topaz vidéo est neutre en
+        // tons (mesuré sur 10 plans), alors que la courbe de Chroma relève de 12
+        // à 25 %. Elle reste appliquée par la page Image.
         return new FrameEnhancementRequest(
             CurrentParameters,
             RecoverOriginalDetail,
@@ -573,7 +573,6 @@ public sealed partial class VideoViewModel
             SelectedOutput?.Scale ?? 1,
             width,
             height,
-            ApplyChromaTone: chromaTone,
             Grading: SelectedColorPreset?.Preset ?? ColorPreset.None,
             GradingSettings: HasAdjustableColorSettings ? CurrentColorSettings : null);
     }
