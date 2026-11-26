@@ -18,7 +18,8 @@ public class GpuClassicFrameEnhancerTests
             new EnhancementParameters(60, 40, 10, 85, 10, 60),
             RecoverOriginalDetail: 20,
             OutputScale: 2,
-            Grading: ColorPreset.UltronCc);
+            Grading: ColorPreset.UltronCc,
+            DetailOnLumaOnly: true);
 
         var expected = reference.Enhance(source, request, CancellationToken.None);
         var actual = gpu.Enhance(source, request, CancellationToken.None);

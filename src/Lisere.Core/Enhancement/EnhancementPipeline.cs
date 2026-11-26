@@ -33,7 +33,8 @@ public static class EnhancementPipeline
         IProgress<EnhancementProgress>? progress = null,
         CancellationToken cancellationToken = default,
         bool synthesizeSkinTexture = false,
-        IReadOnlyList<FaceBox>? faces = null)
+        IReadOnlyList<FaceBox>? faces = null,
+        bool detailOnLumaOnly = false)
     {
         ArgumentNullException.ThrowIfNull(source);
         cancellationToken.ThrowIfCancellationRequested();
@@ -218,9 +219,16 @@ public static class EnhancementPipeline
         if (detail)
         {
             var work = plan.Begin(EnhancementStage.Detail);
-            output = ImageFilters.Color(
-                output,
-                1.0 + (model.Details * EnhancementTuning.Pipeline.DetailColorScale));
+
+            // En vidéo, la chroma ne reçoit pas le gain du détail : il relève la
+            // saturation de 17 à 22 % là où le modèle Topaz est neutre. La luma
+            // garde toute la reconstruction.
+            if (!detailOnLumaOnly)
+            {
+                output = ImageFilters.Color(
+                    output,
+                    1.0 + (model.Details * EnhancementTuning.Pipeline.DetailColorScale));
+            }
 
             // Le détail est reconstruit sur trois échelles, puis borné aux
             // extrêmes locaux : c'est ce qui redonne de la texture à une image

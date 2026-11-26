@@ -93,7 +93,8 @@ public sealed class OnnxSuperResolutionEnhancer : IFrameEnhancer
             source,
             request.ClampedParameters,
             0.0,
-            0.0);
+            0.0,
+            detailOnLumaOnly: request.DetailOnLumaOnly);
 
         var scale = NativeScale;
         var upscaledLuma = UpscaleLuma(preCleaned, scale, request.Progress, cancellationToken);

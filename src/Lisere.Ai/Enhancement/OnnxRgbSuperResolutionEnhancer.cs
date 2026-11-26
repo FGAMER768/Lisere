@@ -95,7 +95,8 @@ public sealed class OnnxRgbSuperResolutionEnhancer : IFrameEnhancer
             source,
             request.ClampedParameters,
             0.0,
-            0.0);
+            0.0,
+            detailOnLumaOnly: request.DetailOnLumaOnly);
 
         var enhanced = UpscaleRgb(preCleaned, request.Progress, cancellationToken);
         stopwatch.Stop();

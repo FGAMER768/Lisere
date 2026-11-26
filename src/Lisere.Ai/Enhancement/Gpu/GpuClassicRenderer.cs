@@ -321,14 +321,17 @@ internal sealed class GpuClassicRenderer : IDisposable
 
         if (detail)
         {
-            var colored = Pick(workspace, output);
-            _device.For(workspace.Count, new ColorShader(
-                output,
-                colored,
-                workspace.Count,
-                (float)(1.0 + (model.Details * EnhancementTuning.Pipeline.DetailColorScale))));
-            output = colored;
-            cancellationToken.ThrowIfCancellationRequested();
+            if (!request.DetailOnLumaOnly)
+            {
+                var colored = Pick(workspace, output);
+                _device.For(workspace.Count, new ColorShader(
+                    output,
+                    colored,
+                    workspace.Count,
+                    (float)(1.0 + (model.Details * EnhancementTuning.Pipeline.DetailColorScale))));
+                output = colored;
+                cancellationToken.ThrowIfCancellationRequested();
+            }
 
             var scale = DetailScale(workspace, output, cancellationToken);
             _device.For(workspace.Count, new ToGrayShader(

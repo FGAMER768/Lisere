@@ -22,7 +22,10 @@ public sealed record FrameEnhancementRequest(
     // Réserve de tampons du rendu en cours : les moteurs qui le peuvent y
     // louent leurs images de sortie et leurs intermédiaires, au lieu d'allouer
     // plusieurs tableaux de 25 Mo par frame 4K.
-    RgbImagePool? BufferPool = null)
+    RgbImagePool? BufferPool = null,
+    // Vidéo : le gain de détail s'applique à la luma seule, sans toucher à la
+    // chroma (voir EnhancementPipeline).
+    bool DetailOnLumaOnly = false)
 {
     public EnhancementParameters ClampedParameters => Parameters.Clamp();
 

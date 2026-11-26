@@ -574,7 +574,8 @@ public sealed partial class VideoViewModel
             width,
             height,
             Grading: SelectedColorPreset?.Preset ?? ColorPreset.None,
-            GradingSettings: HasAdjustableColorSettings ? CurrentColorSettings : null);
+            GradingSettings: HasAdjustableColorSettings ? CurrentColorSettings : null,
+            DetailOnLumaOnly: true);
     }
 
     /// <summary>

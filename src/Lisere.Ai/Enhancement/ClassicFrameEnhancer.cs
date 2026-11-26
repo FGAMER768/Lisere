@@ -36,7 +36,8 @@ public sealed class ClassicFrameEnhancer : IFrameEnhancer
             source,
             request.ClampedParameters,
             request.RecoverOriginalDetail,
-            request.AddNoise);
+            request.AddNoise,
+            detailOnLumaOnly: request.DetailOnLumaOnly);
 
         var (width, height) = request.ResolveSize(source.Width, source.Height);
         return width == enhanced.Width && height == enhanced.Height
