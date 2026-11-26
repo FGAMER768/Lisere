@@ -483,7 +483,7 @@ scripts/           ffmpeg, publication, installateur, signature
 <details>
 <summary>🧪 Tests et publication</summary>
 
-La suite compte **561 tests** (140 Core, 47 Ai, 94 Video, 280 App) avec 0 avertissement
+La suite compte **558 tests** (140 Core, 46 Ai, 93 Video, 279 App) avec 0 avertissement
 de build. Les tests vidéo d'intégration génèrent un clip avec FFmpeg et vérifient le
 rendu, l'audio, le désentrelacement, la taille, l'annulation et l'extraction d'aperçu ;
 ils sont ignorés si FFmpeg est introuvable. Les presets sont couverts sur des JSON
