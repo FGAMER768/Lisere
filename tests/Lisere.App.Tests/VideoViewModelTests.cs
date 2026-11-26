@@ -1043,6 +1043,93 @@ public class VideoViewModelTests
     }
 
     [Fact]
+    public async Task TheTimelineFollowsTheRenderAndTheSourceHalfSharesItsFrame()
+    {
+        var renderer = new FakeVideoRenderer();
+        var extractor = new RecordingFrameExtractor();
+        var viewModel = CreateViewModel(renderer: renderer, extractor: extractor);
+        var timeline = 0.0;
+        var ceiling = 0.0;
+        var sourcePosition = 0.0;
+
+        renderer.OnProgress = progress => progress.Report(new VideoRenderProgress(
+            VideoRenderStage.Rendering,
+            40,
+            55,
+            4,
+            10,
+            null,
+            new VideoFrameSnapshot(4, 4, new byte[4 * 4 * 3])));
+        renderer.Handler = async (request, _) =>
+        {
+            // Le rapport arrive en tâche de fond : on l'attend pendant le rendu.
+            await WaitForAsync(
+                () => viewModel.PreviewPositionPercent > 39,
+                "the timeline should follow the render");
+            timeline = viewModel.PreviewPositionPercent;
+            ceiling = viewModel.MaximumPreviewPosition;
+            sourcePosition = extractor.Positions[^1];
+            return FakeVideoRenderer.ResultFor(request);
+        };
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        Assert.Equal(0.25, extractor.Positions[^1], 2);
+
+        await viewModel.RenderCommand.ExecuteAsync(null);
+
+        // Le clip dure une seconde : 40 % vaut 0,4 s, pas la position de lecture.
+        Assert.Equal(40, timeline, 1);
+        Assert.Equal(100, ceiling, 3);
+        Assert.Equal(0.4, sourcePosition, 2);
+        Assert.NotNull(viewModel.BeforeImage);
+        Assert.Equal(95, viewModel.MaximumPreviewPosition, 3);
+
+        // Le rendu est fini : le point de lecture revient à sa place.
+        Assert.Equal(25, viewModel.PreviewPositionPercent, 1);
+    }
+
+    [Fact]
+    public async Task RifeHalvesTheTimelinePositionBecauseItWritesTwiceTheFrames()
+    {
+        var renderer = new FakeVideoRenderer();
+        var extractor = new RecordingFrameExtractor();
+        var viewModel = CreateViewModel(
+            renderer: renderer,
+            extractor: extractor,
+            rife: new FakeInterpolator());
+        viewModel.UseRife = true;
+        var timeline = 0.0;
+        var sourcePosition = 0.0;
+
+        // 20 frames écrites sur 40 : la moitié du flux interpolé, donc un quart
+        // du clip.
+        renderer.OnProgress = progress => progress.Report(new VideoRenderProgress(
+            VideoRenderStage.Rendering,
+            40,
+            55,
+            20,
+            40,
+            null,
+            new VideoFrameSnapshot(4, 4, new byte[4 * 4 * 3])));
+        renderer.Handler = async (request, _) =>
+        {
+            await WaitForAsync(
+                () => Math.Abs(extractor.Positions[^1] - 0.2) < 0.02,
+                "the source half should come from a quarter of the clip");
+            timeline = viewModel.PreviewPositionPercent;
+            sourcePosition = extractor.Positions[^1];
+            return FakeVideoRenderer.ResultFor(request);
+        };
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await viewModel.RenderCommand.ExecuteAsync(null);
+
+        Assert.Equal(20, timeline, 1);
+        Assert.Equal(0.2, sourcePosition, 2);
+        Assert.Equal(25, viewModel.PreviewPositionPercent, 1);
+    }
+
+    [Fact]
     public async Task MovingThePlayheadReloadsTheSourceFrame()
     {
         var extractor = new RecordingFrameExtractor();

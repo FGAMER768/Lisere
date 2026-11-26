@@ -202,6 +202,26 @@ public sealed partial class VideoViewModel
         IsBusy = true;
         ClearError();
         ProgressPercent = 0;
+
+        // Un rendu complet fait avancer la timeline jusqu'au bout du clip ; un
+        // aperçu de quelques secondes ne le mérite pas.
+        var duration = _video?.DurationSeconds ?? 0;
+        _renderDrivesTimeline = !isPreview;
+        _playheadBeforeRender = PreviewPositionPercent;
+
+        // RIFE écrit deux frames par frame source : un pourcentage d'images
+        // écrites ne vaut que la moitié du clip.
+        _renderFrameFactor = request.Interpolator is null ? 1 : 2;
+        _renderStartPercent = duration > 0
+            ? Math.Clamp((request.Settings.PreviewStartSeconds ?? 0) / duration * 100, 0, 100)
+            : 0;
+        _renderSpanPercent = duration > 0
+            ? Math.Clamp(
+                (isPreview ? request.Settings.PreviewDurationSeconds ?? 0 : duration) / duration * 100,
+                0,
+                100)
+            : 100;
+        MaximumPreviewPosition = _renderDrivesTimeline ? 100 : MaximumPreviewPositionPercent;
         _renderWatch.Restart();
         ShowReassuringProgress(0);
 
@@ -222,7 +242,7 @@ public sealed partial class VideoViewModel
 
             if (isPreview)
             {
-                await LoadRenderedPreviewAsync(result.OutputPath);
+                await LoadRenderedPreviewAsync(result.OutputPath, request.Settings);
                 ProgressText = Strings.Format(
                     "videoPreviewReady",
                     (int)Math.Round(PreviewPositionPercent));
@@ -279,7 +299,17 @@ public sealed partial class VideoViewModel
             cancellation.Dispose();
             IsRendering = false;
             IsBusy = false;
+            _renderDrivesTimeline = false;
+            MaximumPreviewPosition = MaximumPreviewPositionPercent;
             ProgressHint = string.Empty;
+
+            // Le rendu a fait avancer la timeline : le point de lecture revient
+            // là où l'utilisateur l'avait laissé, une fois le rendu terminé.
+            if (error is null && !canceled &&
+                Math.Abs(PreviewPositionPercent - _playheadBeforeRender) > 0.001)
+            {
+                PreviewPositionPercent = _playheadBeforeRender;
+            }
 
             // La session est ouverte : la note peut nommer le GPU utilisé.
             UpdateEngineNote();
@@ -334,7 +364,7 @@ public sealed partial class VideoViewModel
     /// Shows the middle frame of a rendered preview. The file is a real export
     /// of the pipeline, so the frame carries every pass that was enabled.
     /// </summary>
-    private async Task LoadRenderedPreviewAsync(string path)
+    private async Task LoadRenderedPreviewAsync(string path, VideoRenderSettings settings)
     {
         var image = await _previewRenderer.LoadRenderedFrameAsync(
             path,
@@ -351,6 +381,25 @@ public sealed partial class VideoViewModel
         RenderingFrame = image;
         AfterImage = image;
         HasPreview = true;
+
+        // L'instantané est le milieu de la fenêtre rendue : l'avant doit venir du
+        // même instant, sinon les deux moitiés montrent deux moments différents.
+        if (_video is { DurationSeconds: > 0 } video)
+        {
+            try
+            {
+                var middle = (settings.PreviewStartSeconds ?? 0) + ((settings.PreviewDurationSeconds ?? 0) / 2);
+                var source = await _previewRenderer.LoadSourceFrameAsync(
+                    video,
+                    middle / video.DurationSeconds * 100,
+                    CancellationToken.None);
+                BeforeImage = source.Image;
+            }
+            catch (Exception exception) when (exception is IOException or VideoRenderException)
+            {
+                // The rendered frame stays visible even when the source cannot.
+            }
+        }
     }
 
     private void UpdateEstimate()
@@ -386,9 +435,9 @@ public sealed partial class VideoViewModel
     {
         // The snapshot is worth showing even when the report arrives after a
         // cancel: it is the last thing the render produced.
-        if (progress.Snapshot is { } snapshot)
+        if (progress.Snapshot is not null)
         {
-            _ = ShowRenderingFrameAsync(snapshot);
+            _ = ShowRenderingFrameAsync(progress);
         }
 
         // Progress<T> posts asynchronously; a queued report must not overwrite
@@ -400,6 +449,13 @@ public sealed partial class VideoViewModel
 
         ProgressPercent = progress.OverallPercent;
         ShowReassuringProgress(progress.OverallPercent);
+
+        if (_renderDrivesTimeline && progress.Stage == VideoRenderStage.Rendering)
+        {
+            // Le point de la timeline est l'image que le rendu vient d'écrire :
+            // il montre l'avancement, il ne désigne pas une position à lire.
+            PreviewPositionPercent = RenderingPositionPercent(progress);
+        }
     }
 
     /// <summary>
@@ -433,8 +489,13 @@ public sealed partial class VideoViewModel
     }
 
     /// <summary>Live frame of the running render, also kept after a cancel.</summary>
-    private async Task ShowRenderingFrameAsync(VideoFrameSnapshot snapshot)
+    private async Task ShowRenderingFrameAsync(VideoRenderProgress progress)
     {
+        if (progress.Snapshot is not { } snapshot)
+        {
+            return;
+        }
+
         // Two conversions can finish out of order; only the newest frame wins.
         var version = ++_frameVersion;
 
@@ -444,20 +505,44 @@ public sealed partial class VideoViewModel
                 snapshot,
                 CancellationToken.None);
 
+            // Les deux moitiés doivent venir du même instant : l'avant est la
+            // source à la position de l'instantané, pas la dernière frame de
+            // prévisualisation, qui montre un autre moment du clip.
+            var source = _video is { } video
+                ? await _previewRenderer.LoadSourceFrameAsync(
+                    video,
+                    RenderingPositionPercent(progress),
+                    CancellationToken.None)
+                : null;
+
             if (version != _frameVersion)
             {
                 return;
+            }
+
+            if (source is not null)
+            {
+                BeforeImage = source.Image;
             }
 
             RenderingFrame = image;
             AfterImage = image;
             HasPreview = true;
         }
-        catch (Exception exception) when (exception is ArgumentException or IOException)
+        catch (Exception exception) when (
+            exception is ArgumentException or IOException or VideoRenderException)
         {
             // A frame that cannot be shown must never abort an otherwise healthy
             // render.
         }
     }
+
+    /// <summary>Position dans le clip de l'image que le rendu vient d'écrire.</summary>
+    private double RenderingPositionPercent(VideoRenderProgress progress) =>
+        Math.Clamp(
+            _renderStartPercent +
+                (_renderSpanPercent * progress.StagePercent / _renderFrameFactor / 100.0),
+            0,
+            100);
 
 }

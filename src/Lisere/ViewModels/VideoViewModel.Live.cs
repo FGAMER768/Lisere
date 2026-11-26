@@ -31,8 +31,12 @@ public sealed partial class VideoViewModel
     [ObservableProperty]
     private bool _isPlaying;
 
-    /// <summary>Seek ceiling in percent, bound by the timeline and the transport.</summary>
-    public double MaximumPreviewPosition => MaximumPreviewPositionPercent;
+    /// <summary>
+    /// Timeline ceiling in percent. A full render raises it, so its progress can
+    /// reach the end of the clip.
+    /// </summary>
+    [ObservableProperty]
+    private double _maximumPreviewPosition = MaximumPreviewPositionPercent;
 
     private bool CanMovePlayhead() =>
         HasVideo &&

@@ -119,12 +119,24 @@
                                                           StartCommand="{Binding GoToStartCommand}"
                                                           TogglePlaybackCommand="{Binding TogglePlaybackCommand}" />
 
+                                    <!-- Pendant un rendu, le point de la timeline suit le
+                                         rendu : il ne se manipule pas. -->
                                     <views:VideoTimeline AutomationProperties.AutomationId="VideoTimeline"
                                                          AutomationProperties.HelpText="{Binding Strings[videoTimelineHelp]}"
                                                          AutomationProperties.Name="{Binding Strings[videoLabelPreviewPosition]}"
                                                          DurationSeconds="{Binding DurationSeconds}"
                                                          MaximumPercent="{Binding MaximumPreviewPosition}"
-                                                         PositionPercent="{Binding PreviewPositionPercent, Mode=TwoWay}" />
+                                                         PositionPercent="{Binding PreviewPositionPercent, Mode=TwoWay}">
+                                        <views:VideoTimeline.Style>
+                                            <Style TargetType="views:VideoTimeline">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsRendering}" Value="True">
+                                                        <Setter Property="IsEnabled" Value="False" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </views:VideoTimeline.Style>
+                                    </views:VideoTimeline>
                                 </StackPanel>
                             </views:BeforeAfterView.Footer>
                         </views:BeforeAfterView>
