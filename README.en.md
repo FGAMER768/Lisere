@@ -473,7 +473,7 @@ scripts/           ffmpeg, publishing, installer, signing
 <details>
 <summary>🧪 Tests and publishing</summary>
 
-The suite has **560 tests** (140 Core, 46 Ai, 94 Video, 280 App) with 0 build warnings.
+The suite has **564 tests** (140 Core, 46 Ai, 98 Video, 280 App) with 0 build warnings.
 Video integration tests generate a clip with FFmpeg and check rendering, audio,
 deinterlacing, exact size, cancellation and preview extraction; they are skipped when
 FFmpeg is missing. Presets are covered with synthetic JSON and, when

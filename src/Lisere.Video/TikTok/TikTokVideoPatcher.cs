@@ -156,7 +156,10 @@ public sealed class TikTokVideoPatcher : ITikTokVideoPatcher
         {
             cancellationToken.ThrowIfCancellationRequested();
             var patched = new byte[plan.SampleSizes[index]];
-            plan.ReplacementPrefix.CopyTo(patched, 0);
+            if (plan.PceSampleIndex < 0 || plan.PceSampleIndex == index)
+            {
+                plan.ReplacementPrefix.CopyTo(patched, 0);
+            }
             patches.Add(new SamplePatch(plan.SampleOffsets[index], patched));
         }
 

@@ -44,6 +44,24 @@ public sealed class TikTokVideoPatcherTests : IDisposable
             pce);
     }
 
+    [Theory]
+    [InlineData(new[] { 500, 600, 700, 800 }, -1)]
+    [InlineData(new[] { 7, 494, 514, 531 }, 3)]
+    [InlineData(new[] { 7, 20, 6, 4 }, 1)]
+    public void WritesTheMarkerIntoTheSampleThatCanHoldIt(int[] tailSizes, int expected)
+    {
+        Assert.Equal(expected, AacTail.SelectPceSample(tailSizes, 15));
+    }
+
+    [Fact]
+    public void RefusesATailWhereNoSampleCanHoldTheMarker()
+    {
+        var exception = Assert.Throws<TikTokPatchException>(
+            () => AacTail.SelectPceSample([7, 5, 6, 4], 15));
+
+        Assert.Contains("trop petits", exception.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task PatchesTheFourAacTailSamplesAndKeepsTheClipPlayable()
     {

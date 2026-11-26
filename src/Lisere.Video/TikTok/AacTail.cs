@@ -3,7 +3,8 @@ namespace Lisere.Video.TikTok;
 internal sealed record AacTailPlan(
     IReadOnlyList<long> SampleOffsets,
     IReadOnlyList<int> SampleSizes,
-    byte[] ReplacementPrefix);
+    byte[] ReplacementPrefix,
+    int PceSampleIndex);
 
 internal static class AacTail
 {
@@ -68,14 +69,39 @@ internal static class AacTail
         var tailSizes = sampleSizes.Skip(sampleSizes.Count - 4).ToArray();
         var pce = BuildPce(sampleRateIndex);
 
-        if (tailSizes.Any(size => size < pce.Length))
+        return new AacTailPlan(
+            tailOffsets,
+            tailSizes,
+            pce,
+            SelectPceSample(tailSizes, pce.Length));
+    }
+
+    /// <summary>
+    /// FFmpeg clôt presque toujours sa piste AAC par une frame de quelques
+    /// octets : le marqueur ne peut pas y tenir. Il est alors écrit dans la plus
+    /// grande des quatre frames, les autres restant remplies de zéros, puisque le
+    /// patch remplace de toute façon ces quatre frames. -1 garde le marqueur
+    /// dans les quatre quand elles sont toutes assez grandes.
+    /// </summary>
+    internal static int SelectPceSample(IReadOnlyList<int> tailSizes, int pceLength)
+    {
+        var largest = 0;
+        for (var index = 1; index < tailSizes.Count; index++)
+        {
+            if (tailSizes[index] > tailSizes[largest])
+            {
+                largest = index;
+            }
+        }
+
+        if (tailSizes[largest] < pceLength)
         {
             throw new TikTokPatchException(
                 "Les quatre derniers échantillons AAC sont trop petits pour le patch TikTok. " +
                 "Exportez avec un débit audio plus élevé (AAC-LC 128 kb/s ou plus).");
         }
 
-        return new AacTailPlan(tailOffsets, tailSizes, pce);
+        return tailSizes.All(size => size >= pceLength) ? -1 : largest;
     }
 
     internal static byte[] BuildPce(int sampleRateIndex)
